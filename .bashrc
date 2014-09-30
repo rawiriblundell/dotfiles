@@ -18,14 +18,12 @@ fi
 [[ "$-" != *i* ]] && return
 
 # Aliases
-#
 # Some people use a different file for aliases
 if [ -f "${HOME}/.bash_aliases" ]; then
 	source "${HOME}/.bash_aliases"
 fi
 
 # Functions
-#
 # Some people use a different file for functions
 if [ -f "${HOME}/.bash_functions" ]; then
 	source "${HOME}/.bash_functions"
@@ -46,7 +44,7 @@ unssh() {
 /usr/bin/ssh $*
 }
 
-# enable color support of ls and also add handy aliases
+# Enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
 	test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
 	alias ls='ls --color=auto'
@@ -58,7 +56,7 @@ if [ -x /usr/bin/dircolors ]; then
 	alias egrep='egrep --color=auto'
 fi
 			     
-# some more ls aliases
+# Some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias lh='ls -lah'
@@ -265,6 +263,39 @@ genphrase() {
                 fi
         fi
 }
+
+# Password strength check function
+pwcheck () {
+        # Read password in, if it's blank, prompt the user
+        if [ "${1}" = "" ]; then
+                # -r disables backslash interpretation, in case a backslash is in the password
+                # -s disables echo'ing the password as it's typed
+                # -p provides the prompt, saves a useless use of echo
+                read -r -s -p "Please enter the password/phrase you would like checked: " PwdIn
+                printf "%s\n" ""
+        else
+                # Otherwise, whatever is fed in is the password to check
+                PwdIn="${1}"
+        fi
+
+        # Check password, attempt with cracklib-check, failover to perl
+        if [ -f /usr/sbin/cracklib-check ]; then
+                Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
+                Okay="$(awk -F': ' '{ print $2}' <<<"${Result}")"
+        else
+                Result="$(perl -nle 'return 0 if( /.{8,}/ && ( s/\d//g ) >= 2 && ( s/[\$\._,%-]//g) >= 1 ); return 1;')"
+        fi
+
+        # Output result
+        if [[ "$Okay" == "OK" ]]; then
+                printf "%s\n" "The password/phrase passed my testing."
+                return 0
+        else
+                printf "%s\n" "The check failed: $Result" "Please try again."
+                return 1
+        fi
+}
+
 
 # flocate function.  This gives a search function that blends find and locate
 # Will obviously only work where locate lives, so Solaris will mostly be out of luck

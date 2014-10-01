@@ -294,41 +294,42 @@ pwcheck () {
                 ResultPunct="Special character count: OK"
                 ResultSpace="No spaces found: OK"
                 ResultDict="Doesn't seem to match any dictionary words: OK"
-                while [[ "${CredCount}" -gt "1" ]]; do
-                        if [[ "${#PwdIn}" -lt 8 ]]; then
-                                ResultChar="Password must have a minimum of 8 characters."
-                                ((CredCount = CredCount - 1))
-                        elif [[ "${PwdIn}" != *[[:digit:]]* ]]; then
-                                ResultDigit="Password should contain at least one digit."
-                                ((CredCount = CredCount - 1))
-                        elif [[ "${PwdIn}" != *[[:upper:]]* ]]; then
-                                ResultUpper="Password should contain at least one uppercase letter."
-                                ((CredCount = CredCount - 1))
-                        elif [[ "${PwdIn}" != *[[:lower:]]* ]]; then
-                                ResultLower="Password should contain at least one lowercase letter."
-                                ((CredCount = CredCount - 1))
-                        elif [[ "${PwdIn}" != *[[:punct:]] ]]; then
-                                ResultPunct="Password should contain at least one punctuation character."
-                                ((CredCount = CredCount - 1))
-                        elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-                                ResultSpace="Password cannot contain spaces."
-                                ((CredCount = CredCount - 3)) # Punish more for spaces
-                        elif grep "${PwdIn}" /usr/share/dict/words >/dev/null; then
-                                ResultDict="Password cannot contain a dictionary word."
-                                ((CredCount = CredCount -3)) # Punish more for a dictionary word
-                        # Now check password credentials, if it's less than three break out with an error
-                        elif [[ "${CredCount}" -lt "3" ]]; then
-                                Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"
-                		Okay="NotOK"
-                		break
-                	# Otherwise, it's a valid password, break out with success
-                        else
-                                Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"
-                                Okay="OK"
-                                break
-                        fi
-                done
 
+                # Start cycling through each complexity requirement     
+                if [[ "${#PwdIn}" -lt 8 ]]; then
+                        ResultChar="Password must have a minimum of 8 characters."
+                        ((CredCount = CredCount - 1))
+                elif [[ "${PwdIn}" != *[[:digit:]]* ]]; then
+                        ResultDigit="Password should contain at least one digit."
+                        ((CredCount = CredCount - 1))
+                elif [[ "${PwdIn}" != *[[:upper:]]* ]]; then
+                        ResultUpper="Password should contain at least one uppercase letter."
+                        ((CredCount = CredCount - 1))
+                elif [[ "${PwdIn}" != *[[:lower:]]* ]]; then
+                        ResultLower="Password should contain at least one lowercase letter."
+                        ((CredCount = CredCount - 1))
+                elif [[ "${PwdIn}" != *[[:punct:]] ]]; then
+                        ResultPunct="Password should contain at least one punctuation character."
+                        ((CredCount = CredCount - 1))
+                elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
+                        ResultSpace="Password cannot contain spaces."
+                        ((CredCount = CredCount - 2)) # Punish more for spaces
+                elif grep "${PwdIn}" /usr/share/dict/words >/dev/null; then
+                        ResultDict="Password cannot contain a dictionary word."
+                        ((CredCount = CredCount -3)) # Punish more for a dictionary word
+                fi
+                
+                # Now check password score, if it's less than three, then it fails
+                # Here is where we force the three complexity catergories
+                if [[ "${CredCount}" -lt "3" ]]; then
+                        # Valid password; break out of the loop
+                        Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"
+                        Okay="OK"
+                # Otherwise, it's a valid password, break out with success
+                        else
+                        Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"      
+                        Okay="OK"
+                fi
         fi
 
         # Output result

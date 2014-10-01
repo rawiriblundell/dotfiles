@@ -286,7 +286,7 @@ pwcheck () {
         else
                 # Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
                 # Start by giving a credential score to be subtracted from, then default the initial vars
-                CredCount=7
+                CredCount=11
                 ResultChar="Character count: OK"
                 ResultDigit="Digit count: OK"
                 ResultUpper="UPPERCASE count: OK"
@@ -294,7 +294,7 @@ pwcheck () {
                 ResultPunct="Special character count: OK"
                 ResultSpace="No spaces found: OK"
                 ResultDict="Doesn't seem to match any dictionary words: OK"
-                while [[ "${CredCount}" -gt "3" ]]; do
+                while [[ "${CredCount}" -gt "1" ]]; do
                         if [[ "${#PwdIn}" -lt 8 ]]; then
                                 ResultChar="Password must have a minimum of 8 characters."
                                 ((CredCount = CredCount - 1))
@@ -313,7 +313,7 @@ pwcheck () {
                         elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
                                 ResultSpace="Password cannot contain spaces."
                                 ((CredCount = CredCount - 3)) # Punish more for spaces
-                        elif [[ grep "${PwdIn}" /usr/share/dict/words >/dev/null ]]; then
+                        elif grep "${PwdIn}" /usr/share/dict/words >/dev/null; then
                                 ResultDict="Password cannot contain a dictionary word."
                                 ((CredCount = CredCount -3)) # Punish more for a dictionary word
                         # Now check password credentials, if it's less than three break out with an error

@@ -284,8 +284,46 @@ pwcheck () {
                 Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
                 Okay="$(awk -F': ' '{ print $2}' <<<"${Result}")"
         else
-                Result="$(perl -nle 'return 0 if( /.{8,}/ && ( s/\d//g ) >= 2 && ( s/[\$\._,%-]//g) >= 1 ); return 1;')"
+        	# Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
+        	# Start by giving a credential score to be subtracted from, then default the initial vars
+        	CredCount=7
+        	ResultChar="Character count: OK"
+        	ResultDigit="Digit count: OK"
+        	ResultUpper="UPPERCASE count: OK"
+                ResultLower="lowercase count: OK"
+                ResultPunct="Special character count: OK"
+                ResultSpace="No spaces found: OK"
+                ResultDict="Doesn't seem to match any dictionary words: OK"
+                while [[ ${CredCount} -gt "3" ]]; do
+                        if [[ "${#PwdIn}" -lt 8 ]]; then
+                                ResultChar="Password must have a minimum of 8 characters."
+                                ((CredCount = CredCount - 1))
+                        elif [[ "${PwdIn}" != *[[:digit:]]* ]]; then
+                                ResultDigit="Password should contain at least one digit."
+                                ((CredCount = CredCount - 1))
+                        elif [[ "${PwdIn}" != *[[:upper:]]* ]]; then
+                                ResultUpper="Password should contain at least one uppercase letter."
+                                ((CredCount = CredCount - 1))
+                        elif [[ "${PwdIn}" != *[[:lower:]]* ]]; then
+                                ResultLower="Password should contain at least one lowercase letter."
+                                ((CredCount = CredCount - 1))
+                        elif [[ "${PwdIn}" != *[[:punct:]] ]]; then
+                                ResultPunct="Password should contain at least one punctuation character."
+                                ((CredCount = CredCount - 1))
+                        elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
+                                ResultSpace="Password cannot contain spaces."
+                                ((CredCount = CredCount - 1))
+                        elif [[ grep "${PwdIn}" /usr/share/dict/words >/dev/null ]]; then
+                                ResultDict="Password cannot contain a dictionary word."
+                                ((CredCount = CredCount -1))
+                        else
+                                # valid password; break out of the loop
+                                Result="OK"
+                                break
+                        fi
+                done
         fi
+
 
         # Output result
         if [[ "$Okay" == "OK" ]]; then

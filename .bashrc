@@ -200,6 +200,7 @@ genphrase() {
 				let ++n
 			done
 		fi
+		return 0 # Prevent subsequent run of perl/bash
 	fi	
 	# Next we try perl, installed almost everywhere and reasonably fast
 	# For portability we have to be a bit more hands-on with our loops, which impacts performance

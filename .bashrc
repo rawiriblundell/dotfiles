@@ -269,11 +269,7 @@ genphrase() {
 pwcheck () {
         # Read password in, if it's blank, prompt the user
         if [ "${*}" = "" ]; then
-                # -r disables backslash interpretation, in case a backslash is in the password
-                # -s disables echo'ing the password as it's typed
-                # -p provides the prompt, saves a useless use of echo
-                read -r -s -p "Please enter the password/phrase you would like checked: " PwdIn
-                printf "%s\n" ""
+                read -resp $'Please enter the password/phrase you would like checked:\n' PwdIn
         else
                 # Otherwise, whatever is fed in is the password to check
                 PwdIn="${*}"
@@ -303,18 +299,18 @@ pwcheck () {
 		while [ "${PWCheck}" = "true" ]; do
 			# Start cycling through each complexity requirement	
 			if [[ "${#PwdIn}" -lt "8" ]]; then
-				Result="Password must have a minimum of 8 characters.  Further testing stopped."
+				Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped."
 				CredCount=0
 				PWCheck="false" # Instant failure for character count
 			elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-                                Result="Password cannot contain spaces.  Further testing stopped."
+                                Result="${PwdIn}: Password cannot contain spaces.  Further testing stopped."
                                 CredCount=0 
 				PWCheck="false" # Instant failure for spaces
 			fi
 			# Check against the dictionary
 			grep "${PwdIn}" /usr/share/dict/words >/dev/null
 			if [ $? = "0" ]; then
-                        	Result="Password cannot contain a dictionary word."
+                        	Result="${PwdIn}: Password cannot contain a dictionary word."
                         	CredCount=0 # Punish hard for dictionary words
 			fi
 			# Check for a digit

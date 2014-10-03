@@ -265,10 +265,10 @@ genphrase() {
         fi
 }
 
-# Password strength check function
+# Password strength check function.  Can be fed a password most ways.
 pwcheck () {
         # Read password in, if it's blank, prompt the user
-        if [ "${1}" = "" ]; then
+        if [ "${*}" = "" ]; then
                 # -r disables backslash interpretation, in case a backslash is in the password
                 # -s disables echo'ing the password as it's typed
                 # -p provides the prompt, saves a useless use of echo
@@ -276,72 +276,96 @@ pwcheck () {
                 printf "%s\n" ""
         else
                 # Otherwise, whatever is fed in is the password to check
-                PwdIn="${1}"
+                PwdIn="${*}"
         fi
 
-        # Check password, attempt with cracklib-check, failover to something a bit more exhaustive
+        # Check password, attempt with cracklib-check, failover to something a little more exhaustive
         if [ -f /usr/sbin/cracklib-check ]; then
                 Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
                 Okay="$(awk -F': ' '{ print $2}' <<<"${Result}")"
-        else
-                # Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
-                # Start by giving a credential score to be subtracted from, then default the initial vars
-                CredCount=11
-                ResultChar="Character count: OK"
-                ResultDigit="Digit count: OK"
-                ResultUpper="UPPERCASE count: OK"
-                ResultLower="lowercase count: OK"
-                ResultPunct="Special character count: OK"
-                ResultSpace="No spaces found: OK"
-                ResultDict="Doesn't seem to match any dictionary words: OK"
+	else	
+		# I think we have a common theme here.  Writing portable code sucks, but it keeps things interesting.
+		
+		#printf "%s\n" "pwcheck: Attempting this the hard way" #Debug
+		# Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
+		# Start by giving a credential score to be subtracted from, then default the initial vars
+		CredCount=4
+		PWCheck="true"
+		ResultChar="Character count: OK"
+		ResultDigit="Digit count: OK"
+		ResultUpper="UPPERCASE count: OK"
+		ResultLower="lowercase count: OK"
+		ResultPunct="Special character count: OK"
+		ResultSpace="No spaces found: OK"
+		ResultDict="Doesn't seem to match any dictionary words: OK"
+		Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
 
-                # Start cycling through each complexity requirement     
-                if [[ "${#PwdIn}" -lt 8 ]]; then
-                        ResultChar="Password must have a minimum of 8 characters."
-                        ((CredCount = CredCount - 1))
-                elif [[ "${PwdIn}" != *[[:digit:]]* ]]; then
-                        ResultDigit="Password should contain at least one digit."
-                        ((CredCount = CredCount - 1))
-                elif [[ "${PwdIn}" != *[[:upper:]]* ]]; then
-                        ResultUpper="Password should contain at least one uppercase letter."
-                        ((CredCount = CredCount - 1))
-                elif [[ "${PwdIn}" != *[[:lower:]]* ]]; then
-                        ResultLower="Password should contain at least one lowercase letter."
-                        ((CredCount = CredCount - 1))
-                elif [[ "${PwdIn}" != *[[:punct:]] ]]; then
-                        ResultPunct="Password should contain at least one punctuation character."
-                        ((CredCount = CredCount - 1))
-                elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-                        ResultSpace="Password cannot contain spaces."
-                        ((CredCount = CredCount - 2)) # Punish more for spaces
-                elif grep "${PwdIn}" /usr/share/dict/words >/dev/null; then
-                        ResultDict="Password cannot contain a dictionary word."
-                        ((CredCount = CredCount -3)) # Punish more for a dictionary word
-                fi
-                
-                # Now check password score, if it's less than three, then it fails
-                # Here is where we force the three complexity catergories
-                if [[ "${CredCount}" -lt "3" ]]; then
-                        # Valid password; break out of the loop
-                        Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"
-                        Okay="OK"
-                # Otherwise, it's a valid password, break out with success
-                        else
-                        Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}" "${ResultSpace}" "${ResultDict}")"      
-                        Okay="OK"
-                fi
-        fi
+		while [ "${PWCheck}" = "true" ]; do
+			# Start cycling through each complexity requirement	
+			if [[ "${#PwdIn}" -lt "8" ]]; then
+				Result="Password must have a minimum of 8 characters.  Further testing stopped."
+				CredCount=0
+				PWCheck="false" # Instant failure for character count
+			elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
+                                Result="Password cannot contain spaces.  Further testing stopped."
+                                CredCount=0 
+				PWCheck="false" # Instant failure for spaces
+			fi
+			# Check against the dictionary
+			grep "${PwdIn}" /usr/share/dict/words >/dev/null
+			if [ $? = "0" ]; then
+                        	Result="Password cannot contain a dictionary word."
+                        	CredCount=0 # Punish hard for dictionary words
+			fi
+			# Check for a digit
+			echo "${PwdIn}" | grep '[[:digit:]]' >/dev/null
+			if [ $? != "0" ]; then
+				ResultDigit="Password should contain at least one digit."
+				((CredCount = CredCount - 1))
+			fi
+			# Check for UPPERCASE
+                        echo "${PwdIn}" | grep '[[:upper:]]' >/dev/null
+                        if [ $? != "0" ]; then
+                                ResultUpper="Password should contain at least one uppercase letter."
+                                ((CredCount = CredCount - 1))
+                        fi
+			# Check for lowercase
+                        echo "${PwdIn}" | grep '[[:lower:]]' >/dev/null
+                        if [ $? != "0" ]; then
+                                ResultLower="Password should contain at least one lowercase letter."
+                                ((CredCount = CredCount - 1))
+                        fi
+			# Check for special characters
+                        echo "${PwdIn}" | grep '[[:punct:]]' >/dev/null
+                        if [ $? != "0" ]; then
+                                ResultPunct="Password should contain at least one special character."
+                                ((CredCount = CredCount - 1))
+                        fi
+			PWCheck="false" #Exit condition for the loop
+		done
+
+		#printf "%s\n" "CredCount = ${CredCount}" #debug
+	
+		# Now check password score, if it's less than three, then it fails
+		# Here is where we force the three complexity catergories
+		if [[ "${CredCount}" -lt "3" ]]; then
+			# Rejected password, set variables appropriately
+			Okay="NotOK"
+               	# Otherwise, it's a valid password
+		else
+			Okay="OK"
+		fi
+	fi
 
         # Output result
-        if [[ "$Okay" == "OK" ]]; then
+        if [[ "${Okay}" == "OK" ]]; then
                 printf "%s\n" "The password/phrase passed my testing."
                 return 0
         else
-                printf "%s\n" "The check failed: $Result" "Please try again."
+                printf "%s\n" "The check failed:" "${Result}" "Please try again."
                 return 1
         fi
 }
-
 
 # flocate function.  This gives a search function that blends find and locate
 # Will obviously only work where locate lives, so Solaris will mostly be out of luck

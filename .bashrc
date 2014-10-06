@@ -308,8 +308,7 @@ pwcheck () {
 				PWCheck="false" # Instant failure for spaces
 			fi
 			# Check against the dictionary
-			grep "${PwdIn}" /usr/share/dict/words >/dev/null
-			if [ $? = "0" ]; then
+			if grep -q "${PwdIn}" /usr/share/dict/words; then
                         	Result="${PwdIn}: Password cannot contain a dictionary word."
                         	CredCount=0 # Punish hard for dictionary words
 			fi

@@ -523,3 +523,7 @@ if [ "$(uname)" != "SunOS" ] ; then
                 stty erase '^?'
         fi
 fi
+
+# Disable ctrl+s (XOFF) in PuTTY
+stty ixany
+stty ixoff -ixon

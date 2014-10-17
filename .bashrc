@@ -124,11 +124,11 @@ genpasswd() {
 			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
 
 			# We check for python and if it's there, we use it
-			if [ $(command -v python &>/dev/null) ]; then
+			if [ "$(command -v python &>/dev/null)" ]; then
 	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$1\$${Salt}')")
 			# Otherwise, we failover to openssl
 			else
-				PwdSalted=$(openssl passwd -1 -salt ${Salt} ${Pwd})
+				PwdSalted=$(openssl passwd -1 -salt "${Salt}" "${Pwd}")
 			fi
 
 			# Now let's print out the result.  People can always awk/cut to get just the crypted password

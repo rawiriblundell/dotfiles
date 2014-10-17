@@ -72,27 +72,30 @@ genpasswd() {
 	PwdNum=1
 	PwdSet="[:alnum:]"
 	PwdCols="false"
+	PwdKrypt="false"
 
-	while getopts ":Cc:n:hSs" Flags; do
+	while getopts ":Cc:n:hkSs" Flags; do
 		case "${Flags}" in
 			C)	PwdCols="true";;
 			c)	PwdChars="${OPTARG}";;
-			n)	PwdNum="${OPTARG}";;
-				# Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
-				# got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
-			s)	PwdSet="[:alnum:]#$&+/<}^%";;
-			S)	PwdSet="[:graph:]";;	
 			h)	printf "%s\n" "genpasswd - a poor sysadmin's pwgen" \
 				"Optional arguments:" \
 				"-C [attempt to output into columns (Default:off)]" \
 				"-c [number of characters (Default:${PwdChars})]" \
+                                "-h [help]" \
+				"-k [krypt, generates a crypted/salted password for tools like usermod -p and chpasswd -e" \
+				"    use of -C [columns] will be disallowed when this mode is enabled.  (Default:off)]" \
 				"-n [number of passwords (Default:${PwdNum})]" \
 				"-s [strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
 				"-S [stronger mode, complete mix of characters (Default:off)]" \
-				"-h [help]" \
 				"Note: Broken Pipe errors, (older bash versions) can be ignored"
 				return 0;;
-
+			k)	PwdKrypt="true";;
+                        n)      PwdNum="${OPTARG}";;
+                                # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
+                                # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
+                        s)      PwdSet="[:alnum:]#$&+/<}^%";;
+                        S)      PwdSet="[:graph:]";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;
 			
@@ -103,7 +106,42 @@ genpasswd() {
 	
 	# Now generate the password(s)
 	# Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
-	
+
+	# Let's start with checking for the Krypt option
+	if [ "${PwdKrypt}" = "true" ]; then
+		# Disallow columns
+		if [ "${PwdCols}" = "true" ]; then
+			printf "%s\n" "ERROR: Use of -C and -k together is disallowed.  Please choose one, but not both."
+			return 1
+		fi
+		
+		# Let's make sure we get the right number of passwords
+		n=0
+		while [ "${n}" -lt "${PwdNum}" ]; do
+			# And let's get these variables figured out.  Needs to be inside the loop
+			# to correctly pickp other arg values and to rotate properly
+		        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1) 2> /dev/null
+			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
+
+			# We check for python and if it's there, we use it
+			if [ $(command -v python &>/dev/null) ]; then
+	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$1\$${Salt}')")
+			# Otherwise, we failover to openssl
+			else
+				PwdSalted=$(openssl passwd -1 -salt ${Salt} ${Pwd})
+			fi
+
+			# Now let's print out the result.  People can always awk/cut to get just the crypted password
+			# This should probably be tee'd off to a dotfile so that they can get the original password too
+			printf "%s\n" "Original: ${Pwd} Crypted: ${PwdSalted}"
+			
+			# And we tick the counter up by one increment
+			((n = n + 1))
+		done
+		return 0
+	fi
+
+	# Otherwise, let's just do plain old passwords.  This is considerably more straightforward
 	# First, if the columns variable is false, don't pipe the output to 'column'
 	if [ "${PwdCols}" = "false" ]; then
 		tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null

@@ -255,7 +255,7 @@ genphrase() {
 			while [[ $n -lt "${PphraseNum}" ]]; do
 				w=0
 				while [[ $w -lt "${PphraseWords}" ]]; do
-					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict)"
+					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
 					((w = w + 1))
 				done | tr -d "\n"
 				printf "\n"
@@ -267,7 +267,7 @@ genphrase() {
 			while [[ $n -lt "${PphraseNum}" ]]; do
 				w=0
 				while [[ $w -lt "${PphraseWords}" ]]; do
-					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict)"
+					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
 					((w = w + 1));
 				done | tr -d "\n"
 				printf "\n"

@@ -227,14 +227,18 @@ genphrase() {
 	#		echo "Columns true" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
-				printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
+				#printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
+				# Let's be honest, if shuf is around, then we're likely using a recent version of bash
+				# So let's uppercase each word to get CamelCasing
+				read -ra words <<< "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" && printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
 				let ++n
 			done | column
 		else
 	#		echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
-				printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
+				#printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
+				read -ra words <<< "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" && printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
 				let ++n
 			done
 		fi

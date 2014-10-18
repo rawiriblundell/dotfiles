@@ -119,7 +119,7 @@ genpasswd() {
 		n=0
 		while [ "${n}" -lt "${PwdNum}" ]; do
 			# And let's get these variables figured out.  Needs to be inside the loop
-			# to correctly pickp other arg values and to rotate properly
+			# to correctly pickup other arg values and to rotate properly
 		        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1) 2> /dev/null
 			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
 

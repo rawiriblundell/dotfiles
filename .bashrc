@@ -195,7 +195,7 @@ genphrase() {
 	PphraseSeedDoc="False"
 	SeedWord=
 
-	while getopts ":Cw:n:h" Flags; do
+	while getopts ":Chn:s:Sw:" Flags; do
 		case "${Flags}" in
 			C)	PphraseCols="True";;
 			h)	printf "%s\n" "genphrase - a basic passphrase generator" \

@@ -191,20 +191,27 @@ genphrase() {
 	PphraseWords=3
 	PphraseNum=1
 	PphraseCols="False"
+	PphraseSeed="False"
+	SeedWord=
 
 	while getopts ":Cw:n:h" Flags; do
 		case "${Flags}" in
 			C)	PphraseCols="True";;
-			w)	PphraseWords="${OPTARG}";;
-			n)	PphraseNum="${OPTARG}";;
 			h)	printf "%s\n" "genphrase - a basic passphrase generator" \
 				"Optional Arguments:" \
 				"-C [attempt to output into columns (Default:off)]" \
-				"-w [number of random words to use (Default:${PphraseWords})]" \
+				"-h [help]" \
 				"-n [number of passphrases to generate (Default:${PphraseNum})]" \
-				"-h [help]"
+				"-s [seed your own word.  Use ${0##*/} -S to read about this option.]" \
+				"-S [explanation for the word seeding option: -s]" \
+				"-w [number of random words to use (Default:${PphraseWords})]"
 				return 0;;
-
+			n)	PphraseNum="${OPTARG}";;
+			s)	PphraseSeed="True"
+				SeedWord="[${OPTARG}]";;
+			S)	PphraseSeedDoc
+				return 0;;
+			w)	PphraseWords="${OPTARG}";;
 			\?)	echo "ERROR: Invalid option: '-$OPTARG'.  Try 'genphrase -h' for usage." >&2
 				return 1;;
 			
@@ -213,32 +220,46 @@ genphrase() {
 		esac
 	done
 	
+	# First test if a word is being seeded in
+	if [ "${PphraseSeed}" = "True" ]; then
+		# If so, make space for the seed word
+		((PphraseWords = PphraseWords - 1))
+	fi
+	
 	# Now generate the passphrase(s)
 	# First we test to see if shuf is available
-	command -v shuf &>/dev/null
-	# If the exit code is 0, then we can use shuf!
-	if [ $? = 0 ]; then
+	if command -v shuf &>/dev/null; then
 #		echo "Using shuf!" #Debug
 		if [ "${PphraseCols}" = "True" ]; then
 			# Now we use a loop to run the number of times required to match the -n setting
 			# Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
 			# Obviously this will have to be run a sufficient number of times to make the use of
 			# 'column' worth it.  Fortunately shuf is very fast.
-	#		echo "Columns true" #Debug
+#			echo "Columns true" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
+				#Older methods left commented out to show the evolution of this function
 				#printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
-				# Let's be honest, if shuf is around, then we're likely using a recent version of bash
-				# So let's uppercase each word to get CamelCasing
-				read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
+				#read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
+				
+				# Create an array with the seeded word in place if it's used
+				PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
+				# Read the array in and shuffle it
+                                read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
+                                # Now implement CamelCasing on the non-seed words and print the result
+                                printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
 				let ++n
 			done | column
 		else
 	#		echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
-				#printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
-				read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
+				# Create an array with the seeded word in place if it's used
+				PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
+				# Read the array in and shuffle it
+                                read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
+                                # Now implement CamelCasing on the non-seed words and print the result
+                                printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
 				let ++n
 			done
 		fi
@@ -246,8 +267,7 @@ genphrase() {
 	fi	
 	# Next we try perl, installed almost everywhere and reasonably fast
 	# For portability we have to be a bit more hands-on with our loops, which impacts performance
-	command -v perl &>/dev/null
-	if [ $? = 0 ]; then
+	if command -v perl &>/dev/null; then
 #		echo "Using perl!" #Debug
 		if [ "${PphraseCols}" = "True" ]; then
 #			echo "Columns true" #Debug

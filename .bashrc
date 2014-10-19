@@ -192,6 +192,7 @@ genphrase() {
 	PphraseNum=1
 	PphraseCols="False"
 	PphraseSeed="False"
+	PphraseSeedDoc="False"
 	SeedWord=
 
 	while getopts ":Cw:n:h" Flags; do
@@ -209,8 +210,7 @@ genphrase() {
 			n)	PphraseNum="${OPTARG}";;
 			s)	PphraseSeed="True"
 				SeedWord="[${OPTARG}]";;
-			S)	PphraseSeedDoc
-				return 0;;
+			S)	PphraseSeedDoc="True";;
 			w)	PphraseWords="${OPTARG}";;
 			\?)	echo "ERROR: Invalid option: '-$OPTARG'.  Try 'genphrase -h' for usage." >&2
 				return 1;;
@@ -220,7 +220,34 @@ genphrase() {
 		esac
 	done
 	
-	# First test if a word is being seeded in
+	# If -S is selected, print out the documentation for word seeding
+	if [ "${PphraseSeedDoc}" = "True" ]; then
+        	printf "%s\n"   "======================================================================" \
+                	        "genphrase and the -s option: Why you would want to seed your own word?" \
+                	        "======================================================================" \
+                	        "One method for effectively using passphrases is to choose at least two random words" \
+                	        "and to seed those two words with a task specific word.  So let's take two words:" \
+                	        "---" "pings genre" "---" \
+                	        "Now if we capitalise both words to get CamelCasing, we meet the usual upper and lowercase password requirements," \
+                	        "as well as very likely meeting the password length requirement: 'PingsGenre'" ""\
+                	        "So then we add a task specific word: Let's say this passphrase is for your online banking," \
+                	        "so we add the word 'bank' into the mix and get 'PingsGenrebank'" "" \
+                	        "For a social network login, you might use e.g. 'PingsGenreFBook' and so on." \
+                	        "The two random words are the same, but the task-specific word is the key." \
+                	        "" "Problem is, this isn't good enough.  The reality is that CorrectHorseBatteryStaple isn't that secure." \
+                	        "So we need to randomise those words, introduce some special characters," \
+                	        "and some numbers.  'PingsGenrebank' becomes 'Pings{B4nk}Genre'" \
+                	        "and likewise 'PingsGenreFBook' becomes '(FB0ok)GenrePings'." \
+                	        "" "So, this is a very easy to remember system which meets most usual password requirements," \
+                	        "and it makes most lame password checkers *cough* pwcheck *cough* happy." \
+                	        "You could also argue that this borders on multi-factor auth i.e. something you are/know/have." \
+                	        "" "genphrase will always put the seeded word in square brackets and will randomise its location in the phrase," \
+                	        "it's over to you to make sure that your seeded word has numerals etc." \
+                	        "Note: You can always use genphrase to generate the base phrase and then manually embellish it to your taste."
+		return 0
+	fi
+	
+	# Next test if a word is being seeded in
 	if [ "${PphraseSeed}" = "True" ]; then
 		# If so, make space for the seed word
 		((PphraseWords = PphraseWords - 1))
@@ -251,7 +278,7 @@ genphrase() {
 				let ++n
 			done | column
 		else
-	#		echo "Columns false" #Debug
+#			echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
 				# Create an array with the seeded word in place if it's used
@@ -297,7 +324,7 @@ genphrase() {
 	# Otherwise, we switch to bash, which is slower still
 	# Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function
 	# It is BRUTALLY slow.  The method shown here is almost as fast as perl.
-        elif [ $? = 1 ]; then
+        else
 #           echo "Using bash!" #debug
                 if [ "${PphraseCols}" = "True" ]; then
 #                       echo "Columns true" #Debug

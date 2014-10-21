@@ -300,6 +300,9 @@ genphrase() {
 #			echo "Columns true" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
+				#If it's there, print the seedword
+                                printf "%s" "${SeedWord}"
+                                # And now get the random words
 				w=0
 				while [[ $w -lt "${PphraseWords}" ]]; do
 					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
@@ -312,6 +315,7 @@ genphrase() {
 #			echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
+                                printf "%s" "${SeedWord}"
 				w=0
 				while [[ $w -lt "${PphraseWords}" ]]; do
 					printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
@@ -330,6 +334,9 @@ genphrase() {
 #                       echo "Columns true" #Debug
                         n=0
                         while [[ $n -lt "${PphraseNum}" ]]; do
+                        	# If it's there, print the seedword
+                                printf "%s" "${SeedWord}"
+                                # And now get the random words
                                 w=0
                                 while [[ $w -lt "${PphraseWords}" ]]; do
                                         printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
@@ -342,6 +349,7 @@ genphrase() {
 #                       echo "Columns false" #Debug
                         n=0
                         while [[ $n -lt "${PphraseNum}" ]]; do
+                        	printf "%s" "${SeedWord}"
                                 w=0
                                 while [[ $w -lt "${PphraseWords}" ]]; do
                                         printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"

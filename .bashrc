@@ -222,28 +222,35 @@ genphrase() {
 	
 	# If -S is selected, print out the documentation for word seeding
 	if [ "${PphraseSeedDoc}" = "True" ]; then
-        	printf "%s\n"   "======================================================================" \
-                	        "genphrase and the -s option: Why you would want to seed your own word?" \
-                	        "======================================================================" \
-                	        "One method for effectively using passphrases is to choose at least two random words" \
-                	        "and to seed those two words with a task specific word.  So let's take two words:" \
-                	        "---" "pings genre" "---" \
-                	        "Now if we capitalise both words to get CamelCasing, we meet the usual upper and lowercase password requirements," \
-                	        "as well as very likely meeting the password length requirement: 'PingsGenre'" ""\
-                	        "So then we add a task specific word: Let's say this passphrase is for your online banking," \
-                	        "so we add the word 'bank' into the mix and get 'PingsGenrebank'" "" \
-                	        "For a social network login, you might use e.g. 'PingsGenreFBook' and so on." \
-                	        "The two random words are the same, but the task-specific word is the key." \
-                	        "" "Problem is, this isn't good enough.  The reality is that CorrectHorseBatteryStaple isn't that secure." \
-                	        "So we need to randomise those words, introduce some special characters," \
-                	        "and some numbers.  'PingsGenrebank' becomes 'Pings{B4nk}Genre'" \
-                	        "and likewise 'PingsGenreFBook' becomes '(FB0ok)GenrePings'." \
-                	        "" "So, this is a very easy to remember system which meets most usual password requirements," \
-                	        "and it makes most lame password checkers *cough* pwcheck *cough* happy." \
-                	        "You could also argue that this borders on multi-factor auth i.e. something you are/know/have." \
-                	        "" "genphrase will always put the seeded word in square brackets and will randomise its location in the phrase," \
-                	        "it's over to you to make sure that your seeded word has numerals etc." \
-                	        "Note: You can always use genphrase to generate the base phrase and then manually embellish it to your taste."
+                printf "%s\n"   "======================================================================" \
+                                "genphrase and the -s option: Why you would want to seed your own word?" \
+                                "======================================================================" \
+                                "One method for effectively using passphrases is to choose at least two" \
+                                "random words and to seed those two words with a task specific word." \
+                                "So let's take two words:" \
+                                "---" "pings genre" "---" \
+                                "Now if we capitalise both words to get CamelCasing, we meet the usual"\
+                                "upper and lowercase password requirements, as well as very likely" \
+                                "meeting the password length requirement: 'PingsGenre'" ""\
+                                "So then we add a task specific word: Let's say this passphrase is for" \
+                                "your online banking, so we add the word 'bank' into the mix and get:" \
+                                "'PingsGenrebank'" "" \
+                                "For social networking, you might have 'PingsGenreFBook' and so on." \
+                                "The random words are the same, but the task-specific word is the key." \
+                                "" "Problem is, this isn't good enough.  The reality is that" \
+                                "CorrectHorseBatteryStaple isn't that secure (http://goo.gl/ZGlkfm)." \
+                                "So we need to randomise those words, introduce some special characters," \
+                                "and some numbers.  'PingsGenrebank' becomes 'Pings{B4nk}Genre'" \
+                                "and likewise 'PingsGenreFBook' becomes '(FB0ok)GenrePings'." \
+                                "" "So, this is a very easy to remember system which meets most usual" \
+                                "password requirements, and it makes most lame password checkers happy." \
+                                "You could also argue that this borders on multi-factor auth" \
+                                "i.e. something you are/know/have." \
+                                "" "genphrase will always put the seeded word in square brackets and if" \
+                                "possible it will randomise its location in the phrase, it's over to" \
+                                "you to make sure that your seeded word has numerals etc." "" \
+                                "Note: You can always use genphrase to generate the base phrase and" \
+                                "      then manually embellish it to your taste."
 		return 0
 	fi
 	

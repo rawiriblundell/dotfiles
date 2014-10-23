@@ -297,7 +297,14 @@ genphrase() {
                                 
                                 # Well, I wanted to do it the above way, but Solaris got upset
                                 # So instead we have to do it like some kind of barbarians
-                                printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" | shuf | tr -d "\n"
+                                
+                                # First let's create an array of shuffled words with their first char uppercased
+                                DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
+                                        do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
+                                        OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
+                                # Now we print out the seed word and the array, shuffle them, 
+                                # and remove the the newlines, leaving a passphrase
+                                printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
                                 printf "\n"
 				let ++n
 			done | column
@@ -305,7 +312,10 @@ genphrase() {
 #			echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
-                                printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" | shuf | tr -d "\n"
+                                DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
+                                        do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
+                                        OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
+                                printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
                                 printf "\n"
 				let ++n
 			done

@@ -289,23 +289,24 @@ genphrase() {
 				#read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
 				
 				# Create an array with the seeded word in place if it's used
-				PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
+				#PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
 				# Read the array in and shuffle it
-                                read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
+                                #read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
                                 # Now implement CamelCasing on the non-seed words and print the result
-                                printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
+                                #printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
+                                
+                                # Well, I wanted to do it the above way, but Solaris got upset
+                                # So instead we have to do it like some kind of barbarians
+                                printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" | shuf | tr -d "\n"
+                                printf "\n"
 				let ++n
 			done | column
 		else
 #			echo "Columns false" #Debug
 			n=0
 			while [[ $n -lt "${PphraseNum}" ]]; do
-				# Create an array with the seeded word in place if it's used
-				PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
-				# Read the array in and shuffle it
-                                read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
-                                # Now implement CamelCasing on the non-seed words and print the result
-                                printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
+                                printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict)" | shuf | tr -d "\n"
+                                printf "\n"
 				let ++n
 			done
 		fi

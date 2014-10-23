@@ -140,7 +140,7 @@ genpasswd() {
         			else
                     			OpenSSL=openssl
                 		fi
-				PwdSalted=$(openssl passwd -1 -salt "${Salt}" "${Pwd}")
+				PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
 			fi
 
 			# Now let's print out the result.  People can always awk/cut to get just the crypted password

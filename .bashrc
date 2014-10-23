@@ -531,29 +531,29 @@ wclip() {
 }
 
 # Enable X-Windows for cygwin, finds and assigns an available display env variable.
-# This will need to be removed for old versions of bash e.g. 2.03, which can't handle the math.
-# Attempting to version check around that hasn't worked.
-
 # To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
 
 # First we check if we're on Solaris, because Solaris doesn't like "uname -o"
 if [ "$(uname)" != "SunOS" ] ; then
-	if [ "$(uname -o)" = "Cygwin" ] ; then
-		myx() {
-		a=/tmp/.X11-unix/X
-		for ((i=351;i<500;i++)) ; do
-		b=$a$i
-		if [[ ! -S $b ]] ; then
-			c=$i
-			break
-		fi
-		done
-		export DISPLAY=:$c
-		echo export DISPLAY=:$c
-		X :$c -multiwindow >& /dev/null &
-		xterm -fn 9x15bold -bg black -fg orange -sb &
-		}
-	fi
+        if [ "$(uname -o)" = "Cygwin" ] ; then
+                myx() {
+                        a=/tmp/.X11-unix/X
+                        #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
+                        i=351
+                        while [[ "${i}" -lt 500 ]]; do
+                                b=$a$i
+                                if [[ ! -S $b ]] ; then
+                                        c=$i
+                                        break
+                                fi
+                        i++
+                        done
+                        export DISPLAY=:$c
+                        echo export DISPLAY=:$c
+                        X :$c -multiwindow >& /dev/null &
+                        xterm -fn 9x15bold -bg black -fg orange -sb &
+                }
+        fi
 fi
 
 # Standardise the Command Prompt

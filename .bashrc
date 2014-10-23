@@ -128,6 +128,18 @@ genpasswd() {
 	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$1\$${Salt}')")
 			# Otherwise, we failover to openssl
 			else
+				# Sigh, Solaris you pain in the ass
+                		if [ ! "$(command -v openssl &>/dev/null)" ]; then
+                    			if [ -f /usr/local/ssl/bin/openssl ]; then
+                        			OpenSSL=/usr/local/ssl/bin/openssl
+                    			elif [ -f /opt/csw/bin/openssl ]; then
+                        			OpenSSL=/opt/csw/bin/openssl
+                    			elif [ -f /usr/sfw/bin/openssl ]; then
+                        			OpenSSL=/usr/sfw/bin/openssl
+                    			fi
+        			else
+                    			OpenSSL=openssl
+                		fi
 				PwdSalted=$(openssl passwd -1 -salt "${Salt}" "${Pwd}")
 			fi
 

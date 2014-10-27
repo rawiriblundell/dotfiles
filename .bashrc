@@ -142,6 +142,9 @@ genpasswd() {
 			# We check for python and if it's there, we use it
 			if command -v python &>/dev/null; then
 	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
+	        	# Next we failover to perl
+                        elif command -v perl &>/dev/null; then
+                                PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
 			# Otherwise, we failover to openssl
 			elif ! command -v openssl &>/dev/null; then
 				# Sigh, Solaris you pain in the ass

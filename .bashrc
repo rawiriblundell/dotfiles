@@ -73,6 +73,8 @@ genpasswd() {
 	PwdSet="[:alnum:]"
 	PwdCols="false"
 	PwdKrypt="false"
+	PwdKryptMode=1
+	KryptMethod=
 
 	while getopts ":Cc:n:hkSs" Flags; do
 		case "${Flags}" in
@@ -83,14 +85,17 @@ genpasswd() {
 				"-C [attempt to output into columns (Default:off)]" \
 				"-c [number of characters (Default:${PwdChars})]" \
                                 "-h [help]" \
-				"-k [krypt, generates a crypted/salted password for tools like usermod -p and chpasswd -e" \
-				"    use of -C [columns] will be disallowed when this mode is enabled.  (Default:off)]" \
+				"-k [krypt, generates a crypted/salted password for tools like 'usermod -p' and 'chpasswd -e'" \
+				"    use of -C [columns] will be disallowed when this mode is enabled." \
+				"    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
+				"    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
 				"-n [number of passwords (Default:${PwdNum})]" \
 				"-s [strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
 				"-S [stronger mode, complete mix of characters (Default:off)]" \
 				"Note: Broken Pipe errors, (older bash versions) can be ignored"
 				return 0;;
-			k)	PwdKrypt="true";;
+			k)	PwdKrypt="true"
+				PwdKryptMode="${OPTARG}";;
                         n)      PwdNum="${OPTARG}";;
                                 # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
                                 # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
@@ -115,6 +120,17 @@ genpasswd() {
 			return 1
 		fi
 		
+		# Now figure out the crypt mode
+		# 1 = MD5
+		# 5 = SHA256
+		# 6 = SHA512
+		# We don't want to mess around with other options as it requires more error handling than I can be bothered with
+		# If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
+		if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
+			# Otherwise, default to MD5.  This catches 
+			PwdKryptMode=1
+		fi
+		
 		# Let's make sure we get the right number of passwords
 		n=0
 		while [ "${n}" -lt "${PwdNum}" ]; do
@@ -124,23 +140,24 @@ genpasswd() {
 			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
 
 			# We check for python and if it's there, we use it
-			if [ "$(command -v python &>/dev/null)" ]; then
-	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$1\$${Salt}')")
+			if command -v python &>/dev/null; then
+	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
 			# Otherwise, we failover to openssl
-			else
+			elif ! command -v openssl &>/dev/null; then
 				# Sigh, Solaris you pain in the ass
-                		if [ ! "$(command -v openssl &>/dev/null)" ]; then
-                    			if [ -f /usr/local/ssl/bin/openssl ]; then
-                        			OpenSSL=/usr/local/ssl/bin/openssl
-                    			elif [ -f /opt/csw/bin/openssl ]; then
-                        			OpenSSL=/opt/csw/bin/openssl
-                    			elif [ -f /usr/sfw/bin/openssl ]; then
-                        			OpenSSL=/usr/sfw/bin/openssl
-                    			fi
-        			else
+                		if [ -f /usr/local/ssl/bin/openssl ]; then
+                        		OpenSSL=/usr/local/ssl/bin/openssl
+                    		elif [ -f /opt/csw/bin/openssl ]; then
+                        		OpenSSL=/opt/csw/bin/openssl
+                    		elif [ -f /usr/sfw/bin/openssl ]; then
+                        		OpenSSL=/usr/sfw/bin/openssl
+                    		else
                     			OpenSSL=openssl
                 		fi
+                		
+                		# We can only generate an MD5 password using OpenSSL
 				PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
+				KryptMethod=OpenSSL
 			fi
 
 			# Now let's print out the result.  People can always awk/cut to get just the crypted password
@@ -150,6 +167,10 @@ genpasswd() {
 			# And we tick the counter up by one increment
 			((n = n + 1))
 		done
+		# In case OpenSSL is used, give an FYI before we exit out
+		if [ "${KryptMethod}" = "OpenSSL" ]; then
+			printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
+		fi
 		return 0
 	fi
 

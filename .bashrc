@@ -192,6 +192,66 @@ genpasswd() {
 	#echo "PwdNum is: ${PwdNum}"
 }
 
+# A separate password encryption tool, so that you can encrypt passwords
+# of your own choice, rather than depending on something that genpasswd has spat out
+cryptpasswd() {
+        # Declare OPTIND as local for safety
+        local OPTIND
+
+        # Default the vars
+        Pwd="${1}"
+        Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
+        PwdKryptMode="${2}"
+
+        if [ "${1}" = "" ]; then
+                printf "%s\n" "cryptpasswd - a tool for hashing passwords" \
+                              "Usage: cryptpasswd [password to hash] [1|5|6]" \
+                              "    Crypt method can be set using '1' (MD5, default), '5' (SHA256) or '6' (SHA512)" \
+                              "    Any other arguments will default to MD5."
+                return 0
+        fi
+
+        # We don't want to mess around with other options as it requires more error handling than I can be bothered with
+        # If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
+        if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
+                # Otherwise, default to MD5.
+                PwdKryptMode=1
+        fi
+
+        # We check for python and if it's there, we use it
+        if command -v python &>/dev/null; then
+                PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
+        # Next we failover to perl
+        elif command -v perl &>/dev/null; then
+                PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
+        # Otherwise, we failover to openssl
+        elif ! command -v openssl &>/dev/null; then
+                # Sigh, Solaris you pain in the ass
+                if [ -f /usr/local/ssl/bin/openssl ]; then
+                        OpenSSL=/usr/local/ssl/bin/openssl
+                elif [ -f /opt/csw/bin/openssl ]; then
+                        OpenSSL=/opt/csw/bin/openssl
+                elif [ -f /usr/sfw/bin/openssl ]; then
+                        OpenSSL=/usr/sfw/bin/openssl
+                else
+                        OpenSSL=openssl
+                fi
+
+                # We can only generate an MD5 password using OpenSSL
+                PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
+                KryptMethod=OpenSSL
+        fi
+
+        # Now let's print out the result.  People can always awk/cut to get just the crypted password
+        # This should probably be tee'd off to a dotfile so that they can get the original password too
+        printf "%s\n" "Original: ${Pwd} Crypted: ${PwdSalted}"
+
+        # In case OpenSSL is used, give an FYI before we exit out
+        if [ "${KryptMethod}" = "OpenSSL" ]; then
+                printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
+        fi
+}
+
 # A passphrase generator, because: why not?
 # Note: This will only generate XKCD "Correct Horse Battery Staple" level phrases, which actually aren't that secure
 # without some character randomisation.

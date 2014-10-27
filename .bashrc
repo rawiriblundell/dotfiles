@@ -76,7 +76,7 @@ genpasswd() {
 	PwdKryptMode=1
 	KryptMethod=
 
-	while getopts ":Cc:n:hkSs" Flags; do
+	while getopts ":Cc:n:hk:Ss" Flags; do
 		case "${Flags}" in
 			C)	PwdCols="true";;
 			c)	PwdChars="${OPTARG}";;

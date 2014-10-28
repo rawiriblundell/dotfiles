@@ -127,7 +127,7 @@ genpasswd() {
 		# We don't want to mess around with other options as it requires more error handling than I can be bothered with
 		# If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
 		if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
-			# Otherwise, default to MD5.  This catches 
+			# Otherwise, default to MD5. 
 			PwdKryptMode=1
 		fi
 		

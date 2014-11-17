@@ -509,7 +509,7 @@ pwcheck () {
 
 		while [ "${PWCheck}" = "true" ]; do
 			# Start cycling through each complexity requirement	
-			if [[ "${#PwdIn}" -lt "8" ]]; then
+			if [[ "${PwdIn}" -lt "8" ]]; then
 				Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped."
 				CredCount=0
 				PWCheck="false" # Instant failure for character count

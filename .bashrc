@@ -85,6 +85,7 @@ genpasswd() {
 			D)	ReqSet="${ReqSet}[0-9]+"
 				PwdCheck="true";;
 			h)	printf "%s\n" "genpasswd - a poor sysadmin's pwgen" \
+				"" "Usage: genpasswd [options]" "" \
 				"Optional arguments:" \
 				"-C [Attempt to output into columns (Default:off)]" \
 				"-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
@@ -100,7 +101,7 @@ genpasswd() {
 				"-S [Stronger mode, complete mix of characters (Default:off)]" \
 				"-U [Require at least one uppercase character (Default:off)]" \
 				"-Y [Require at least one special character (Default:off)]" \
-				"Note: Broken Pipe errors, (older bash versions) can be ignored"
+				"" "Note: Broken Pipe errors, (older bash versions) can be ignored"
 				return 0;;
 			k)	PwdKrypt="true"
 				PwdKryptMode="${OPTARG}";;
@@ -129,7 +130,7 @@ genpasswd() {
 	
 	# We need to check that the character length is more than 4 to protect against
 	# infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
-	if [[ "${PwdChars}" -le 4 ]]; then
+	if [[ "${PwdChars}" -lt 4 ]]; then
 		printf "%s\n" "ERROR: Password length must be greater than four characters."
 		return 1
 	fi
@@ -201,45 +202,38 @@ genpasswd() {
 
 	# Otherwise, let's just do plain old passwords.  This is considerably more straightforward
 	# First, if the character check variable is true, then we go through that process
-	if [[ "{PwdCheck}" = "true" ]]; then
+	if [[ "${PwdCheck}" = "true" ]]; then
 		# We handle for no columns, running a loop until the required number of
 		# passwords is generated
 		if [[ "${PwdCols}" = "false" ]]; then
 			n=0
 			while [[ "${n}" -lt "${PwdNum}" ]]; do
 				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-				if [[ -n "${ReqSet}" ]]; then 
-					while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
-						Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-					done
-                                	printf "%s\n" "${Pwd}"
-	                                ((n = n + 1))
-				else
-					# We leave this in as a failover
-					printf "%s\n" "${Pwd}"
-					((n = n + 1))
-				fi
+				# Now we run through a loop that will grep out generated passwords that match
+				# the required character classes.  For portability, we shunt the lot to /dev/null
+				# Because Solaris egrep doesn't behave with -q or -s as it should.
+				while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+					Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+				done
+				# For each matched password, print it out, iterate and loop again.
+                               	printf "%s\n" "${Pwd}"
+	                       ((n = n + 1))
 			done
 		# Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
 		elif [[ "${PwdCols}" = "true" ]]; then
 			n=0
 	                while [[ "${n}" -lt "${PwdNum}" ]]; do
         	                Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-                	        if [[ -n "${ReqSet}" ]]; then
-                        	        while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
-                                	        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-	                                done
-        	                        printf "%s\n" "${Pwd}"
-                	                ((n = n + 1))
-                        	else
-	                                printf "%s\n" "${Pwd}"
-        	                        ((n = n + 1))
-                	        fi
+                        	while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+                                        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+	                        done
+        	                printf "%s\n" "${Pwd}"
+                	        ((n = n + 1))
 	                done | column 2> /dev/null
 		fi
 	# Otherwise if the character check variable is not true, we use the
-	# absolute simplest bit of code in this function.  This is for performance reasons.
-	# With no checks, this is blazing fast.  Using the while loops as above tends to churn a bit.
+	# absolute simplest bit of code in this function.  This is here for performance reasons.
+	# With no checks, this is blazing fast.  Using the while loop as above tends to churn a bit.
 	else
 		if [[ "${PwdCols}" = "false" ]]; then
 			tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null

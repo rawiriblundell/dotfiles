@@ -75,32 +75,49 @@ genpasswd() {
 	PwdKrypt="false"
 	PwdKryptMode=1
 	KryptMethod=
+	ReqDigit="false"
+	ReqLower="false"
+	ReqUpper="false"
+	ReqSymbol="false"
+	ReqSet=
 
-	while getopts ":Cc:n:hk:Ss" Flags; do
+	while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
 		case "${Flags}" in
 			C)	PwdCols="true";;
 			c)	PwdChars="${OPTARG}";;
+			D)	ReqDigit="true"
+				ReqSet="${ReqSet}[0-9]+";;
 			h)	printf "%s\n" "genpasswd - a poor sysadmin's pwgen" \
 				"Optional arguments:" \
-				"-C [attempt to output into columns (Default:off)]" \
-				"-c [number of characters (Default:${PwdChars})]" \
-                                "-h [help]" \
-				"-k [krypt, generates a crypted/salted password for tools like 'usermod -p' and 'chpasswd -e'" \
+				"-C [Attempt to output into columns (Default:off)]" \
+				"-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
+				"-D [Require at least one digit (Default:off)]" \
+                                "-h [Help]" \
+				"-k [Krypt, generates a crypted/salted password for tools like 'usermod -p' and 'chpasswd -e'" \
 				"    use of -C [columns] will be disallowed when this mode is enabled." \
 				"    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
 				"    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
-				"-n [number of passwords (Default:${PwdNum})]" \
-				"-s [strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
-				"-S [stronger mode, complete mix of characters (Default:off)]" \
+				"-L [Require at least one lowercase character (Default:off)]" \
+				"-n [Number of passwords (Default:${PwdNum})]" \
+				"-s [Strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
+				"-S [Stronger mode, complete mix of characters (Default:off)]" \
+				"-U [Require at least one uppercase character (Default:off)]" \
+				"-Y [Require at least one special character (Default:off)]" \
 				"Note: Broken Pipe errors, (older bash versions) can be ignored"
 				return 0;;
 			k)	PwdKrypt="true"
 				PwdKryptMode="${OPTARG}";;
+			L)	ReqLower="true"
+				ReqSet="${ReqSet}[a-z]+";;
                         n)      PwdNum="${OPTARG}";;
                                 # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
                                 # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
                         s)      PwdSet="[:alnum:]#$&+/<}^%";;
                         S)      PwdSet="[:graph:]";;
+			U)	ReqUpper="true"
+				ReqSet="${ReqSet}[A-Z]+";;
+			Y)	ReqSymbol="true"
+				ReqSet="${ReqSet}[#$&\+/<}^%]+";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;
 			
@@ -108,9 +125,16 @@ genpasswd() {
 				return 1;;
 		esac
 	done
+
+        # Now generate the password(s)
+        # Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
 	
-	# Now generate the password(s)
-	# Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
+	# We need to check that the character length is more than 4 to protect against
+	# infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
+	if [[ "${PwdChars}" -le 4 ]]; then
+		printf "%s\n" "ERROR: Password length must be greater than four characters."
+		return 1
+	fi
 
 	# Let's start with checking for the Krypt option
 	if [ "${PwdKrypt}" = "true" ]; then
@@ -127,7 +151,7 @@ genpasswd() {
 		# We don't want to mess around with other options as it requires more error handling than I can be bothered with
 		# If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
 		if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
-			# Otherwise, default to MD5. 
+			# Otherwise, default to MD5.  This catches 
 			PwdKryptMode=1
 		fi
 		
@@ -142,9 +166,9 @@ genpasswd() {
 			# We check for python and if it's there, we use it
 			if command -v python &>/dev/null; then
 	        		PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
-	        	# Next we failover to perl
-                        elif command -v perl &>/dev/null; then
-                                PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
+			# Next we failover to perl
+			elif command -v perl &>/dev/null; then
+				PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
 			# Otherwise, we failover to openssl
 			elif ! command -v openssl &>/dev/null; then
 				# Sigh, Solaris you pain in the ass
@@ -180,7 +204,14 @@ genpasswd() {
 	# Otherwise, let's just do plain old passwords.  This is considerably more straightforward
 	# First, if the columns variable is false, don't pipe the output to 'column'
 	if [ "${PwdCols}" = "false" ]; then
-		tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
+		n=0
+		while [ "${n}" -lt "${PwdNum}" ]; do
+			Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+			while ! printf "%s\n" "${GenPass}" | egrep "${ReqSet}"; do
+				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+			done
+			((n = n + 1))
+		done
 	# Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
 	elif [ "${PwdCols}" = "true" ]; then
 		tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null	
@@ -198,49 +229,49 @@ cryptpasswd() {
         # Declare OPTIND as local for safety
         local OPTIND
 
-        # Default the vars
+	# Default the vars
         Pwd="${1}"
         Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
-        PwdKryptMode="${2}"
-
-        if [ "${1}" = "" ]; then
-                printf "%s\n" "cryptpasswd - a tool for hashing passwords" \
+	PwdKryptMode="${2}"
+	
+	if [ "${1}" = "" ]; then
+		printf "%s\n" "cryptpasswd - a tool for hashing passwords" \
                               "Usage: cryptpasswd [password to hash] [1|5|6]" \
                               "    Crypt method can be set using '1' (MD5, default), '5' (SHA256) or '6' (SHA512)" \
                               "    Any other arguments will default to MD5."
-                return 0
-        fi
+		return 0
+	fi
 
         # We don't want to mess around with other options as it requires more error handling than I can be bothered with
         # If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
         if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
-                # Otherwise, default to MD5.
+	        # Otherwise, default to MD5.
                 PwdKryptMode=1
         fi
 
         # We check for python and if it's there, we use it
         if command -v python &>/dev/null; then
-                PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
+        	PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
         # Next we failover to perl
         elif command -v perl &>/dev/null; then
-                PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
+        	PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
         # Otherwise, we failover to openssl
         elif ! command -v openssl &>/dev/null; then
-                # Sigh, Solaris you pain in the ass
+        	# Sigh, Solaris you pain in the ass
                 if [ -f /usr/local/ssl/bin/openssl ]; then
-                        OpenSSL=/usr/local/ssl/bin/openssl
+                	OpenSSL=/usr/local/ssl/bin/openssl
                 elif [ -f /opt/csw/bin/openssl ]; then
-                        OpenSSL=/opt/csw/bin/openssl
+                	OpenSSL=/opt/csw/bin/openssl
                 elif [ -f /usr/sfw/bin/openssl ]; then
-                        OpenSSL=/usr/sfw/bin/openssl
+                	OpenSSL=/usr/sfw/bin/openssl
                 else
-                        OpenSSL=openssl
+                	OpenSSL=openssl
                 fi
 
                 # We can only generate an MD5 password using OpenSSL
-                PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
+              	PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
                 KryptMethod=OpenSSL
-        fi
+	fi
 
         # Now let's print out the result.  People can always awk/cut to get just the crypted password
         # This should probably be tee'd off to a dotfile so that they can get the original password too
@@ -248,7 +279,7 @@ cryptpasswd() {
 
         # In case OpenSSL is used, give an FYI before we exit out
         if [ "${KryptMethod}" = "OpenSSL" ]; then
-                printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
+        	printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
         fi
 }
 
@@ -299,7 +330,7 @@ genphrase() {
 				"-C [attempt to output into columns (Default:off)]" \
 				"-h [help]" \
 				"-n [number of passphrases to generate (Default:${PphraseNum})]" \
-				"-s [seed your own word.  Use ${0##*/} -S to read about this option.]" \
+				"-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \
 				"-S [explanation for the word seeding option: -s]" \
 				"-w [number of random words to use (Default:${PphraseWords})]"
 				return 0;;
@@ -509,7 +540,7 @@ pwcheck () {
 
 		while [ "${PWCheck}" = "true" ]; do
 			# Start cycling through each complexity requirement	
-			if [[ "${PwdIn}" -lt "8" ]]; then
+			if [[ "${#PwdIn}" -lt "8" ]]; then
 				Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped."
 				CredCount=0
 				PWCheck="false" # Instant failure for character count
@@ -639,6 +670,23 @@ if [ "$(uname)" != "SunOS" ] ; then
                 }
         fi
 fi
+
+# Provide a faster-than-scp file transfer function
+# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
+ncp() {
+	FileFull=$1
+	RemoteHost=$2
+
+	FileDir=$(dirname "${FileFull}")
+	FileName=$(basename "${FileFull}")
+	LocalHost=$(hostname)
+
+	ZipTool=pigz
+	NCPort=8888
+
+	tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
+	ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
+}
 
 # Standardise the Command Prompt
 # First, let's map some colours, uncomment to use:

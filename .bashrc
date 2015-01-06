@@ -76,12 +76,14 @@ genpasswd() {
 	PwdKryptMode=1
 	KryptMethod=
 	ReqSet=
+	PwdCheck="false"
 
 	while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
 		case "${Flags}" in
 			C)	PwdCols="true";;
 			c)	PwdChars="${OPTARG}";;
-			D)	ReqSet="${ReqSet}[0-9]+";;
+			D)	ReqSet="${ReqSet}[0-9]+"
+				PwdCheck="true";;
 			h)	printf "%s\n" "genpasswd - a poor sysadmin's pwgen" \
 				"Optional arguments:" \
 				"-C [Attempt to output into columns (Default:off)]" \
@@ -102,15 +104,18 @@ genpasswd() {
 				return 0;;
 			k)	PwdKrypt="true"
 				PwdKryptMode="${OPTARG}";;
-			L)	ReqSet="${ReqSet}[a-z]+";;
+			L)	ReqSet="${ReqSet}[a-z]+"
+				PwdCheck="true";;
                         n)      PwdNum="${OPTARG}";;
                                 # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
                                 # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
                         s)      PwdSet="[:alnum:]#$&+/<}^%";;
                         S)      PwdSet="[:graph:]";;
-			U)	ReqSet="${ReqSet}[A-Z]+";;
+			U)	ReqSet="${ReqSet}[A-Z]+"
+				PwdCheck="true";;
 			Y)	ReqSet="${ReqSet}[#$&\+/<}^%]+"
-				PwdSet="[:alnum:]#$&+/<}^%";;
+				PwdSet="[:alnum:]#$&+/<}^%"
+				PwdCheck="true";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;
 			
@@ -195,40 +200,54 @@ genpasswd() {
 	fi
 
 	# Otherwise, let's just do plain old passwords.  This is considerably more straightforward
-	# First, if the columns variable is false, don't pipe the output to 'column'
-	if [ "${PwdCols}" = "false" ]; then
-		n=0
-		while [ "${n}" -lt "${PwdNum}" ]; do
-			Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-			if [ -n "${ReqSet}" ]; then 
-				while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
-					Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-				done
-                                printf "%s\n" "${Pwd}"
-                                ((n = n + 1))
-			else
-				printf "%s\n" "${Pwd}"
-				((n = n + 1))
-			fi
-		done
-	# Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
-	elif [ "${PwdCols}" = "true" ]; then
-		n=0
-                while [ "${n}" -lt "${PwdNum}" ]; do
-                        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-                        if [ -n "${ReqSet}" ]; then
-                                while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
-                                        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-                                done
-                                printf "%s\n" "${Pwd}"
-                                ((n = n + 1))
-                        else
-                                printf "%s\n" "${Pwd}"
-                                ((n = n + 1))
-                        fi
-                done | column 2> /dev/null
+	# First, if the character check variable is true, then we go through that process
+	if [[ "{PwdCheck}" = "true" ]]; then
+		# We handle for no columns, running a loop until the required number of
+		# passwords is generated
+		if [[ "${PwdCols}" = "false" ]]; then
+			n=0
+			while [[ "${n}" -lt "${PwdNum}" ]]; do
+				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+				if [[ -n "${ReqSet}" ]]; then 
+					while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
+						Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+					done
+                                	printf "%s\n" "${Pwd}"
+	                                ((n = n + 1))
+				else
+					# We leave this in as a failover
+					printf "%s\n" "${Pwd}"
+					((n = n + 1))
+				fi
+			done
+		# Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
+		elif [[ "${PwdCols}" = "true" ]]; then
+			n=0
+	                while [[ "${n}" -lt "${PwdNum}" ]]; do
+        	                Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+                	        if [[ -n "${ReqSet}" ]]; then
+                        	        while ! printf "%s\n" "${Pwd}" | egrep -q "${ReqSet}"; do
+                                	        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+	                                done
+        	                        printf "%s\n" "${Pwd}"
+                	                ((n = n + 1))
+                        	else
+	                                printf "%s\n" "${Pwd}"
+        	                        ((n = n + 1))
+                	        fi
+	                done | column 2> /dev/null
+		fi
+	# Otherwise if the character check variable is not true, we use the
+	# absolute simplest bit of code in this function.  This is for performance reasons.
+	# With no checks, this is blazing fast.  Using the while loops as above tends to churn a bit.
+	else
+		if [[ "${PwdCols}" = "false" ]]; then
+			tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
+		elif [[ "${PwdCols}" = "true" ]]; then
+			tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null
+		fi
 	fi
-
+	
 	# Uncomment for debug
 	#echo "ReqSet is: ${ReqSet}"
 	#echo "PwdSet is: ${PwdSet}" 

@@ -110,12 +110,14 @@ genpasswd() {
                         n)      PwdNum="${OPTARG}";;
                                 # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
                                 # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
-                        s)      PwdSet="[:alnum:]#$&+/<}^%";;
+                        s)      PwdSet="[:alnum:]#$&+/<}^%@";;
                         S)      PwdSet="[:graph:]";;
 			U)	ReqSet="${ReqSet}[A-Z]+"
 				PwdCheck="true";;
-			Y)	ReqSet="${ReqSet}[#$&\+/<}^%]+"
-				PwdSet="[:alnum:]#$&+/<}^%"
+				# If a special character is required, we feed in more special chars than in -s
+				# This improves performance a bit by better guaranteeing seeding and matching
+			Y)	ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
+				PwdSet="[:alnum:]#$&+/<}^%?@!"
 				PwdCheck="true";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;
@@ -136,9 +138,9 @@ genpasswd() {
 	fi
 
 	# Let's start with checking for the Krypt option
-	if [ "${PwdKrypt}" = "true" ]; then
+	if [[ "${PwdKrypt}" = "true" ]]; then
 		# Disallow columns
-		if [ "${PwdCols}" = "true" ]; then
+		if [[ "${PwdCols}" = "true" ]]; then
 			printf "%s\n" "ERROR: Use of -C and -k together is disallowed.  Please choose one, but not both."
 			return 1
 		fi
@@ -156,11 +158,16 @@ genpasswd() {
 		
 		# Let's make sure we get the right number of passwords
 		n=0
-		while [ "${n}" -lt "${PwdNum}" ]; do
+		while [[ "${n}" -lt "${PwdNum}" ]]; do
 			# And let's get these variables figured out.  Needs to be inside the loop
 			# to correctly pickup other arg values and to rotate properly
 		        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1) 2> /dev/null
 			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
+			
+			# Now we ensure that Pwd matches any character requirements
+			while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+			done
 
 			# We check for python and if it's there, we use it
 			if command -v python &>/dev/null; then

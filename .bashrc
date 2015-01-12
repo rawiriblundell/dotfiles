@@ -178,16 +178,14 @@ genpasswd() {
 			# Otherwise, we failover to openssl
 			elif ! command -v openssl &>/dev/null; then
 				# Sigh, Solaris you pain in the ass
-                		if [ -f /usr/local/ssl/bin/openssl ]; then
-                        		OpenSSL=/usr/local/ssl/bin/openssl
-                    		elif [ -f /opt/csw/bin/openssl ]; then
-                        		OpenSSL=/opt/csw/bin/openssl
-                    		elif [ -f /usr/sfw/bin/openssl ]; then
-                        		OpenSSL=/usr/sfw/bin/openssl
-                    		else
-                    			OpenSSL=openssl
-                		fi
-                		
+                                for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
+i                                       if [ -f "${d}/openssl" ]; then
+                                                OpenSSL="${d}/openssl"
+                                        else
+                                                OpenSSL=openssl
+                                        fi
+                                done
+
                 		# We can only generate an MD5 password using OpenSSL
 				PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
 				KryptMethod=OpenSSL

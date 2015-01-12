@@ -179,7 +179,7 @@ genpasswd() {
 			elif ! command -v openssl &>/dev/null; then
 				# Sigh, Solaris you pain in the ass
                                 for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
-i                                       if [ -f "${d}/openssl" ]; then
+                                       if [ -f "${d}/openssl" ]; then
                                                 OpenSSL="${d}/openssl"
                                         else
                                                 OpenSSL=openssl

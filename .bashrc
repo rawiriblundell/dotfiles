@@ -77,6 +77,8 @@ genpasswd() {
 	KryptMethod=
 	ReqSet=
 	PwdCheck="false"
+	SpecialChar="false"
+	InputChars=(\! \@ \# \$ \% \^ \( \) \_ \+ \? \> \< \~)
 
 	while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
 		case "${Flags}" in
@@ -116,8 +118,9 @@ genpasswd() {
 				PwdCheck="true";;
 				# If a special character is required, we feed in more special chars than in -s
 				# This improves performance a bit by better guaranteeing seeding and matching
-			Y)	ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
-				PwdSet="[:alnum:]#$&+/<}^%?@!"
+			Y)	#ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
+				SpecialChar="true"
+				PwdSet="[:alnum:]"
 				PwdCheck="true";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;
@@ -127,14 +130,24 @@ genpasswd() {
 		esac
 	done
 
-        # Now generate the password(s)
-        # Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
-	
 	# We need to check that the character length is more than 4 to protect against
 	# infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
 	if [[ "${PwdChars}" -lt 4 ]]; then
 		printf "%s\n" "ERROR: Password length must be greater than four characters."
 		return 1
+	fi
+
+        # Now generate the password(s)
+        # Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
+
+	if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
+        # If these two are false, there's no point doing further checks.  We just slam through
+	# the absolute simplest bit of code in this function.  This is here for performance reasons.
+		if [[ "${PwdCols}" = "false" ]]; then
+                        tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
+                elif [[ "${PwdCols}" = "true" ]]; then
+                        tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null
+                fi
 	fi
 
 	# Let's start with checking for the Krypt option
@@ -221,7 +234,22 @@ genpasswd() {
 					Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
 				done
 				# For each matched password, print it out, iterate and loop again.
-                               	printf "%s\n" "${Pwd}"
+                               	if [[ "${SpecialChar}" = "true" ]]; then
+					# Generate a random element number to select from the special characters array
+					Shuffle=$((RANDOM % ${#InputChars[@]}))
+					# Using the above, get the randomly selected character from the array
+					PwdSeed=${InputChars[*]:$Shuffle:1}
+					# Choose a random location within the max password length in which to insert it
+					SeedLoc=$((RANDOM % ${#Pwd}))
+					# Calculate the password length minus 1, as we need to shorten the password
+					((PwdLen = ${#Pwd} - 1))
+					# Shorten the password in order to make space for the inserted character
+					Pwd="${Pwd:0:$PwdLen}"
+					# Print out the password, then use sed to insert it into the preselected place
+					printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
+				else
+					printf "%s\n" "${Pwd}"
+				fi
 	                       ((n = n + 1))
 			done
 		# Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
@@ -232,18 +260,19 @@ genpasswd() {
                         	while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
                                         Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
 	                        done
-        	                printf "%s\n" "${Pwd}"
+                                if [[ "${SpecialChar}" = "true" ]]; then
+                                        Shuffle=$((RANDOM % ${#InputChars[@]}))
+                                        PwdSeed=${InputChars[*]:$Shuffle:1}
+                                        SeedLoc=$((RANDOM % ${#Pwd}))
+                                        ((PwdLen = ${#Pwd} - 1))
+                                        Pwd="${Pwd:0:$PwdLen}"
+                                        printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
+                                else
+                                        printf "%s\n" "${Pwd}"
+                                fi
+
                 	        ((n = n + 1))
 	                done | column 2> /dev/null
-		fi
-	# Otherwise if the character check variable is not true, we use the
-	# absolute simplest bit of code in this function.  This is here for performance reasons.
-	# With no checks, this is blazing fast.  Using the while loop as above tends to churn a bit.
-	else
-		if [[ "${PwdCols}" = "false" ]]; then
-			tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
-		elif [[ "${PwdCols}" = "true" ]]; then
-			tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null
 		fi
 	fi
 	

@@ -139,9 +139,9 @@ genpasswd() {
         # Now generate the password(s)
         # Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
 
-	if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
         # If these two are false, there's no point doing further checks.  We just slam through
 	# the absolute simplest bit of code in this function.  This is here for performance reasons.
+	if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
 		if [[ "${PwdCols}" = "false" ]]; then
                         tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
                 elif [[ "${PwdCols}" = "true" ]]; then
@@ -269,7 +269,6 @@ genpasswd() {
                                 else
                                         printf "%s\n" "${Pwd}"
                                 fi
-
                 	        ((n = n + 1))
 	                done | column 2> /dev/null
 		fi

@@ -120,7 +120,6 @@ genpasswd() {
 				# This improves performance a bit by better guaranteeing seeding and matching
 			Y)	#ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
 				SpecialChar="true"
-				PwdSet="[:alnum:]"
 				PwdCheck="true";;
 			\?)	echo "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
 				return 1;;

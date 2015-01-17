@@ -180,6 +180,16 @@ genpasswd() {
 			while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
 				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
 			done
+			
+                        # If -Y is set, we need to mix in a special character
+                        if [[ "${SpecialChar}" = "true" ]]; then
+                                Shuffle=$((RANDOM % ${#InputChars[@]}))
+                                PwdSeed=${InputChars[*]:$Shuffle:1}
+                                SeedLoc=$((RANDOM % ${#Pwd}))
+                                ((PwdLen = ${#Pwd} - 1))
+                                Pwd="${Pwd:0:$PwdLen}"
+                                Pwd=$(printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
+                        fi
 
 			# We check for python and if it's there, we use it
 			if command -v python &>/dev/null; then
@@ -233,6 +243,7 @@ genpasswd() {
 					Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
 				done
 				# For each matched password, print it out, iterate and loop again.
+				# But first we need to check if -Y is set, and if so, force in a random special character
                                	if [[ "${SpecialChar}" = "true" ]]; then
 					# Generate a random element number to select from the special characters array
 					Shuffle=$((RANDOM % ${#InputChars[@]}))
@@ -244,8 +255,9 @@ genpasswd() {
 					((PwdLen = ${#Pwd} - 1))
 					# Shorten the password in order to make space for the inserted character
 					Pwd="${Pwd:0:$PwdLen}"
-					# Print out the password, then use sed to insert it into the preselected place
+					# Print out the password, then use sed to insert the special character into the preselected place
 					printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
+				# If -Y isn't set, just print it out.  Easy!
 				else
 					printf "%s\n" "${Pwd}"
 				fi
@@ -315,16 +327,14 @@ cryptpasswd() {
         	PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
         # Otherwise, we failover to openssl
         elif ! command -v openssl &>/dev/null; then
-        	# Sigh, Solaris you pain in the ass
-                if [ -f /usr/local/ssl/bin/openssl ]; then
-                	OpenSSL=/usr/local/ssl/bin/openssl
-                elif [ -f /opt/csw/bin/openssl ]; then
-                	OpenSSL=/opt/csw/bin/openssl
-                elif [ -f /usr/sfw/bin/openssl ]; then
-                	OpenSSL=/usr/sfw/bin/openssl
-                else
-                	OpenSSL=openssl
-                fi
+		# Sigh, Solaris you pain in the ass
+                for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
+                        if [ -f "${d}/openssl" ]; then
+                                OpenSSL="${d}/openssl"
+                        else
+                                OpenSSL=openssl
+                        fi
+                done
 
                 # We can only generate an MD5 password using OpenSSL
               	PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")

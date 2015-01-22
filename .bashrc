@@ -176,11 +176,13 @@ genpasswd() {
 		        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1) 2> /dev/null
 			Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
 			
-			# Now we ensure that Pwd matches any character requirements
-			while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-				Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-			done
-			
+                        # Now we ensure that Pwd matches any character requirements
+                        if [[ "${PwdCheck}" = "true" ]]; then
+                                while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+                                        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+                                done
+                        fi
+
                         # If -Y is set, we need to mix in a special character
                         if [[ "${SpecialChar}" = "true" ]]; then
                                 Shuffle=$((RANDOM % ${#InputChars[@]}))

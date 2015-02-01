@@ -771,7 +771,7 @@ txtgrn='\e[0;32m\]' # Green
 #bldblk='\e[1;30m\]' # Black - Bold
 bldred='\e[1;31m\]' # Red
 #bldgrn='\e[1;32m\]' # Green
-#bldylw='\e[1;33m\]' # Yellow
+bldylw='\e[1;33m\]' # Yellow
 #bldblu='\e[1;34m\]' # Blue
 #bldpur='\e[1;35m\]' # Purple
 #bldcyn='\e[1;36m\]' # Cyan
@@ -795,11 +795,23 @@ bldred='\e[1;31m\]' # Red
 txtrst='\e[0m\]'    # Text Reset
 
 # Throw it all together, starting with the portable option 
-if [ "$(uname)" != "Linux" ]; then
-	export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
-else
+if [[ "$(uname)" != "Linux" ]]; then
+	# Check if we're root, and adjust to suit
+	if [[ "${EUID}" -eq 0 ]]; then
+		export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
+	# Otherwise show the usual prompt
+	else
+		export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
+	fi
 # Otherwise use tput as it's more predictable/readable.  Generated via kirsle.net/wizards/ps1.html
-	export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput sgr0)\]\[$(tput setaf 2)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 2)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
+else
+	# Check if we're root, and adjust to suit
+	if [[ "${EUID}" -eq 0 ]]; then
+		export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
+	# Otherwise show the usual prompt
+	else
+		export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 2)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 2)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
+	fi
 fi
 
 # NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount

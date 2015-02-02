@@ -62,6 +62,10 @@ alias la='ls -A'
 alias lh='ls -lah'
 alias l='ls -CF'
 
+# Widen diff out to the width of the console
+# Useful for side by side e.g. diff -y
+alias diff='diff -W $(( $(tput cols) - 2 ))'
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
 	# Declare OPTIND as local for safety

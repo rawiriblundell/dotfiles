@@ -357,6 +357,21 @@ cryptpasswd() {
         fi
 }
 
+# Found code to merge into genphrase at some point.
+function passgen ()
+{
+    about 'generates random password from dictionary words'
+    param 'optional integer length'
+    param 'if unset, defaults to 4'
+    example '$ passgen'
+    example '$ passgen 6'
+    group 'base'
+    local i pass length=${1:-4}
+    pass=$(echo $(for i in $(eval echo "{1..$length}"); do pickfrom /usr/share/dict/words; done))
+    echo "With spaces (easier to memorize): $pass"
+    echo "Without (use this as the password): $(echo $pass | tr -d ' ')"
+}
+
 # A passphrase generator, because: why not?
 # Note: This will only generate XKCD "Correct Horse Battery Staple" level phrases, which actually aren't that secure
 # without some character randomisation.

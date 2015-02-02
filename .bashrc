@@ -803,6 +803,8 @@ if [[ "$(uname)" != "Linux" ]]; then
 	else
 		export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
 	fi
+	# Alias the root PS1 into sudo for edge cases
+	alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 # Otherwise use tput as it's more predictable/readable.  Generated via kirsle.net/wizards/ps1.html
 else
 	# Check if we're root, and adjust to suit
@@ -812,6 +814,8 @@ else
 	else
 		export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput sgr0)\]\[$(tput setaf 2)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 2)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
 	fi
+	# Alias the root PS1 into sudo for edge cases
+	alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
 fi
 
 # NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount

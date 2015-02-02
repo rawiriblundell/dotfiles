@@ -62,9 +62,12 @@ alias la='ls -A'
 alias lh='ls -lah'
 alias l='ls -CF'
 
-# Widen diff out to the width of the console
-# Useful for side by side e.g. diff -y
-alias diff='diff -W $(( $(tput cols) - 2 ))'
+# Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
+# Linux only, as -W/-w options aren't available in non-GNU
+if [[ "$(uname)" = "Linux" ]]; then
+        alias diff='diff -W $(( $(tput cols) - 2 ))'
+        alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
+fi
 
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {

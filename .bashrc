@@ -700,7 +700,7 @@ pwcheck () {
 # Usage: flocate searchterm1 searchterm2 searchterm[n]
 # Source: http://solarum.com/v.php?l=1149LV99
 flocate() {
-if command -v locate &>/dev/null; then
+if ! command -v locate &>/dev/null; then
   printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
   return 1
 fi

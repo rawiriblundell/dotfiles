@@ -36,12 +36,12 @@ umask 027
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
 # and automatically adds them to ~/.ssh/known_hosts
 ssh() {
-  /usr/bin/ssh -o StrictHostKeyChecking=no -q $*
+  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
 }
 
 # Provide normal, no-options ssh for error checking
 unssh() {
-  /usr/bin/ssh $*
+  /usr/bin/ssh "$@"
 }
 
 # Enable color support of ls and also add handy aliases
@@ -52,7 +52,7 @@ if [ -x /usr/bin/dircolors ]; then
   #alias vdir='vdir --color=auto'
        
   alias grep='grep --color=auto'
-        alias fgrep='fgrep --color=auto'
+  alias fgrep='fgrep --color=auto'
   alias egrep='egrep --color=auto'
 fi
            
@@ -151,8 +151,10 @@ genpasswd() {
   if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
     if [[ "${PwdCols}" = "false" ]]; then
       tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
+      return 0
     elif [[ "${PwdCols}" = "true" ]]; then
       tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null
+      return 0
     fi
   fi
 
@@ -209,6 +211,7 @@ genpasswd() {
       # Otherwise, we failover to openssl
       elif ! command -v openssl &>/dev/null; then
         # Sigh, Solaris you pain in the ass
+        # {,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl
         for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
           if [ -f "${d}/openssl" ]; then
             OpenSSL="${d}/openssl"
@@ -474,7 +477,7 @@ genphrase() {
   fi
   
   # Next test if a word is being seeded in
-  if [ "${PphraseSeed}" = "True" ]; then
+  if [[ "${PphraseSeed}" = "True" ]]; then
     # If so, make space for the seed word
     ((PphraseWords = PphraseWords - 1))
   fi
@@ -483,12 +486,12 @@ genphrase() {
   # First we test to see if shuf is available
   if command -v shuf &>/dev/null; then
 #    echo "Using shuf!" #Debug
-    if [ "${PphraseCols}" = "True" ]; then
+    if [[ "${PphraseCols}" = "True" ]]; then
       # Now we use a loop to run the number of times required to match the -n setting
       # Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
       # Obviously this will have to be run a sufficient number of times to make the use of
       # 'column' worth it.  Fortunately shuf is very fast.
-#      echo "Columns true" #Debug
+#     echo "Columns true" #Debug
       n=0
       while [[ $n -lt "${PphraseNum}" ]]; do
         #Older methods left commented out to show the evolution of this function
@@ -516,7 +519,7 @@ genphrase() {
         let ++n
       done | column
     else
-#      echo "Columns false" #Debug
+#     echo "Columns false" #Debug
       n=0
       while [[ $n -lt "${PphraseNum}" ]]; do
         DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
@@ -533,8 +536,8 @@ genphrase() {
   # For portability we have to be a bit more hands-on with our loops, which impacts performance
   if command -v perl &>/dev/null; then
 #    echo "Using perl!" #Debug
-    if [ "${PphraseCols}" = "True" ]; then
-#      echo "Columns true" #Debug
+    if [[ "${PphraseCols}" = "True" ]]; then
+#     echo "Columns true" #Debug
       n=0
       while [[ $n -lt "${PphraseNum}" ]]; do
         #If it's there, print the seedword
@@ -546,13 +549,13 @@ genphrase() {
           ((w = w + 1))
         done | tr -d "\n"
         printf "\n"
-                  ((n = n + 1))
+      ((n = n + 1))
       done | column
     else
 #     echo "Columns false" #Debug
       n=0
       while [[ $n -lt "${PphraseNum}" ]]; do
-                                printf "%s" "${SeedWord}"
+        printf "%s" "${SeedWord}"
         w=0
         while [[ $w -lt "${PphraseWords}" ]]; do
           printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
@@ -567,7 +570,7 @@ genphrase() {
   # It is BRUTALLY slow.  The method shown here is almost as fast as perl.
   else
 #   echo "Using bash!" #debug
-    if [ "${PphraseCols}" = "True" ]; then
+    if [[ "${PphraseCols}" = "True" ]]; then
 #     echo "Columns true" #Debug
       n=0
       while [[ $n -lt "${PphraseNum}" ]]; do
@@ -585,18 +588,18 @@ genphrase() {
     else
 #     echo "Columns false" #Debug
       n=0
-        while [[ $n -lt "${PphraseNum}" ]]; do
-          printf "%s" "${SeedWord}"
-          w=0
-          while [[ $w -lt "${PphraseWords}" ]]; do
-            printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
-            ((w = w + 1))
-          done | tr -d "\n"
-        printf "\n"     
-        ((n = n + 1))
-        done
-      fi
+      while [[ $n -lt "${PphraseNum}" ]]; do
+        printf "%s" "${SeedWord}"
+        w=0
+        while [[ $w -lt "${PphraseWords}" ]]; do
+          printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
+          ((w = w + 1))
+        done | tr -d "\n"
+      printf "\n"     
+      ((n = n + 1))
+      done
     fi
+  fi
 }
 
 # Password strength check function.  Can be fed a password most ways.
@@ -611,12 +614,13 @@ pwcheck () {
 
   # Check password, attempt with cracklib-check, failover to something a little more exhaustive
   if [[ -f /usr/sbin/cracklib-check ]]; then
+    printf "%s\n" "pwcheck: Using cracklib-check to test the password..."
     Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
-    Okay="$(awk -F': ' '{ print $2}' <<<"${Result}")"
+    Okay="$(awk -F': ' '{print $2}' <<<"${Result}")"
   else  
     # I think we have a common theme here.  Writing portable code sucks, but it keeps things interesting.
     
-    #printf "%s\n" "pwcheck: Attempting this the hard way" #Debug
+    printf "%s\n" "pwcheck: cracklib-check not found, manually testing the password..."
     # Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
     # Start by giving a credential score to be subtracted from, then default the initial vars
     CredCount=4
@@ -642,31 +646,35 @@ pwcheck () {
         PWCheck="false" # Instant failure for spaces
       fi
       # Check against the dictionary
-      if grep -q "${PwdIn}" /usr/share/dict/words; then
+      if grep -q "${PwdIn}" /usr/{,share/}dict/words; then
         Result="${PwdIn}: Password cannot contain a dictionary word."
         CredCount=0 # Punish hard for dictionary words
       fi
       # Check for a digit
-      echo "${PwdIn}" | grep '[[:digit:]]' >/dev/null
-      if [[ $? != "0" ]]; then
+      if [[ ! "${PwdIn}" == *[[:digit:]]* ]]; then
+      #echo "${PwdIn}" | grep '[[:digit:]]' >/dev/null
+      #if [[ $? != "0" ]]; then
         ResultDigit="Password should contain at least one digit."
         ((CredCount = CredCount - 1))
       fi
       # Check for UPPERCASE
-      echo "${PwdIn}" | grep '[[:upper:]]' >/dev/null
-      if [[ $? != "0" ]]; then
+      if [[ ! "${PwdIn}" == *[[:upper:]]* ]]; then
+      #echo "${PwdIn}" | grep '[[:upper:]]' >/dev/null
+      #if [[ $? != "0" ]]; then
         ResultUpper="Password should contain at least one uppercase letter."
         ((CredCount = CredCount - 1))
       fi
       # Check for lowercase
-      echo "${PwdIn}" | grep '[[:lower:]]' >/dev/null
-      if [[ $? != "0" ]]; then
+      if [[ ! "${PwdIn}" == *[[:lower:]]* ]]; then
+      #echo "${PwdIn}" | grep '[[:lower:]]' >/dev/null
+      #if [[ $? != "0" ]]; then
         ResultLower="Password should contain at least one lowercase letter."
         ((CredCount = CredCount - 1))
       fi
       # Check for special characters
-      echo "${PwdIn}" | grep '[[:punct:]]' >/dev/null
-      if [[ $? != "0" ]]; then
+      if [[ ! "${PwdIn}" == *[[:punct:]]* ]]; then
+      #echo "${PwdIn}" | grep '[[:punct:]]' >/dev/null
+      #if [[ $? != "0" ]]; then
         ResultPunct="Password should contain at least one special character."
         ((CredCount = CredCount - 1))
       fi
@@ -688,10 +696,10 @@ pwcheck () {
 
   # Output result
   if [[ "${Okay}" == "OK" ]]; then
-    printf "%s\n" "The password/phrase passed my testing."
+    printf "%s\n" "pwcheck: The password/phrase passed my testing."
     return 0
   else
-    printf "%s\n" "The check failed:" "${Result}" "Please try again."
+    printf "%s\n" "pwcheck: The check failed:" "${Result}" "Please try again."
     return 1
   fi
 }

@@ -393,14 +393,15 @@ genphrase() {
   # perl, sed, oawk/nawk and bash are the most portable options in order of speed.  The bash $RANDOM example is horribly slow, but reliable.  Avoid if possible.
 
   # First, double check that the dictionary file exists.  .bash_profile should normally take care of this
-  if [ ! -f ~/.pwords.dict ] ; then
-    if [ "$(uname)" = "SunOS" ] ; then
-      words=/usr/dict/words
-      /usr/xpg4/bin/grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
-    else
-      words=/usr/share/dict/words
-      grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
-    fi
+  if [[ ! -f ~/.pwords.dict ]] ; then
+    egrep -h '^.{4,7}$' /usr/{,share/}dict/words > ~/.pwords.dict
+    #if [ "$(uname)" = "SunOS" ] ; then
+    #  words=/usr/dict/words
+    #  /usr/xpg4/bin/grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
+    #else
+    #  words=/usr/share/dict/words
+    #  grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
+    #fi
   fi
 
   # Declare OPTIND as local for safety

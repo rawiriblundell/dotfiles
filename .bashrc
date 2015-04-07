@@ -603,6 +603,7 @@ genphrase() {
 }
 
 # Password strength check function.  Can be fed a password most ways.
+# TO-DO: add a verbose output switch
 pwcheck () {
   # Read password in, if it's blank, prompt the user
   if [[ "${*}" = "" ]]; then
@@ -625,14 +626,13 @@ pwcheck () {
     # Start by giving a credential score to be subtracted from, then default the initial vars
     CredCount=4
     PWCheck="true"
-    ResultChar="Character count: OK"
-    ResultDigit="Digit count: OK"
-    ResultUpper="UPPERCASE count: OK"
-    ResultLower="lowercase count: OK"
-    ResultPunct="Special character count: OK"
-    ResultSpace="No spaces found: OK"
-    ResultDict="Doesn't seem to match any dictionary words: OK"
-    Result="$(printf "%s\n" "${PwdIn}:" "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
+    ResultChar="[OK]: Character count"
+    ResultDigit="[OK]: Digit count"
+    ResultUpper="[OK]: UPPERCASE count"
+    ResultLower="[OK]: lowercase count"
+    ResultPunct="[OK]: Special character count"
+    ResultSpace="[OK]: No spaces found"
+    ResultDict="[OK]: Doesn't seem to match any dictionary words"
 
     while [[ "${PWCheck}" = "true" ]]; do
       # Start cycling through each complexity requirement  
@@ -646,38 +646,32 @@ pwcheck () {
         PWCheck="false" # Instant failure for spaces
       fi
       # Check against the dictionary
-      if grep -q "${PwdIn}" /usr/{,share/}dict/words; then
+      if grep -qh "${PwdIn}" /usr/{,share/}dict/words 2>/dev/null; then
         Result="${PwdIn}: Password cannot contain a dictionary word."
         CredCount=0 # Punish hard for dictionary words
       fi
       # Check for a digit
       if [[ ! "${PwdIn}" == *[[:digit:]]* ]]; then
-      #echo "${PwdIn}" | grep '[[:digit:]]' >/dev/null
-      #if [[ $? != "0" ]]; then
-        ResultDigit="Password should contain at least one digit."
+        ResultDigit="[FAIL]: Password should contain at least one digit."
         ((CredCount = CredCount - 1))
       fi
       # Check for UPPERCASE
       if [[ ! "${PwdIn}" == *[[:upper:]]* ]]; then
-      #echo "${PwdIn}" | grep '[[:upper:]]' >/dev/null
-      #if [[ $? != "0" ]]; then
-        ResultUpper="Password should contain at least one uppercase letter."
+        ResultUpper="[FAIL]: Password should contain at least one uppercase letter."
         ((CredCount = CredCount - 1))
       fi
       # Check for lowercase
       if [[ ! "${PwdIn}" == *[[:lower:]]* ]]; then
-      #echo "${PwdIn}" | grep '[[:lower:]]' >/dev/null
-      #if [[ $? != "0" ]]; then
-        ResultLower="Password should contain at least one lowercase letter."
+        ResultLower="[FAIL]: Password should contain at least one lowercase letter."
         ((CredCount = CredCount - 1))
       fi
       # Check for special characters
       if [[ ! "${PwdIn}" == *[[:punct:]]* ]]; then
-      #echo "${PwdIn}" | grep '[[:punct:]]' >/dev/null
-      #if [[ $? != "0" ]]; then
-        ResultPunct="Password should contain at least one special character."
+        ResultPunct="[FAIL]: Password should contain at least one special character."
         ((CredCount = CredCount - 1))
       fi
+      Result="$(printf "%s\n" "pwcheck: 3 of the following tests are required to pass testing:" \
+        "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
       PWCheck="false" #Exit condition for the loop
     done
 
@@ -699,7 +693,7 @@ pwcheck () {
     printf "%s\n" "pwcheck: The password/phrase passed my testing."
     return 0
   else
-    printf "%s\n" "pwcheck: The check failed:" "${Result}" "Please try again."
+    printf "%s\n" "pwcheck: The check failed for password '${PwdIn}.'" "${Result}" "Please try again."
     return 1
   fi
 }

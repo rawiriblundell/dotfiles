@@ -10,7 +10,7 @@
 #
 
 # Source global definitions
-if [[] -f /etc/bashrc ]]; then
+if [[ -f /etc/bashrc ]]; then
   . /etc/bashrc
 fi
 
@@ -19,13 +19,13 @@ fi
 
 # Aliases
 # Some people use a different file for aliases
-if [[] -f "${HOME}/.bash_aliases" ]]; then
+if [[ -f "${HOME}/.bash_aliases" ]]; then
   source "${HOME}/.bash_aliases"
 fi
 
 # Functions
 # Some people use a different file for functions
-if [[] -f "${HOME}/.bash_functions" ]]; then
+if [[ -f "${HOME}/.bash_functions" ]]; then
   source "${HOME}/.bash_functions"
 fi
 
@@ -45,7 +45,7 @@ unssh() {
 }
 
 # Enable color support of ls and also add handy aliases
-if [[] -x /usr/bin/dircolors ]]; then
+if [[ -x /usr/bin/dircolors ]]; then
   test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
   alias ls='ls --color=auto'
   #alias dir='dir --color=auto'

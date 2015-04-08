@@ -55,7 +55,7 @@ if [[ -x /usr/bin/dircolors ]]; then
   alias fgrep='fgrep --color=auto'
   alias egrep='egrep --color=auto'
 fi
-           
+
 # Some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
@@ -68,6 +68,58 @@ if [[ "$(uname)" = "Linux" ]]; then
   alias diff='diff -W $(( $(tput cols) - 2 ))'
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
 fi
+
+# If we're on Solaris, alias grep to the more useful xpg4 version
+if [[ "$(uname)" = "SunOS" ]]; then
+  [[ -x "/usr/xpg4/bin/grep" ]] && alias grep='/usr/xpg4/bin/grep'
+  [[ -x "/usr/xpg4/bin/egrep" ]] && alias egrep='/usr/xpg4/bin/egrep'
+fi
+
+# Check the window size after each command and, if necessary,
+# Update the values of LINES and COLUMNS.
+# This attempts to correct line-wrapping-over-prompt issues when a window is resized
+shopt -s checkwinsize
+
+# Set the bash history timestamp format
+export HISTTIMEFORMAT="%F,%T "
+
+# don't put duplicate lines in the history. See bash(1) for more options
+# ... or force ignoredups and ignorespace
+HISTCONTROL=ignoredups:ignorespace
+ 
+# append to the history file, don't overwrite it
+shopt -s histappend
+ 
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# Sort out the PATH for Solaris
+# First let's check the host to see what OS is present
+if [[ "$(uname)" = "SunOS" ]]; then
+  # Ok, it's Solaris.  So let's set the PATH for that:
+  PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:
+else
+  # Not Solaris?  Must be Linux then:
+  PATH=$PATH:$HOME/bin
+fi
+export PATH
+
+# Sort out "Terminal Too Wide" issue in vi on Solaris
+if [[ "$(uname)" = "SunOS" ]]; then
+  stty columns 140
+fi
+
+# Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
+if [[ "$(uname)" != "SunOS" ]]; then
+  if tty --quiet; then
+    stty erase '^?'
+  fi
+fi
+
+# Disable ctrl+s (XOFF) in PuTTY
+stty ixany
+stty ixoff -ixon
 
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
@@ -395,16 +447,9 @@ genphrase() {
 
   # perl, sed, oawk/nawk and bash are the most portable options in order of speed.  The bash $RANDOM example is horribly slow, but reliable.  Avoid if possible.
 
-  # First, double check that the dictionary file exists.  .bash_profile should normally take care of this
+  # First, double check that the dictionary file exists.  I usually have my .bash_profile take care of this
   if [[ ! -f ~/.pwords.dict ]] ; then
-    egrep -h '^.{4,7}$' /usr/{,share/}dict/words > ~/.pwords.dict
-    #if [ "$(uname)" = "SunOS" ] ; then
-    #  words=/usr/dict/words
-    #  /usr/xpg4/bin/grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
-    #else
-    #  words=/usr/share/dict/words
-    #  grep -E '^.{4,7}$' "${words}" > ~/.pwords.dict
-    #fi
+    egrep -h '^.{4,7}$' /usr/{,share/}dict/words > ~/.pwords.dict 2>/dev/null
   fi
 
   # Declare OPTIND as local for safety
@@ -615,13 +660,13 @@ pwcheck () {
 
   # Check password, attempt with cracklib-check, failover to something a little more exhaustive
   if [[ -f /usr/sbin/cracklib-check ]]; then
-    printf "%s\n" "pwcheck: Using cracklib-check to test the password..."
+    Method="cracklib-check"
     Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
     Okay="$(awk -F': ' '{print $2}' <<<"${Result}")"
   else  
     # I think we have a common theme here.  Writing portable code sucks, but it keeps things interesting.
     
-    printf "%s\n" "pwcheck: cracklib-check not found, manually testing the password..."
+    Method="pwcheck"
     # Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
     # Start by giving a credential score to be subtracted from, then default the initial vars
     CredCount=4
@@ -637,46 +682,44 @@ pwcheck () {
     while [[ "${PWCheck}" = "true" ]]; do
       # Start cycling through each complexity requirement  
       if [[ "${#PwdIn}" -lt "8" ]]; then
-        Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped."
+        Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
         CredCount=0
         PWCheck="false" # Instant failure for character count
       elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-        Result="${PwdIn}: Password cannot contain spaces.  Further testing stopped."
+        Result="${PwdIn}: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
         CredCount=0 
         PWCheck="false" # Instant failure for spaces
       fi
       # Check against the dictionary
       if grep -qh "${PwdIn}" /usr/{,share/}dict/words 2>/dev/null; then
-        Result="${PwdIn}: Password cannot contain a dictionary word."
+        ResultDict="${PwdIn}: Password cannot contain a dictionary word.  (Score = 0)"
         CredCount=0 # Punish hard for dictionary words
       fi
       # Check for a digit
       if [[ ! "${PwdIn}" == *[[:digit:]]* ]]; then
-        ResultDigit="[FAIL]: Password should contain at least one digit."
+        ResultDigit="[FAIL]: Password should contain at least one digit.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
       # Check for UPPERCASE
       if [[ ! "${PwdIn}" == *[[:upper:]]* ]]; then
-        ResultUpper="[FAIL]: Password should contain at least one uppercase letter."
+        ResultUpper="[FAIL]: Password should contain at least one uppercase letter.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
       # Check for lowercase
       if [[ ! "${PwdIn}" == *[[:lower:]]* ]]; then
-        ResultLower="[FAIL]: Password should contain at least one lowercase letter."
+        ResultLower="[FAIL]: Password should contain at least one lowercase letter.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
       # Check for special characters
       if [[ ! "${PwdIn}" == *[[:punct:]]* ]]; then
-        ResultPunct="[FAIL]: Password should contain at least one special character."
+        ResultPunct="[FAIL]: Password should contain at least one special character.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
-      Result="$(printf "%s\n" "pwcheck: 3 of the following tests are required to pass testing:" \
+      Result="$(printf "%s\n" "pwcheck: A score of 3 is required pass testing, ${PwdIn} scored ${CredCount}." \
         "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
       PWCheck="false" #Exit condition for the loop
     done
 
-    #printf "%s\n" "CredCount = ${CredCount}" #debug
-  
     # Now check password score, if it's less than three, then it fails
     # Here is where we force the three complexity catergories
     if [[ "${CredCount}" -lt "3" ]]; then
@@ -693,7 +736,7 @@ pwcheck () {
     printf "%s\n" "pwcheck: The password/phrase passed my testing."
     return 0
   else
-    printf "%s\n" "pwcheck: The check failed for password '${PwdIn}.'" "${Result}" "Please try again."
+    printf "%s\n" "pwcheck: The check failed for password '${PwdIn}' using the ${Method} test." "${Result}" "Please try again."
     return 1
   fi
 }
@@ -818,6 +861,15 @@ bldylw='\e[1;33m\]' # Yellow
 #bakwht='\e[47m\]'   # White
 txtrst='\e[0m\]'    # Text Reset
 
+# NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount
+# and get confused about where the prompt starts.  All sorts of line wrapping weirdness and prompt overwrites
+# will then occur.  This is why all of the variables have '\]' enclosing them.  Don't mess with that.
+# 
+# Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
+# Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
+
+# The double backslash at the start also helps with this behaviour.
+
 # Throw it all together, starting with the portable option 
 if [[ "$(uname)" != "Linux" ]]; then
   # Check if we're root, and adjust to suit
@@ -841,58 +893,3 @@ else
   # Alias the root PS1 into sudo for edge cases
   alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
 fi
-
-# NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount
-# and get confused about where the prompt starts.  All sorts of line wrapping weirdness and prompt overwrites
-# will then occur.  This is why all of the variables have '\]' enclosing them.  Don't mess with that.
-# 
-# Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
-# Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
-
-# The double backslash at the start also helps with this behaviour.
-
-# Check the window size after each command and, if necessary,
-# Update the values of LINES and COLUMNS.
-# This attempts to correct line-wrapping-over-prompt issues when a window is resized
-shopt -s checkwinsize
-
-# Set the bash history timestamp format
-export HISTTIMEFORMAT="%F,%T "
-
-# don't put duplicate lines in the history. See bash(1) for more options
-# ... or force ignoredups and ignorespace
-HISTCONTROL=ignoredups:ignorespace
- 
-# append to the history file, don't overwrite it
-shopt -s histappend
- 
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
-
-# Sort out the PATH for Solaris
-# First let's check the host to see what OS is present
-if [[ "$(uname)" = "SunOS" ]]; then
-  # Ok, it's Solaris.  So let's set the PATH for that:
-  PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:
-else
-  # Not Solaris?  Must be Linux then:
-  PATH=$PATH:$HOME/bin
-fi
-export PATH
-
-# Sort out "Terminal Too Wide" issue in vi on Solaris
-if [[ "$(uname)" = "SunOS" ]]; then
-  stty columns 140
-fi
-
-# Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
-if [[ "$(uname)" != "SunOS" ]]; then
-  if tty --quiet; then
-    stty erase '^?'
-  fi
-fi
-
-# Disable ctrl+s (XOFF) in PuTTY
-stty ixany
-stty ixoff -ixon

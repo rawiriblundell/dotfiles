@@ -211,7 +211,7 @@ genpasswd() {
       # Otherwise, we failover to openssl
       elif ! command -v openssl &>/dev/null; then
         # Sigh, Solaris you pain in the ass
-        # {,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl
+        # OpenSSL=$(command -v {,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
         for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
           if [ -f "${d}/openssl" ]; then
             OpenSSL="${d}/openssl"

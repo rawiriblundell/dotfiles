@@ -680,15 +680,15 @@ pwcheck () {
     ResultDict="[OK]: Doesn't seem to match any dictionary words"
 
     while [[ "${PWCheck}" = "true" ]]; do
-      # Start cycling through each complexity requirement  
+      # Start cycling through each complexity requirement
+      # We instantly fail for short passwords
       if [[ "${#PwdIn}" -lt "8" ]]; then
-        Result="${PwdIn}: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
-        CredCount=0
-        PWCheck="false" # Instant failure for character count
+        printf "%s\n" "pwcheck: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
+        return 1
+      # And we instantly fail for passwords with spaces in them
       elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-        Result="${PwdIn}: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
-        CredCount=0 
-        PWCheck="false" # Instant failure for spaces
+        printf "%s\n" "pwcheck: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
+        return 1
       fi
       # Check against the dictionary
       if grep -qh "${PwdIn}" /usr/{,share/}dict/words 2>/dev/null; then
@@ -715,7 +715,7 @@ pwcheck () {
         ResultPunct="[FAIL]: Password should contain at least one special character.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
-      Result="$(printf "%s\n" "pwcheck: A score of 3 is required pass testing, ${PwdIn} scored ${CredCount}." \
+      Result="$(printf "%s\n" "pwcheck: A score of 3 is required to pass testing, '${PwdIn}' scored ${CredCount}." \
         "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
       PWCheck="false" #Exit condition for the loop
     done

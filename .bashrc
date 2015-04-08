@@ -50,7 +50,6 @@ if [[ -x /usr/bin/dircolors ]]; then
   alias ls='ls --color=auto'
   #alias dir='dir --color=auto'
   #alias vdir='vdir --color=auto'
-       
   alias grep='grep --color=auto'
   alias fgrep='fgrep --color=auto'
   alias egrep='egrep --color=auto'
@@ -61,19 +60,6 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias lh='ls -lah'
 alias l='ls -CF'
-
-# Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
-# Linux only, as -W/-w options aren't available in non-GNU
-if [[ "$(uname)" = "Linux" ]]; then
-  alias diff='diff -W $(( $(tput cols) - 2 ))'
-  alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
-fi
-
-# If we're on Solaris, alias grep to the more useful xpg4 version
-if [[ "$(uname)" = "SunOS" ]]; then
-  [[ -x "/usr/xpg4/bin/grep" ]] && alias grep='/usr/xpg4/bin/grep'
-  [[ -x "/usr/xpg4/bin/egrep" ]] && alias egrep='/usr/xpg4/bin/egrep'
-fi
 
 # Check the window size after each command and, if necessary,
 # Update the values of LINES and COLUMNS.
@@ -94,32 +80,122 @@ shopt -s histappend
 HISTSIZE=1000
 HISTFILESIZE=2000
 
-# Sort out the PATH for Solaris
-# First let's check the host to see what OS is present
-if [[ "$(uname)" = "SunOS" ]]; then
-  # Ok, it's Solaris.  So let's set the PATH for that:
-  PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:
-else
-  # Not Solaris?  Must be Linux then:
-  PATH=$PATH:$HOME/bin
-fi
-export PATH
+# Disable ctrl+s (XOFF) in PuTTY
+stty ixany
+stty ixoff -ixon
 
-# Sort out "Terminal Too Wide" issue in vi on Solaris
+########################################
+# OS specific tweaks
+########################################
+
 if [[ "$(uname)" = "SunOS" ]]; then
+  # If we're on Solaris, alias grep to the more useful xpg4 version
+  [[ -x "/usr/xpg4/bin/grep" ]] && alias grep='/usr/xpg4/bin/grep'
+  [[ -x "/usr/xpg4/bin/egrep" ]] && alias egrep='/usr/xpg4/bin/egrep'
+  # And set the $PATH
+  PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:/usr/xpg4/bin:
+  # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
-fi
-
-# Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
-if [[ "$(uname)" != "SunOS" ]]; then
+elif [[ "$(uname)" = "Linux" ]]; then
+  # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
+  # Linux only, as -W/-w options aren't available in non-GNU
+  alias diff='diff -W $(( $(tput cols) - 2 ))'
+  alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
+  PATH=$PATH:$HOME/bin
+  # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
   if tty --quiet; then
     stty erase '^?'
   fi
 fi
+export PATH
 
-# Disable ctrl+s (XOFF) in PuTTY
-stty ixany
-stty ixoff -ixon
+########################################
+# Functions
+########################################
+
+# flocate function.  This gives a search function that blends find and locate
+# Will obviously only work where locate lives, so Solaris will mostly be out of luck
+# Usage: flocate searchterm1 searchterm2 searchterm[n]
+# Source: http://solarum.com/v.php?l=1149LV99
+flocate() {
+if ! command -v locate &>/dev/null; then
+  printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
+  return 1
+fi
+if [[ $# -gt 1 ]]; then
+  display_divider=1
+else
+  display_divider=0
+fi
+
+current_argument=0
+total_arguments=$#
+while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
+  current_file=$1
+  if [ "${display_divider}" = "1" ] ; then
+    printf "%s\n" "----------------------------------------" \
+    "Matches for ${current_file}" \
+    "----------------------------------------"
+  fi
+
+  filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
+  locate -r "${filename_re}"
+  shift
+  (( current_argument = current_argument + 1 ))
+done
+}
+
+# Enable piping to Windows Clipboard from with PuTTY
+# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
+wclip() {
+  echo -ne '\e''[5i'
+  cat $*
+  echo -ne '\e''[4i'
+  echo "Copied to Windows clipboard" 1>&2
+}
+
+# Enable X-Windows for cygwin, finds and assigns an available display env variable.
+# To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
+
+# First we check if we're on Solaris, because Solaris doesn't like "uname -o"
+if [[ "$(uname)" != "SunOS" ]]; then
+  if [[ "$(uname -o)" = "Cygwin" ]]; then
+    myx() {
+      a=/tmp/.X11-unix/X
+      #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
+      i=351
+      while [[ "${i}" -lt 500 ]]; do
+        b=$a$i
+        if [[ ! -S $b ]] ; then
+          c=$i
+          break
+        fi
+      i++
+      done
+      export DISPLAY=:$c
+      echo export DISPLAY=:$c
+      X :$c -multiwindow >& /dev/null &
+      xterm -fn 9x15bold -bg black -fg orange -sb &
+    }
+  fi
+fi
+
+# Provide a faster-than-scp file transfer function
+# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
+ncp() {
+  FileFull=$1
+  RemoteHost=$2
+
+  FileDir=$(dirname "${FileFull}")
+  FileName=$(basename "${FileFull}")
+  LocalHost=$(hostname)
+
+  ZipTool=pigz
+  NCPort=8888
+
+  tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
+  ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
+}
 
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
@@ -739,90 +815,6 @@ pwcheck () {
     printf "%s\n" "pwcheck: The check failed for password '${PwdIn}' using the ${Method} test." "${Result}" "Please try again."
     return 1
   fi
-}
-
-# flocate function.  This gives a search function that blends find and locate
-# Will obviously only work where locate lives, so Solaris will mostly be out of luck
-# Usage: flocate searchterm1 searchterm2 searchterm[n]
-# Source: http://solarum.com/v.php?l=1149LV99
-flocate() {
-if ! command -v locate &>/dev/null; then
-  printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
-  return 1
-fi
-if [[ $# -gt 1 ]]; then
-  display_divider=1
-else
-  display_divider=0
-fi
-
-current_argument=0
-total_arguments=$#
-while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
-  current_file=$1
-  if [ "${display_divider}" = "1" ] ; then
-    printf "%s\n" "----------------------------------------" \
-    "Matches for ${current_file}" \
-    "----------------------------------------"
-  fi
-
-  filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
-  locate -r "${filename_re}"
-  shift
-  (( current_argument = current_argument + 1 ))
-done
-}
-
-# Enable piping to Windows Clipboard from with PuTTY
-# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
-wclip() {
-  echo -ne '\e''[5i'
-  cat $*
-  echo -ne '\e''[4i'
-  echo "Copied to Windows clipboard" 1>&2
-}
-
-# Enable X-Windows for cygwin, finds and assigns an available display env variable.
-# To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
-
-# First we check if we're on Solaris, because Solaris doesn't like "uname -o"
-if [[ "$(uname)" != "SunOS" ]]; then
-  if [[ "$(uname -o)" = "Cygwin" ]]; then
-    myx() {
-      a=/tmp/.X11-unix/X
-      #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
-      i=351
-      while [[ "${i}" -lt 500 ]]; do
-        b=$a$i
-        if [[ ! -S $b ]] ; then
-          c=$i
-          break
-        fi
-      i++
-      done
-      export DISPLAY=:$c
-      echo export DISPLAY=:$c
-      X :$c -multiwindow >& /dev/null &
-      xterm -fn 9x15bold -bg black -fg orange -sb &
-    }
-  fi
-fi
-
-# Provide a faster-than-scp file transfer function
-# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
-ncp() {
-  FileFull=$1
-  RemoteHost=$2
-
-  FileDir=$(dirname "${FileFull}")
-  FileName=$(basename "${FileFull}")
-  LocalHost=$(hostname)
-
-  ZipTool=pigz
-  NCPort=8888
-
-  tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
-  ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
 }
 
 # Standardise the Command Prompt

@@ -337,17 +337,9 @@ genpasswd() {
       elif command -v perl &>/dev/null; then
         PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
       # Otherwise, we failover to openssl
+      # If command can't find it, we try to search some common Linux and Solaris paths for it
       elif ! command -v openssl &>/dev/null; then
-        # Sigh, Solaris you pain in the ass
-        # OpenSSL=$(command -v {,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
-        for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
-          if [ -f "${d}/openssl" ]; then
-            OpenSSL="${d}/openssl"
-          else
-            OpenSSL=openssl
-          fi
-        done
-
+        OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
         # We can only generate an MD5 password using OpenSSL
         PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
         KryptMethod=OpenSSL
@@ -466,16 +458,9 @@ cryptpasswd() {
   elif command -v perl &>/dev/null; then
     PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
   # Otherwise, we failover to openssl
+  # If command can't find it, we try to search some common Linux and Solaris paths for it
   elif ! command -v openssl &>/dev/null; then
-    # Sigh, Solaris you pain in the ass
-    for d in /usr/local/ssl/bin /opt/csw/bin /usr/sfw/bin; do
-      if [ -f "${d}/openssl" ]; then
-        OpenSSL="${d}/openssl"
-      else
-        OpenSSL=openssl
-      fi
-    done
-
+    OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
     # We can only generate an MD5 password using OpenSSL
     PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
     KryptMethod=OpenSSL

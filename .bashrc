@@ -197,6 +197,50 @@ ncp() {
   ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
 }
 
+# Enable launching a function with sudo
+# Basically copies the function to a temporary file and launches it
+# TO DO: rewrite returns as exits?
+exesudo () {
+  local _funcname_="$1"
+
+  local params=( "$@" )               ## array containing all params passed here
+  local tmpfile="/dev/shm/$RANDOM"    ## temporary file
+  local filecontent                   ## content of the temporary file
+  local regex                         ## regular expression
+  local func                          ## function source
+
+  # Shift the first param (which is the name of the function)
+  unset params[0]              ## remove first element
+  # params=( "${params[@]}" )     ## repack array
+
+  content="#!/bin/bash\n\n"
+
+  # Write the params array
+  content="${content}params=(\n"
+
+  regex="\s+"
+  for param in "${params[@]}"; do
+    if [[ "$param" =~ $regex ]]; then
+      content="${content}\t\"${param}\"\n"
+    else
+      content="${content}\t${param}\n"
+    fi
+  done
+
+  content="$content)\n"
+  echo -e "$content" > "$tmpfile"
+
+  # Append the function source
+  echo "#$( type "$_funcname_" )" >> "$tmpfile"
+
+  # Append the call to the function
+  echo -e "\n$_funcname_ \"\${params[@]}\"\n" >> "$tmpfile"
+
+  # DONE: EXECUTE THE TEMPORARY FILE WITH SUDO
+  sudo bash "$tmpfile"
+  rm "$tmpfile"
+}
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

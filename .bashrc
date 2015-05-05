@@ -44,6 +44,11 @@ unssh() {
   /usr/bin/ssh "$@"
 }
 
+# SSH auto-completion based on entries in known_hosts.
+#if [[ -e ~/.ssh/known_hosts ]]; then
+#  complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" ssh
+#fi
+
 # Enable color support of ls and also add handy aliases
 if [[ -x /usr/bin/dircolors ]]; then
   test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"

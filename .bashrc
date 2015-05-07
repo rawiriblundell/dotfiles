@@ -246,6 +246,18 @@ exesudo () {
   rm "$tmpfile"
 }
 
+userimpact() {
+  if [[ "$1" = "-h" ]]; then
+    printf "%s\n" "Usage: userimpact [-c (sort by cpu usage) -m (sort by memory usage)]"
+  elif [[ "$1" = "-c" ]]; then
+    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn | column -t
+  elif [[ "$1" = "-m" ]]; then
+    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn | column -t
+  else
+    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
+  fi
+}
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

@@ -246,7 +246,14 @@ exesudo () {
   rm "$tmpfile"
 }
 
+# Function to display a list of users and their memory and cpu usage
 userimpact() {
+  # This doesn't run on Solaris yet, awk/nawk/gawk incompatiblity most likely
+  if [[ "$(uname)" = "SunOS" ]]; then
+    printf "%s\n" "ERROR: Sorry, this function is currently not compatible with Solaris"
+    return 1
+  fi
+  # Otherwise, start processing $1.  This way is used because getopts blew up
   if [[ "$1" = "-c" ]]; then
     ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn | column -t
   elif [[ "$1" = "-m" ]]; then

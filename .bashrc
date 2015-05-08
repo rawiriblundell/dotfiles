@@ -204,7 +204,6 @@ ncp() {
 
 # Enable launching a function with sudo
 # Basically copies the function to a temporary file and launches it
-# TO DO: rewrite returns as exits?
 exesudo () {
   local _funcname_="$1"
 
@@ -225,7 +224,9 @@ exesudo () {
 
   regex="\s+"
   for param in "${params[@]}"; do
-    if [[ "$param" =~ $regex ]]; then
+    # This breaks older versions of bash, sigh.
+    #if [[ "$param" =~ $regex ]]; then
+    if echo "${param}" | egrep "${regex}" &>/dev/null; then
       content="${content}\t\"${param}\"\n"
     else
       content="${content}\t${param}\n"

@@ -307,7 +307,8 @@ genpasswd() {
           "-S [Stronger mode, complete mix of characters (Default:off)]" \
           "-U [Require at least one uppercase character (Default:off)]" \
           "-Y [Require at least one special character (Default:off)]" \
-          "" "Note: Broken Pipe errors, (older bash versions) can be ignored"
+          "" "Note1: Broken Pipe errors, (older bash versions) can be ignored" \
+          "Note2: If you get umlauts, cyrillic etc, export LC_ALL= to something like en_US.UTF-8"
           return 0;;
       k)  PwdKrypt="true"
           PwdKryptMode="${OPTARG}";;

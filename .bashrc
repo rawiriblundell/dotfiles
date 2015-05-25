@@ -248,12 +248,12 @@ exesudo () {
 }
 
 # Start an HTTP server from a directory, optionally specifying the port
-function server() {
-	local port="${1:-8000}"
-	sleep 1 && open "http://localhost:${port}/" &
-	# Set the default Content-Type to `text/plain` instead of `application/octet-stream`
-	# And serve everything as UTF-8 (although not technically correct, this doesn’t break anything for binary files)
-	python -m "SimpleHTTPServer" "$port"
+quickserve() {
+  local port="${1:-8000}"
+  sleep 1 && open "http://localhost:${port}/" &
+  # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
+  # And serve everything as UTF-8 (although not technically correct, this doesn.t break anything for binary files)
+  python -m "SimpleHTTPServer" "$port"
 }
 
 # Function to display a list of users and their memory and cpu usage

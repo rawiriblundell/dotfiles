@@ -101,6 +101,14 @@ if [[ "$(uname)" = "SunOS" ]]; then
   PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:/usr/xpg4/bin:
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
+  
+  # Check if /usr/bin/sudo and /bin/bash exist
+  if [[ ! -f /usr/bin/sudo ]]; then
+    printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(which sudo | tail -1) /usr/bin/sudo'"
+  fi
+  if [[ ! -f /bin/bash ]]; then
+    printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(which bash | tail -1) /bin/bash'"
+  fi
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU

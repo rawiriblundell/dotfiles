@@ -277,6 +277,15 @@ userimpact() {
 
 # Throttle stdout
 throttle() {
+  # Check that stdin isn't empty
+  if [[ -t 0 ]]; then
+    printf "%s\n" "throttle"
+    printf "\t%s\n"  "This function increments line by line through the output" \
+      "of other commands.  It requires input on stdin i.e." \
+      "'somecommand | anothercommand | throttle [optional increment value in seconds]'"
+    return 1
+  fi
+
   # Default the sleep time to 1 second
   if [[ -z $1 ]]; then
     Sleep=1
@@ -905,7 +914,8 @@ pwcheck () {
 
 # Standardise the title header
 settitle() {
-  printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+  #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+  printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
 }
 PROMPT_COMMAND=settitle
 export PROMPT_COMMAND

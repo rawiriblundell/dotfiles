@@ -275,6 +275,28 @@ userimpact() {
   fi
 }
 
+# Throttle stdout
+throttle() {
+  # Default the sleep time to 1 second
+  if [[ -z $1 ]]; then
+    Sleep=1
+  else
+    Sleep="$1"
+    # We do another check for portability
+    # (GNU sleep can handle fractional seconds, non-GNU cannot)
+    if ! sleep "${Sleep}" &>/dev/null; then
+      printf "%s\n" "INFO: That time increment is not supported, defaulting to 1s"
+      Sleep=1
+    fi
+  fi
+
+  # Now we output line by line with a sleep in the middle
+  while read -r Line; do
+    printf "%s\n" "${Line}"
+    sleep "${Sleep}"
+  done
+}
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety
@@ -949,3 +971,6 @@ else
   # Alias the root PS1 into sudo for edge cases
   alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
 fi
+
+# need to work this in for Solaris to update Putty Titles
+#printf "\033]0; $(hostname):$(pwd) \007\003\n"

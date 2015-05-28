@@ -903,6 +903,13 @@ pwcheck () {
   fi
 }
 
+# Standardise the title header
+settitle() {
+  printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+}
+PROMPT_COMMAND=settitle
+export PROMPT_COMMAND
+
 # Standardise the Command Prompt
 # First, let's map some colours, uncomment to use:
 #txtblk='\e[0;30m\]' # Black - Regular
@@ -971,6 +978,3 @@ else
   # Alias the root PS1 into sudo for edge cases
   alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
 fi
-
-# need to work this in for Solaris to update Putty Titles
-#printf "\033]0; $(hostname):$(pwd) \007\003\n"

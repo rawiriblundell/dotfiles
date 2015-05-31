@@ -314,6 +314,54 @@ throttle() {
   done
 }
 
+# Check if 'rev' is available, if not, enable a stop-gap function
+if ! command -v rev &>/dev/null; then
+  rev() {
+    # Check that stdin or $1 isn't empty
+    if [[ -t 0 ]] && [[ -z $1 ]]; then
+      printf "%s\n" "rev"
+      printf "\t%s\n"  "This function replicates the command 'rev'" \
+        "it reverses the order of characters in a string, so it needs input e.g." \
+        "'echo 'someword' | rev' or 'rev sometext'"
+      return 1
+    # Disallow both piping in strings and declaring strings
+    elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+      printf "%s\n" "rev - ERROR: Please select either piping in or declaring a string to reverse, not both."
+      return 1
+    fi
+
+    # If parameter is a file, action that first
+    if [[ -f $1 ]]; then
+      while read -r Line; do
+        len=${#Line}
+        rev=
+        for((i=len-1;i>=0;i--)); do
+          rev="$rev${Line:$i:1}"
+        done
+        printf "%s\n" "${rev}"
+      done < "$1"
+    # else, if parameter exists, action that
+    elif [[ ! -z "$@" ]]; then
+      Line=$*
+      len=${#Line}
+      for((i=len-1;i>=0;i--)); do 
+        rev="$rev${Line:$i:1}"
+      done
+      printf "%s\n" "${rev}"
+    # Finally, cater for piped/redirected stdin
+    else
+      while read -r Line; do
+        len=${#Line}
+        rev=
+        for((i=len-1;i>=0;i--)); do
+          rev="$rev${Line:$i:1}"
+        done
+        printf "%s\n" "${rev}"
+      done < "${1:-/dev/stdin}"
+    fi
+  }
+fi
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

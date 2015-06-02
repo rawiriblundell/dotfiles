@@ -343,6 +343,7 @@ if ! command -v rev &>/dev/null; then
     # else, if parameter exists, action that
     elif [[ ! -z "$@" ]]; then
       Line=$*
+      rev=
       len=${#Line}
       for((i=len-1;i>=0;i--)); do 
         rev="$rev${Line:$i:1}"

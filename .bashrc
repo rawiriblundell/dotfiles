@@ -363,6 +363,58 @@ if ! command -v rev &>/dev/null; then
   }
 fi
 
+# Check if 'watch' is available, if not, enable a stop-gap function
+if ! command -v watch &>/dev/null; then
+  watch() {
+  # Set the default values for Sleep, Title and Command
+  Sleep=2
+  Title=true
+  Command=
+  local OPTIND
+
+  while getopts ":hn:vt" Flags; do
+    case "${Flags}" in
+      h)  printf "%s\n" "Usage:" " watch [-hntv] <command>" "" \
+            "Options:" \
+            "  -h, help.      Print a summary of the options" \
+            "  -n, interval.  Seconds to wait between updates" \
+            "  -v, version.   Print the version number" \
+            "  -t, no title.  Turns off showing the header"
+          return 0;;
+      n)  Sleep="${OPTARG}";;
+      v)  printf "%s\n" "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
+          return 0;;
+      t)  Title=false;;
+      \?)  printf "%s\n" "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
+           return 1;;
+      :)  printf "%s\n" "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+          return 1;;
+    esac
+  done
+
+  shift $(( OPTIND -1 ))
+  Command=$*
+
+  if [[ -z "${Command}" ]]; then
+    printf "%s\n" "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
+    return 1
+  fi
+
+  while true; do
+    clear
+    if [[ "${Title}" = "true" ]]; then
+      Date=$(date)
+      let Col=$(tput cols)-${#Date}
+      printf "%s%${Col}s" "Every ${Sleep}s: ${Command}" "${Date}"
+      tput sgr0
+      printf "%s\n" "" ""
+    fi
+    $Command
+    sleep "${Sleep}"
+  done
+  }
+fi
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

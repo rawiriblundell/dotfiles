@@ -265,7 +265,7 @@ quickserve() {
 }
 
 # Function to display a list of users and their memory and cpu usage
-userimpact() {
+what() {
   # This doesn't run on Solaris yet, awk/nawk/gawk incompatiblity most likely
   if [[ "$(uname)" = "SunOS" ]]; then
     printf "%s\n" "ERROR: Sorry, this function is currently not compatible with Solaris"
@@ -359,6 +359,74 @@ if ! command -v rev &>/dev/null; then
         done
         printf "%s\n" "${rev}"
       done < "${1:-/dev/stdin}"
+    fi
+  }
+fi
+
+# Check if 'shuf' is available, if not, provide basic shuffle functionality
+# Performance tests: perl non-portable, python, perl-portable, bash.  In that order.
+if ! command -v shuf &>/dev/null; then
+  shuf() {
+    # Let's set a blank array
+    shufArray=()
+
+    # Handle the input, checking whether it's a file or stdin
+    # Check that stdin or $1 isn't empty, and handly any attempts to use -opts
+    if [[ -t 0 ]] && [[ -z $1 ]] || [[ $1 = "-?" ]]; then
+      printf "%s\n" "shuf"
+      printf "\t%s\n"  "This function replicates the command 'shuf'" \
+        "it shuffles the order of lines, so it needs input e.g." \
+        "'command | shuf' or 'shuf somefile' or 'shuf words to shuffle'" \
+        "" "It does not offer any of shuf's options, you will need to do that yourself" \
+        "e.g. instead of 'shuf -n 2 filename', use 'shuf filename | head -2'"
+      return 1
+    # Disallow both piping in strings and declaring strings
+    elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+      printf "%s\n" "shuf - ERROR: Please either piping in or declaring a filename to shuffle, not both."
+      return 1
+    fi
+
+    # If there is more than one parameter, we read that into the array
+    if [[ $# -ge 2 ]]; then
+      shufArray=( $@ )
+    # Otherwise, we handle $1 (as a file), or piped/redirected stdin
+    # We manage IFS to ensure that lines remain intact
+    else
+      while read -r line; do
+        oldIFS="$IFS"
+        IFS=$'\n'
+        shufArray+=( "$line" )
+      done < "${1:-/dev/stdin}"
+      IFS="${oldIFS}"
+    fi
+
+    # First, perl is usually available, so let's check for that
+    if command -v perl &>/dev/null; then
+      # Need to figure out a test to see if this module is available, if so, use it.
+      #printf "%s\n" "${shufArray[@]}" | perl -MList::Util=shuffle -e 'print shuffle(<>);' 
+
+      # Here is a slower, but portable-ish alternative, tested down to Solaris 8
+      printf "%s\n" "${shufArray[@]}" | perl -e 'srand(time|$$); @a =<>; while ( @a ) { $choice = splice(@a, rand @a, 1); print $choice; }'
+
+    # Otherwise, we try python.  Less available than perl but a relatively portable oneliner
+    elif command -v python &>/dev/null; then
+      printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
+
+    # Otherwise, we failover to bash native, textbook KFY algorithm
+    else
+      local i tmp size max rand
+
+      # $RANDOM % (i+1) is biased because of the limited range of $RANDOM
+      # Compensate by using a range which is a multiple of the array size.
+      size=${#shufArray[@]}
+      max=$(( 32768 / size * size ))
+      
+      for ((i=size-1; i>0; i--)); do
+        while (( (rand=$RANDOM) >= max )); do :; done
+        rand=$(( rand % (i+1) ))
+        tmp=${shufArray[i]} shufArray[i]=${shufArray[rand]} shufArray[rand]=$tmp
+      done
+      printf "%s\n" "${shufArray[@]}"
     fi
   }
 fi

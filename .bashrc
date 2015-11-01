@@ -392,11 +392,17 @@ if ! command -v shuf &>/dev/null; then
     # Otherwise, we handle $1 (as a file), or piped/redirected stdin
     # We manage IFS to ensure that lines remain intact
     else
-      while read -r line; do
-        oldIFS="$IFS"
-        IFS=$'\n'
-        shufArray+=( "$line" )
-      done < "${1:-/dev/stdin}"
+      oldIFS="$IFS"
+      IFS=$'\n'
+      # If it's a file, we read it straight in.  Faster than the line by line method for stdin
+      # Possible TO-DO: add a check for mapfile or readarray
+      if [[ -f $1 ]]; then
+        GLOBIGNORE='*' :; shufArray=($(<"$1"))
+      else
+        while read -r line; do
+          shufArray+=( "$line" )
+        done
+      fi
       IFS="${oldIFS}"
     fi
 
@@ -412,21 +418,30 @@ if ! command -v shuf &>/dev/null; then
     elif command -v python &>/dev/null; then
       printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
 
-    # Otherwise, we failover to bash native, textbook KFY algorithm
+    # Otherwise, we failover to bash native, this can potentially be brutally slow
     else
-      local i tmp size max rand
-
-      # $RANDOM % (i+1) is biased because of the limited range of $RANDOM
-      # Compensate by using a range which is a multiple of the array size.
-      size=${#shufArray[@]}
-      max=$(( 32768 / size * size ))
-      
-      for ((i=size-1; i>0; i--)); do
-        while (( (rand=$RANDOM) >= max )); do :; done
-        rand=$(( rand % (i+1) ))
-        tmp=${shufArray[i]} shufArray[i]=${shufArray[rand]} shufArray[rand]=$tmp
+      # Figure out the size of the array and open an empty array
+      arrSize=${#shufArray[@]}
+      newArray=()
+      # If the array is over 100 elements, print out a courtesy warning
+      if [[ ${arrSize} -gt 100 ]]; then
+        printf "%s\n" "[shuf INFO]: Using bash native shuffle method, this can be extremely slow e.g. 1 shuffle per second" \
+          "The content that you would like shuffled has ${arrSize} elements to shuffle.  Use Ctrl+C to cancel, or please wait patiently."
+      fi
+      # So long as shufArray has more than 0 elements, we work on it
+      while [[ ${arrSize} -gt 0 ]]; do
+        # Choose a random number up to 32768 (and then reducing as arrSize decrements)
+        numRand=$(( RANDOM % arrSize ))
+        # Use that random number to randomly select an element from shufArray, feed it to newArray
+        newArray+=( "${shufArray[numRand]}" )
+        # Remove that element from shufArray and the reindex it to prevent duplicate reads
+        unset shufArray[numRand]
+        shufArray=( "${shufArray[@]}" )
+        # Decrement arrSize
+        arrSize=$(( arrSize - 1 ))
       done
-      printf "%s\n" "${shufArray[@]}"
+      # Now that the new array is built, print it out
+      printf "%s\n" "${newArray[@]}"
     fi
   }
 fi

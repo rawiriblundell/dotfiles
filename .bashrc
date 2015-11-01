@@ -419,10 +419,10 @@ if ! command -v shuf &>/dev/null; then
       printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
 
     # Otherwise, we failover to bash native, this can potentially be brutally slow
+    # This is the third method coded, it allows some biasing in exchange for a slight performance boost
     else
-      # Figure out the size of the array and open an empty array
+      # Figure out the size of the array, this tells us how many shuffles we have to do
       arrSize=${#shufArray[@]}
-      newArray=()
       # If the array is over 100 elements, print out a courtesy warning
       if [[ ${arrSize} -gt 100 ]]; then
         printf "%s\n" "[shuf INFO]: Using bash native shuffle method, this can be extremely slow e.g. 1 shuffle per second" \
@@ -430,18 +430,18 @@ if ! command -v shuf &>/dev/null; then
       fi
       # So long as shufArray has more than 0 elements, we work on it
       while [[ ${arrSize} -gt 0 ]]; do
-        # Choose a random number up to 32768 (and then reducing as arrSize decrements)
+        # Choose a random number up to 32768 (this eventually reduces as arrSize decrements)
         numRand=$(( RANDOM % arrSize ))
-        # Use that random number to randomly select an element from shufArray, feed it to newArray
-        newArray+=( "${shufArray[numRand]}" )
+        # Use that random number to randomly select an element from shufArray, then append it to the end of the array
+        shufArray+=( "${shufArray[numRand]}" )
         # Remove that element from shufArray and the reindex it to prevent duplicate reads
         unset shufArray[numRand]
         shufArray=( "${shufArray[@]}" )
         # Decrement arrSize
         arrSize=$(( arrSize - 1 ))
       done
-      # Now that the new array is built, print it out
-      printf "%s\n" "${newArray[@]}"
+      # Now that shufArray is rebuilt, print it out
+      printf "%s\n" "${shufArray[@]}"
     fi
   }
 fi

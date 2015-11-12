@@ -210,6 +210,18 @@ ncp() {
   ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
 }
 
+# Calculate how many days since epoch
+epochdays() {
+  if command -v perl &>/dev/null; then
+    epoch=$(perl -e "print time")
+  elif command -v truss &>/dev/null; then
+    epoch=$(truss date 2>&1 | grep ^time | awk -F"= " '{print $2}')
+  elif [[ $(uname) = Linux ]]; then
+    epoch=$(date +%s)
+  fi
+  printf "%s\n" "$(( epoch / 86400 ))"
+}
+
 # Enable launching a function with sudo
 # Basically copies the function to a temporary file and launches it
 exesudo () {
@@ -738,7 +750,7 @@ cryptpasswd() {
   Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
   PwdKryptMode="${2}"
   
-  if [ "${1}" = "" ]; then
+  if [[ -z "${1}" ]]; then
     printf "%s\n" "cryptpasswd - a tool for hashing passwords" \
     "Usage: cryptpasswd [password to hash] [1|5|6]" \
     "    Crypt method can be set using '1' (MD5, default), '5' (SHA256) or '6' (SHA512)" \
@@ -773,7 +785,7 @@ cryptpasswd() {
   printf "%s\n" "Original: ${Pwd} Crypted: ${PwdSalted}"
 
   # In case OpenSSL is used, give an FYI before we exit out
-  if [ "${KryptMethod}" = "OpenSSL" ]; then
+  if [[ "${KryptMethod}" = "OpenSSL" ]]; then
     printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
   fi
 }

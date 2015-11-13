@@ -98,7 +98,7 @@ if [[ "$(uname)" = "SunOS" ]]; then
   [[ -x "/usr/xpg4/bin/grep" ]] && alias grep='/usr/xpg4/bin/grep'
   [[ -x "/usr/xpg4/bin/egrep" ]] && alias egrep='/usr/xpg4/bin/egrep'
   # And set the $PATH
-  PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:/usr/xpg4/bin:
+  PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$PATH
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
   

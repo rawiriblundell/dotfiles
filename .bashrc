@@ -905,8 +905,8 @@ genphrase() {
   fi
   
   # Now generate the passphrase(s)
-  # First we test to see if shuf is available
-  if command -v shuf &>/dev/null; then
+  # First we test to see if shuf is available, avoiding the earlier shuf function for now
+  if command -v shuf &>/dev/null && ! type shuf | head -1 | grep -q function; then
 #    echo "Using shuf!" #Debug
     if [[ "${PphraseCols}" = "True" ]]; then
       # Now we use a loop to run the number of times required to match the -n setting

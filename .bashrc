@@ -94,10 +94,7 @@ stty ixoff -ixon
 ########################################
 
 if [[ "$(uname)" = "SunOS" ]]; then
-  # If we're on Solaris, alias grep to the more useful xpg4 version
-  [[ -x "/usr/xpg4/bin/grep" ]] && alias grep='/usr/xpg4/bin/grep'
-  [[ -x "/usr/xpg4/bin/egrep" ]] && alias egrep='/usr/xpg4/bin/egrep'
-  # And set the $PATH
+  # If we're on Solaris, set the PATH so that we bias towards xpg binaries
   PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$PATH
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
@@ -125,90 +122,6 @@ export PATH
 ########################################
 # Functions
 ########################################
-
-# flocate function.  This gives a search function that blends find and locate
-# Will obviously only work where locate lives, so Solaris will mostly be out of luck
-# Usage: flocate searchterm1 searchterm2 searchterm[n]
-# Source: http://solarum.com/v.php?l=1149LV99
-flocate() {
-if ! command -v locate &>/dev/null; then
-  printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
-  return 1
-fi
-if [[ $# -gt 1 ]]; then
-  display_divider=1
-else
-  display_divider=0
-fi
-
-current_argument=0
-total_arguments=$#
-while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
-  current_file=$1
-  if [ "${display_divider}" = "1" ] ; then
-    printf "%s\n" "----------------------------------------" \
-    "Matches for ${current_file}" \
-    "----------------------------------------"
-  fi
-
-  filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
-  locate -r "${filename_re}"
-  shift
-  (( current_argument = current_argument + 1 ))
-done
-}
-
-# Enable piping to Windows Clipboard from with PuTTY
-# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
-wclip() {
-  echo -ne '\e''[5i'
-  cat $*
-  echo -ne '\e''[4i'
-  echo "Copied to Windows clipboard" 1>&2
-}
-
-# Enable X-Windows for cygwin, finds and assigns an available display env variable.
-# To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
-
-# First we check if we're on Solaris, because Solaris doesn't like "uname -o"
-if [[ "$(uname)" != "SunOS" ]]; then
-  if [[ "$(uname -o)" = "Cygwin" ]]; then
-    myx() {
-      a=/tmp/.X11-unix/X
-      #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
-      i=351
-      while [[ "${i}" -lt 500 ]]; do
-        b=$a$i
-        if [[ ! -S $b ]] ; then
-          c=$i
-          break
-        fi
-      i++
-      done
-      export DISPLAY=:$c
-      echo export DISPLAY=:$c
-      X :$c -multiwindow >& /dev/null &
-      xterm -fn 9x15bold -bg black -fg orange -sb &
-    }
-  fi
-fi
-
-# Provide a faster-than-scp file transfer function
-# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
-ncp() {
-  FileFull=$1
-  RemoteHost=$2
-
-  FileDir=$(dirname "${FileFull}")
-  FileName=$(basename "${FileFull}")
-  LocalHost=$(hostname)
-
-  ZipTool=pigz
-  NCPort=8888
-
-  tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
-  ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
-}
 
 # Calculate how many days since epoch
 epochdays() {
@@ -267,6 +180,81 @@ exesudo () {
   rm "$tmpfile"
 }
 
+# flocate function.  This gives a search function that blends find and locate
+# Will obviously only work where locate lives, so Solaris will mostly be out of luck
+# Usage: flocate searchterm1 searchterm2 searchterm[n]
+# Source: http://solarum.com/v.php?l=1149LV99
+flocate() {
+if ! command -v locate &>/dev/null; then
+  printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
+  return 1
+fi
+if [[ $# -gt 1 ]]; then
+  display_divider=1
+else
+  display_divider=0
+fi
+
+current_argument=0
+total_arguments=$#
+while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
+  current_file=$1
+  if [ "${display_divider}" = "1" ] ; then
+    printf "%s\n" "----------------------------------------" \
+    "Matches for ${current_file}" \
+    "----------------------------------------"
+  fi
+
+  filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
+  locate -r "${filename_re}"
+  shift
+  (( current_argument = current_argument + 1 ))
+done
+}
+
+# Enable X-Windows for cygwin, finds and assigns an available display env variable.
+# To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
+
+# First we check if we're on Solaris, because Solaris doesn't like "uname -o"
+if [[ "$(uname)" != "SunOS" ]]; then
+  if [[ "$(uname -o)" = "Cygwin" ]]; then
+    myx() {
+      a=/tmp/.X11-unix/X
+      #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
+      i=351
+      while [[ "${i}" -lt 500 ]]; do
+        b=$a$i
+        if [[ ! -S $b ]] ; then
+          c=$i
+          break
+        fi
+      i++
+      done
+      export DISPLAY=:$c
+      echo export DISPLAY=:$c
+      X :$c -multiwindow >& /dev/null &
+      xterm -fn 9x15bold -bg black -fg orange -sb &
+    }
+  fi
+fi
+
+# Provide a faster-than-scp file transfer function
+# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
+ncp() {
+  FileFull=$1
+  RemoteHost=$2
+
+  FileDir=$(dirname "${FileFull}")
+  FileName=$(basename "${FileFull}")
+  LocalHost=$(hostname)
+
+  ZipTool=pigz
+  NCPort=8888
+
+  tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
+  ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
+}
+
 # Start an HTTP server from a directory, optionally specifying the port
 quickserve() {
   local port="${1:-8000}"
@@ -274,56 +262,6 @@ quickserve() {
   # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
   # And serve everything as UTF-8 (although not technically correct, this doesn.t break anything for binary files)
   python -m "SimpleHTTPServer" "$port"
-}
-
-# Function to display a list of users and their memory and cpu usage
-what() {
-  # This doesn't run on Solaris yet, awk/nawk/gawk incompatiblity most likely
-  if [[ "$(uname)" = "SunOS" ]]; then
-    printf "%s\n" "ERROR: Sorry, this function is currently not compatible with Solaris"
-    return 1
-  fi
-  # Otherwise, start processing $1.  This way is used because getopts blew up
-  if [[ "$1" = "-c" ]]; then
-    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn | column -t
-  elif [[ "$1" = "-m" ]]; then
-    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn | column -t
-  elif [[ -z "$1" ]]; then
-    ps -eo %cpu=,vsz=,user= | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
-  else
-    printf "%s\n" "userimpact - list all users and their memory/cpu usage" "Usage: userimpact [-c (sort by cpu usage) -m (sort by memory usage)]"
-  fi
-}
-
-# Throttle stdout
-throttle() {
-  # Check that stdin isn't empty
-  if [[ -t 0 ]]; then
-    printf "%s\n" "throttle"
-    printf "\t%s\n"  "This function increments line by line through the output" \
-      "of other commands.  It requires input on stdin i.e." \
-      "'somecommand | anothercommand | throttle [optional increment value in seconds]'"
-    return 1
-  fi
-
-  # Default the sleep time to 1 second
-  if [[ -z $1 ]]; then
-    Sleep=1
-  else
-    Sleep="$1"
-    # We do another check for portability
-    # (GNU sleep can handle fractional seconds, non-GNU cannot)
-    if ! sleep "${Sleep}" &>/dev/null; then
-      printf "%s\n" "INFO: That time increment is not supported, defaulting to 1s"
-      Sleep=1
-    fi
-  fi
-
-  # Now we output line by line with a sleep in the middle
-  while read -r Line; do
-    printf "%s\n" "${Line}"
-    sleep "${Sleep}"
-  done
 }
 
 # Check if 'rev' is available, if not, enable a stop-gap function
@@ -457,6 +395,60 @@ if ! command -v shuf &>/dev/null; then
     fi
   }
 fi
+
+# Throttle stdout
+throttle() {
+  # Check that stdin isn't empty
+  if [[ -t 0 ]]; then
+    printf "%s\n" "throttle"
+    printf "\t%s\n"  "This function increments line by line through the output" \
+      "of other commands.  It requires input on stdin i.e." \
+      "'somecommand | anothercommand | throttle [optional increment value in seconds]'"
+    return 1
+  fi
+
+  # Default the sleep time to 1 second
+  if [[ -z $1 ]]; then
+    Sleep=1
+  else
+    Sleep="$1"
+    # We do another check for portability
+    # (GNU sleep can handle fractional seconds, non-GNU cannot)
+    if ! sleep "${Sleep}" &>/dev/null; then
+      printf "%s\n" "INFO: That time increment is not supported, defaulting to 1s"
+      Sleep=1
+    fi
+  fi
+
+  # Now we output line by line with a sleep in the middle
+  while read -r Line; do
+    printf "%s\n" "${Line}"
+    sleep "${Sleep}"
+  done
+}
+
+# Enable piping to Windows Clipboard from with PuTTY
+# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
+wclip() {
+  echo -ne '\e''[5i'
+  cat $*
+  echo -ne '\e''[4i'
+  echo "Copied to Windows clipboard" 1>&2
+}
+
+# Function to display a list of users and their memory and cpu usage
+what() {
+  # Start processing $1.  I initially tried coding this with getopts but it blew up
+  if [[ "$1" = "-c" ]]; then
+    ps -eo pcpu,vsz,user | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn
+  elif [[ "$1" = "-m" ]]; then
+    ps -eo pcpu,vsz,user | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn
+  elif [[ -z "$1" ]]; then
+    ps -eo pcpu,vsz,user | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
+  else
+    printf "%s\n" "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
+  fi
+}
 
 # Check if 'watch' is available, if not, enable a stop-gap function
 if ! command -v watch &>/dev/null; then

@@ -75,15 +75,19 @@ shopt -s checkwinsize
 export HISTTIMEFORMAT="%F,%T "
 
 # don't put duplicate lines in the history. See bash(1) for more options
-# ... or force ignoredups and ignorespace
+# and ignore commands that start with a space
 HISTCONTROL=ignoredups:ignorespace
  
-# append to the history file, don't overwrite it
+# append to the history file instead of overwriting it
 shopt -s histappend
- 
+
+# After each command, append to the history file and reread it
+# This attempts to keep history sync'd across multiple sessions
+export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
+
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+HISTSIZE=5000
+HISTFILESIZE=5000
 
 # Disable ctrl+s (XOFF) in PuTTY
 stty ixany

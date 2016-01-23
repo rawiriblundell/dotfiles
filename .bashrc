@@ -115,7 +115,12 @@ elif [[ "$(uname)" = "Linux" ]]; then
   # Linux only, as -W/-w options aren't available in non-GNU
   alias diff='diff -W $(( $(tput cols) - 2 ))'
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
-  PATH=$PATH:$HOME/bin
+  
+  # set PATH so it includes user's private bin if it exists
+  if [[ -d "$HOME/bin" ]]; then
+    PATH="$HOME/bin:$PATH"
+  fi
+
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
   if tty --quiet; then
     stty erase '^?'

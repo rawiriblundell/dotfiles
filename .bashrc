@@ -99,7 +99,8 @@ stty ixoff -ixon
 
 if [[ "$(uname)" = "SunOS" ]]; then
   # If we're on Solaris, set the PATH so that we bias towards xpg binaries
-  PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$PATH
+  PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
+  
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
   
@@ -116,9 +117,11 @@ elif [[ "$(uname)" = "Linux" ]]; then
   alias diff='diff -W $(( $(tput cols) - 2 ))'
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
   
-  # set PATH so it includes user's private bin if it exists
-  if [[ -d "$HOME/bin" ]]; then
-    PATH="$HOME/bin:$PATH"
+  # If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
+  if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then
+    if [[ -d $HOME/bin ]]; then
+      PATH=$PATH:$HOME/bin
+    fi
   fi
 
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc

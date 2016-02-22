@@ -325,6 +325,22 @@ if ! command -v rev &>/dev/null; then
   }
 fi
 
+# A function to repeat an action any number of times
+repeat() {
+  # check that $1 is a digit, if not error out, if so, set the repeatNum variable
+  case "$1" in
+    (*[!0-9]*|'') printf "%s\n" "[ERROR]: '$1' is not a number.  Usage: 'repeat n command'"; return 1;;
+    (*)           local repeatNum=$1;;
+  esac
+  # shift so that the rest of the line is the command to execute
+  shift
+
+  # Run the command in a while loop repeatNum times
+  while [ $(( repeatNum -= 1 )) -ge 0 ]; do
+    "$@"
+  done
+}
+
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Performance tests: perl non-portable, python, perl-portable, bash.  In that order.
 if ! command -v shuf &>/dev/null; then

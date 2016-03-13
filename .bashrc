@@ -89,7 +89,7 @@ export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; histor
 HISTSIZE=5000
 HISTFILESIZE=5000
 
-# Disable ctrl+s (XOFF) in PuTTY
+# Disable ctrl+s (XOFF) in PuTTYr
 stty ixany
 stty ixoff -ixon
 
@@ -248,6 +248,13 @@ if [[ "$(uname)" != "SunOS" ]]; then
       xterm -fn 9x15bold -bg black -fg orange -sb &
     }
   fi
+fi
+
+# Replicate 'let'.  Likely to not be needed in bash, mostly for my reference
+if ! command -v let &>/dev/null; then
+  let() {
+    return "$((!($1)))"
+  }
 fi
 
 # Provide a faster-than-scp file transfer function
@@ -810,7 +817,7 @@ cryptpasswd() {
   fi
 }
 
-# Found code to merge into genphrase at some point.
+# Found code from bash-it to merge into genphrase at some point.
 function passgen ()
 {
   about 'generates random password from dictionary words'

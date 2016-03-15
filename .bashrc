@@ -32,7 +32,7 @@ fi
 # Set umask for new files
 umask 027
 
-# If .curl-format exists, enable curl-trace
+# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
 if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
 fi

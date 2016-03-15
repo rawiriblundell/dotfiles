@@ -32,9 +32,9 @@ fi
 # Set umask for new files
 umask 027
 
-# If .curl-function exists, enable curl-trace
-if [[ -f ~/.curl-function ]] && command -v curl &>/dev/null; then
-  alias curl-trace='curl -w "@~/.curl-format" -o /dev/null -s'
+# If .curl-format exists, enable curl-trace
+if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
+  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
 fi
 
 # Silence ssh motd's etc using "-q"

@@ -32,6 +32,11 @@ fi
 # Set umask for new files
 umask 027
 
+# If .curl-function exists, enable curl-trace
+if [[ -f ~/.curl-function ]] && command -v curl &>/dev/null; then
+  alias curl-trace='curl -w "@~/.curl-format" -o /dev/null -s'
+fi
+
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
 # and automatically adds them to ~/.ssh/known_hosts

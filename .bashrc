@@ -144,8 +144,10 @@ export PATH
 epochdays() {
   if command -v perl &>/dev/null; then
     epoch=$(perl -e "print time")
-  elif command -v truss &>/dev/null; then
+  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = SunOS ]]; then
     epoch=$(truss date 2>&1 | grep ^time | awk -F"= " '{print $2}')
+  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = FreeBSD ]]; then
+    epoch=$(truss date 2>&1 | grep ^gettimeofday | cut -d "{" -f2 | cut -d "." -f1)
   elif [[ $(uname) = Linux ]]; then
     epoch=$(date +%s)
   fi

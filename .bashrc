@@ -140,6 +140,19 @@ export PATH
 # Functions
 ########################################
 
+# Print the given text in the center of the screen.
+# From https://github.com/Haroenv/config/blob/master/.bash_profile
+center() {
+  width=$(tput cols);
+  str="$@";
+  len=${#str};
+  [ $len -ge $width ] && echo "$str" && return;
+  for ((i = 0; i < $(((($width - $len)) / 2)); i++)); do
+    echo -n " ";
+  done;
+  echo "$str";
+}
+
 # Calculate how many days since epoch
 epochdays() {
   if command -v perl &>/dev/null; then

@@ -557,6 +557,11 @@ if ! command -v watch &>/dev/null; then
   }
 fi
 
+# Get local weather and present it nicely
+weather() {
+    curl "http://wttr.in/{$1:-Wellington}"
+}
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

@@ -129,7 +129,8 @@ elif [[ "$(uname)" = "Linux" ]]; then
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
   
   # If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
-  if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then
+  #if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
+  if [[ ! $PATH =~ $HOME/bin{,:} ]]; then
     if [[ -d $HOME/bin ]]; then
       PATH=$PATH:$HOME/bin
     fi

@@ -130,7 +130,8 @@ elif [[ "$(uname)" = "Linux" ]]; then
   
   # If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
   #if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
-  if [[ ! $PATH =~ $HOME/bin{,:} ]]; then
+  #if [[ ! $PATH =~ $HOME/bin{,:} ]]; then # This breaks on even older versions of bash e.g. 2.05
+  if ! echo "$PATH" | grep "$HOME/bin" &>/dev/null; then
     if [[ -d $HOME/bin ]]; then
       PATH=$PATH:$HOME/bin
     fi

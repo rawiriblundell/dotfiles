@@ -86,13 +86,19 @@ HISTCONTROL=ignoredups:ignorespace
 # append to the history file instead of overwriting it
 shopt -s histappend
 
-# After each command, append to the history file and reread it
-# This attempts to keep history sync'd across multiple sessions
-export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
-
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000
 HISTFILESIZE=5000
+
+# Standardise the title header
+settitle() {
+  #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+  printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
+}
+# After each command, append to the history file and reread it
+# This attempts to keep history sync'd across multiple sessions
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
+export PROMPT_COMMAND
 
 # Disable ctrl+s (XOFF) in PuTTY
 stty ixany
@@ -1169,14 +1175,6 @@ pwcheck () {
     return 1
   fi
 }
-
-# Standardise the title header
-settitle() {
-  #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
-  printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
-}
-PROMPT_COMMAND=settitle
-export PROMPT_COMMAND
 
 # Standardise the Command Prompt
 # First, let's map some colours, uncomment to use:

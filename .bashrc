@@ -94,7 +94,7 @@ export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; histor
 HISTSIZE=5000
 HISTFILESIZE=5000
 
-# Disable ctrl+s (XOFF) in PuTTYr
+# Disable ctrl+s (XOFF) in PuTTY
 stty ixany
 stty ixoff -ixon
 

@@ -512,29 +512,6 @@ up () {
   fi
 }
 
-# Enable piping to Windows Clipboard from with PuTTY
-# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
-wclip() {
-  echo -ne '\e''[5i'
-  cat $*
-  echo -ne '\e''[4i'
-  echo "Copied to Windows clipboard" 1>&2
-}
-
-# Function to display a list of users and their memory and cpu usage
-what() {
-  # Start processing $1.  I initially tried coding this with getopts but it blew up
-  if [[ "$1" = "-c" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn
-  elif [[ "$1" = "-m" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn
-  elif [[ -z "$1" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
-  else
-    printf "%s\n" "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
-  fi
-}
-
 # Check if 'watch' is available, if not, enable a stop-gap function
 if ! command -v watch &>/dev/null; then
   watch() {
@@ -589,7 +566,39 @@ fi
 
 # Get local weather and present it nicely
 weather() {
-    curl "http://wttr.in/{$1:-Wellington}"
+  if ! command -v curl &>/dev/null; then
+    printf "%s\n" "[ERROR] - weather: This command requires 'curl', please install it"
+    exit 1
+  fi
+
+  if [[ -z $1 ]]; then
+    curl "http://wttr.in/Wellington"
+  else
+    curl "http://wttr.in/$1"
+  fi
+}
+
+# Enable piping to Windows Clipboard from with PuTTY
+# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
+wclip() {
+  echo -ne '\e''[5i'
+  cat $*
+  echo -ne '\e''[4i'
+  echo "Copied to Windows clipboard" 1>&2
+}
+
+# Function to display a list of users and their memory and cpu usage
+what() {
+  # Start processing $1.  I initially tried coding this with getopts but it blew up
+  if [[ "$1" = "-c" ]]; then
+    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn
+  elif [[ "$1" = "-m" ]]; then
+    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn
+  elif [[ -z "$1" ]]; then
+    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
+  else
+    printf "%s\n" "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
+  fi
 }
 
 # Password generator function for when pwgen or apg aren't available

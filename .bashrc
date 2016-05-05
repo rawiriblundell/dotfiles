@@ -109,10 +109,10 @@ if [[ "$(uname)" = "SunOS" ]]; then
   PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
   
   # If we've got bash v2 (e.g. Solaris 9), we cripple it.  Otherwise it will complain about 'history not found'
-  if (( BASH_VERSINFO[0] = 2 )); then
+  if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
     PROMPT_COMMAND=settitle
   # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
-  elif (( BASH_VERSINFO[0] > 2 )); then
+  elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
     # After each command, append to the history file and reread it
     # This attempts to keep history sync'd across multiple sessions
     PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"

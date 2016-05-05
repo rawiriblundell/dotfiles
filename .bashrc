@@ -96,11 +96,6 @@ settitle() {
   printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
 }
 
-# After each command, append to the history file and reread it
-# This attempts to keep history sync'd across multiple sessions
-PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
-export PROMPT_COMMAND
-
 # Disable ctrl+s (XOFF) in PuTTY
 stty ixany
 stty ixoff -ixon
@@ -113,6 +108,16 @@ if [[ "$(uname)" = "SunOS" ]]; then
   # If we're on Solaris, set the PATH so that we bias towards xpg binaries
   PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
   
+  # If we've got bash v2 (e.g. Solaris 9), we cripple it.  Otherwise it will complain about 'history not found'
+  if (( BASH_VERSINFO[0] = 2 )); then
+    PROMPT_COMMAND=settitle
+  # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
+  elif (( BASH_VERSINFO[0] > 2 )); then
+    # After each command, append to the history file and reread it
+    # This attempts to keep history sync'd across multiple sessions
+    PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
+  fi
+
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
   
@@ -138,12 +143,15 @@ elif [[ "$(uname)" = "Linux" ]]; then
     fi
   fi
 
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
+ 
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
   if tty --quiet; then
     stty erase '^?'
   fi
 fi
 export PATH
+export PROMPT_COMMAND
 
 ########################################
 # Functions
@@ -489,6 +497,19 @@ throttle() {
     printf "%s\n" "${Line}"
     sleep "${Sleep}"
   done
+}
+
+# Provide 'up', so instead of 'cd ../../../' you simply type 'up 3'
+up () {
+  if [[ "$#" -lt 1 ]]; then
+    cd ..
+  else
+    cdstr=""
+    for ((i=0; i<$1; i++)); do
+      cdstr="../${cdstr}"
+    done
+    cd "${cdstr}" || exit
+  fi
 }
 
 # Enable piping to Windows Clipboard from with PuTTY

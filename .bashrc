@@ -95,6 +95,7 @@ settitle() {
   #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
   printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
 }
+
 # After each command, append to the history file and reread it
 # This attempts to keep history sync'd across multiple sessions
 PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
@@ -1246,3 +1247,6 @@ else
   # Alias the root PS1 into sudo for edge cases
   alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
 fi
+
+# Useful for debugging
+export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '

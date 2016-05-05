@@ -108,7 +108,7 @@ if [[ "$(uname)" = "SunOS" ]]; then
   # If we're on Solaris, set the PATH so that we bias towards xpg binaries
   PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
   
-  # If we've got bash v2 (e.g. Solaris 9), we cripple it.  Otherwise it will complain about 'history not found'
+  # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
   if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
     PROMPT_COMMAND=settitle
   # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux

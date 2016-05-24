@@ -601,6 +601,20 @@ what() {
   fi
 }
 
+# Function to get the owner of a file
+whoowns() {
+  # First we try GNU-style 'stat'
+  if stat -c '%U' "$1" >/dev/null 2>&1; then
+     stat -c '%U' "$1"
+  # Next is BSD-style 'stat'
+  elif stat -f '%Su' "$1" >/dev/null 2>&1; then
+    stat -f '%Su' "$1"
+  # Otherwise, we failover to 'ls', which is not undesireable
+  else
+    ls -ld "$1" | awk 'NR==1 {print $3}'
+  fi
+}
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety

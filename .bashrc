@@ -49,10 +49,33 @@ unssh() {
   /usr/bin/ssh "$@"
 }
 
-# SSH auto-completion based on entries in known_hosts.
-#if [[ -e ~/.ssh/known_hosts ]]; then
-#  complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" ssh
-#fi
+################################################################################
+# Programmable Completion (Tab Completion)
+
+# Enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+################################################################################
+# Fix 'cd' tab completion
+
+complete -d cd
+
+################################################################################
+# SSH auto-completion based on ~/.ssh/config.
+if [[ -e ~/.ssh/config ]]; then
+  complete -o "default" -o "nospace" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
+# SSH auto-completion based on ~/.ssh/known_hosts.
+elif [[ -e ~/.ssh/known_hosts ]]; then
+  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr '\n' ' ')" ssh
+fi
 
 # Enable color support of ls and also add handy aliases
 if [[ -x /usr/bin/dircolors ]]; then

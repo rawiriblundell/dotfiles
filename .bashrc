@@ -1,3 +1,4 @@
+################################################################################
 # .bashrc
 # This file is read for interactive shells
 # and .bash_profile is read for login shells
@@ -7,7 +8,7 @@
 
 # Unless there is a specific need, it's simpler to put most things into .bashrc
 # And reference it into .bash_profile
-#
+################################################################################
 
 # Source global definitions
 if [[ -f /etc/bashrc ]]; then
@@ -32,68 +33,48 @@ fi
 # Set umask for new files
 umask 027
 
-# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
-if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
-  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
-fi
-
-# Silence ssh motd's etc using "-q"
-# Adding "-o StrictHostKeyChecking=no" prevents key prompts
-# and automatically adds them to ~/.ssh/known_hosts
-ssh() {
-  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
-}
-
-# Provide normal, no-options ssh for error checking
-unssh() {
-  /usr/bin/ssh "$@"
-}
-
 ################################################################################
-# Programmable Completion (Tab Completion)
+# Set the PATH, add in xpg6 and xpg4 in case we're on Solaris
+PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
 
-# Enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
+# If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
+#if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
+#if [[ ! $PATH =~ $HOME/bin{,:} ]]; then # This breaks on even older versions of bash e.g. 2.05
+if ! echo "$PATH" | grep "$HOME/bin" &>/dev/null; then
+  if [[ -d $HOME/bin ]]; then
+    PATH=$PATH:$HOME/bin
   fi
 fi
+export PATH
+
+# A portable alternative to command -v/which/type
+pathfind() {
+  OLDIFS="$IFS"
+  IFS=:
+  for p in $PATH; do
+    if [ -x "$p/$*" ]; then
+      IFS="$OLDIFS"
+      return 0
+    fi
+  done
+  IFS="$OLDIFS"
+  return 1
+}
 
 ################################################################################
-# Fix 'cd' tab completion
-
-complete -d cd
+# Set the PROMPT_COMMAND
+# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
+if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
+  PROMPT_COMMAND=settitle
+# Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
+elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
+  # After each command, append to the history file and reread it
+  # This attempts to keep history sync'd across multiple sessions
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
+fi
+export PROMPT_COMMAND
 
 ################################################################################
-# SSH auto-completion based on ~/.ssh/config.
-if [[ -e ~/.ssh/config ]]; then
-  complete -o "default" -o "nospace" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
-# SSH auto-completion based on ~/.ssh/known_hosts.
-elif [[ -e ~/.ssh/known_hosts ]]; then
-  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr '\n' ' ')" ssh
-fi
-
-# Enable color support of ls and also add handy aliases
-if [[ -x /usr/bin/dircolors ]]; then
-  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-  alias ls='ls --color=auto'
-  #alias dir='dir --color=auto'
-  #alias vdir='vdir --color=auto'
-  alias grep='grep --color=auto'
-  alias fgrep='fgrep --color=auto'
-  alias egrep='egrep --color=auto'
-fi
-
-# Some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias lh='ls -lah'
-alias l='ls -CF'
-
 # Check the window size after each command and, if necessary,
 # Update the values of LINES and COLUMNS.
 # This attempts to correct line-wrapping-over-prompt issues when a window is resized
@@ -123,58 +104,102 @@ settitle() {
 stty ixany
 stty ixoff -ixon
 
+################################################################################
+# Programmable Completion (Tab Completion)
+
+# Enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+################################################################################
+# Fix 'cd' tab completion
+
+complete -d cd
+
+################################################################################
+# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
+if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
+  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
+fi
+
+# Silence ssh motd's etc using "-q"
+# Adding "-o StrictHostKeyChecking=no" prevents key prompts
+# and automatically adds them to ~/.ssh/known_hosts
+ssh() {
+  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
+}
+
+# Provide normal, no-options ssh for error checking
+unssh() {
+  /usr/bin/ssh "$@"
+}
+
+# SSH auto-completion based on ~/.ssh/config.
+if [[ -e ~/.ssh/config ]]; then
+  complete -o "default" -o "nospace" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
+# SSH auto-completion based on ~/.ssh/known_hosts.
+elif [[ -e ~/.ssh/known_hosts ]]; then
+  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr '\n' ' ')" ssh
+fi
+
+# Enable color support of ls and also add handy aliases
+if [[ -x /usr/bin/dircolors ]]; then
+  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  alias ls='ls --color=auto'
+  #alias dir='dir --color=auto'
+  #alias vdir='vdir --color=auto'
+  alias grep='grep --color=auto'
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+fi
+
+# Some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias lh='ls -lah'
+alias l='ls -CF'
+
 ########################################
 # OS specific tweaks
 ########################################
 
 if [[ "$(uname)" = "SunOS" ]]; then
-  # If we're on Solaris, set the PATH so that we bias towards xpg binaries
-  PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
-  
-  # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
-  if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
-    PROMPT_COMMAND=settitle
-  # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
-  elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
-    # After each command, append to the history file and reread it
-    # This attempts to keep history sync'd across multiple sessions
-    PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
-  fi
-
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
   
   # Check if /usr/bin/sudo and /bin/bash exist
   if [[ ! -f /usr/bin/sudo ]]; then
-    printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(which sudo | tail -1) /usr/bin/sudo'"
+    if pathfind sudo &>/dev/null; then
+      printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
+    else
+      printf "%s\n" "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
+    fi
   fi
   if [[ ! -f /bin/bash ]]; then
-    printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(which bash | tail -1) /bin/bash'"
+    if pathfind bash &>/dev/null; then
+      printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
+    else
+      printf "%s\n" "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
+    fi
   fi
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU
   alias diff='diff -W $(( $(tput cols) - 2 ))'
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
-  
-  # If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
-  #if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
-  #if [[ ! $PATH =~ $HOME/bin{,:} ]]; then # This breaks on even older versions of bash e.g. 2.05
-  if ! echo "$PATH" | grep "$HOME/bin" &>/dev/null; then
-    if [[ -d $HOME/bin ]]; then
-      PATH=$PATH:$HOME/bin
-    fi
-  fi
-
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
  
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
   if tty --quiet; then
     stty erase '^?'
   fi
 fi
-export PATH
-export PROMPT_COMMAND
 
 ########################################
 # Functions
@@ -201,8 +226,11 @@ epochdays() {
     epoch=$(truss date 2>&1 | grep ^time | awk -F"= " '{print $2}')
   elif command -v truss >/dev/null 2>&1 && [[ $(uname) = FreeBSD ]]; then
     epoch=$(truss date 2>&1 | grep ^gettimeofday | cut -d "{" -f2 | cut -d "." -f1)
-  elif [[ $(uname) = Linux ]]; then
+  elif date +%s &>/dev/null; then
     epoch=$(date +%s)
+  else
+    printf "%s\n" "ERROR - epochdays: unable to find out the number of seconds since epoch"
+    return 1
   fi
   printf "%s\n" "$(( epoch / 86400 ))"
 }
@@ -407,6 +435,36 @@ repeat() {
     "$@"
   done
 }
+
+# Check if 'seq' is available, if not, provide a basic replacement function
+if ! command -v seq &>/dev/null; then
+  seq() {
+    # If no parameters are given, print out usage
+    if [[ -z "$@" ]]; then
+      printf "%s\n" "Usage: seq x [y]"
+      return 0
+    fi
+    
+    # If only one number is given, we assume 1..n
+    if [[ -z $2 ]]; then
+      for ((i=1; i<=$1; i++))
+        do printf "%s\n" "$i"
+      done
+      
+    # If two numbers are given in ascending order, we print ascending
+    elif [[ $1 -lt $2 ]]; then
+      for ((i=$1; i<=$2; i++))
+        do printf "%s\n" "$i"
+      done
+      
+    # Otherwise, we assume descending order
+    else
+      for ((i=$1; i>=$2; i--))
+        do printf "%s\n" "$i"
+      done
+    fi
+  }
+fi
 
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Performance tests: perl non-portable, python, perl-portable, bash.  In that order.
@@ -638,6 +696,10 @@ whoowns() {
   fi
 }
 
+################################################################################
+# genpasswd password generator
+################################################################################
+
 # Password generator function for when pwgen or apg aren't available
 genpasswd() {
   # Declare OPTIND as local for safety
@@ -866,6 +928,7 @@ genpasswd() {
   #echo "PwdChars is: ${PwdChars}"
   #echo "PwdNum is: ${PwdNum}"
 }
+################################################################################
 
 # A separate password encryption tool, so that you can encrypt passwords
 # of your own choice, rather than depending on something that genpasswd has spat out
@@ -933,6 +996,9 @@ function passgen ()
   echo "Without (use this as the password): $(echo $pass | tr -d ' ')"
 }
 
+################################################################################
+# genphrase passphrase generator
+################################################################################
 # A passphrase generator, because: why not?
 # Note: This will only generate XKCD "Correct Horse Battery Staple" level phrases, which actually aren't that secure
 # without some character randomisation.
@@ -1151,6 +1217,7 @@ genphrase() {
     fi
   fi
 }
+################################################################################
 
 # Password strength check function.  Can be fed a password most ways.
 # TO-DO: add a verbose output switch
@@ -1246,6 +1313,7 @@ pwcheck () {
   fi
 }
 
+################################################################################
 # Standardise the Command Prompt
 # First, let's map some colours, uncomment to use:
 #txtblk='\e[0;30m\]' # Black - Regular
@@ -1291,19 +1359,9 @@ txtrst='\e[0m\]'    # Text Reset
 
 # The double backslash at the start also helps with this behaviour.
 
-# Throw it all together, starting with the portable option 
-if [[ "$(uname)" != "Linux" ]]; then
-  # Check if we're root, and adjust to suit
-  if [[ "${EUID}" -eq 0 ]]; then
-    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
-  # Otherwise show the usual prompt
-  else
-    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
-  fi
-  # Alias the root PS1 into sudo for edge cases
-  alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
-# Otherwise use tput as it's more predictable/readable.  Generated via kirsle.net/wizards/ps1.html
-else
+# Throw it all together, starting with checking if tput is available
+# It's more predictable/readable.  Generated via kirsle.net/wizards/ps1.html 
+if command -v tput &>/dev/null; then
   # Check if we're root, and adjust to suit
   if [[ "${EUID}" -eq 0 ]]; then
     export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
@@ -1313,6 +1371,18 @@ else
   fi
   # Alias the root PS1 into sudo for edge cases
   alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
+
+# Otherwise, revert to the portable option
+else
+  # Check if we're root, and adjust to suit
+  if [[ "${EUID}" -eq 0 ]]; then
+    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
+  # Otherwise show the usual prompt
+  else
+    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
+  fi
+  # Alias the root PS1 into sudo for edge cases
+  alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 fi
 
 # Useful for debugging

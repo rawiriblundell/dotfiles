@@ -53,6 +53,7 @@ pathfind() {
   IFS=:
   for p in $PATH; do
     if [ -x "$p/$*" ]; then
+      printf "%s\n" "$p/$*"
       IFS="$OLDIFS"
       return 0
     fi

@@ -1019,7 +1019,14 @@ genphrase() {
 
   # First, double check that the dictionary file exists.  I usually have my .bash_profile take care of this
   if [[ ! -f ~/.pwords.dict ]] ; then
-    egrep -h '^.{4,7}$' /usr/{,share/}dict/words > ~/.pwords.dict 2>/dev/null
+    # Test if we have internet access, if so, download the peerio wordlist
+    if nc -zw1 google.com 80; then
+      wget https://passphrases.peerio.com/dict/en.txt
+      mv en.txt ~/.pwords.dict
+    # Otherwise, create our own wordlist using what's available
+    else
+      egrep -h '^.{4,7}$' /usr/{,share/}dict/words | egrep -v "é|'|-" > ~/.pwords.dict 2>/dev/null
+    fi
   fi
 
   # Declare OPTIND as local for safety
@@ -1058,7 +1065,7 @@ genphrase() {
   done
   
   # If -S is selected, print out the documentation for word seeding
-  if [ "${PphraseSeedDoc}" = "True" ]; then
+  if [[ "${PphraseSeedDoc}" = "True" ]]; then
     printf "%s\n"   "======================================================================" \
     "genphrase and the -s option: Why you would want to seed your own word?" \
     "======================================================================" \

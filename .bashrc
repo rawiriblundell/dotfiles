@@ -414,17 +414,17 @@ ncp() {
 printline() {
   # If $1 is empty, print a usage message
   if [[ -z $1 ]]; then
-    printf "%s\n" "printline"
-    printf "\t%s\n" "This function prints a specified line from a file or pipe." \
-      "Usage: 'printline [line-number] (file-name)' or 'pipe | to | printline [line-number]'"
+    printf "%s\n" "Usage:  printline n [file]" ""
+    printf "\t%s\n" "Print the Nth line of FILE." "" \
+      "With no FILE or when FILE is -, read standard input instead."
     return 1
   fi
 
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    ''|*[!0-9]*)  printf "%s\n" "[ERROR] printline: '$1' does not appear to be a number." \
-                    "Usage: printline [line-number] (file-name) or 'pipe | to | printline [line-number]'";
+    ''|*[!0-9]*)  printf "%s\n" "[ERROR] printline: '$1' does not appear to be a number." "" \
+                    "Run 'printline' with no arguments for usage.";
                   return 1 ;;
     *)            local lineNo="$((10#$1))" ;;
   esac
@@ -432,8 +432,8 @@ printline() {
   # Next, if $2 is set, check that we can actually read it
   if [[ -n "$2" ]]; then
     if [[ ! -r "$2" ]]; then
-      printf "%s\n" "[ERROR] printline: '$2' does not appear to exist or I can't read it." \
-        "Usage: printline [line-number] (file-name) or 'pipe | to | printline [line-number]'"
+      printf "%s\n" "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
+        "Run 'printline' with no arguments for usage."
       return 1
     else
       local file="$2"
@@ -442,7 +442,7 @@ printline() {
 
   # Finally after all that testing is done, we throw in a cursory test for 'sed'
   if command -v sed &>/dev/null; then
-    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./p" "${file:-/dev/stdin}"
+    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
     printf "%s\n" "[ERROR] printline: This function depends on 'sed' which was not found."

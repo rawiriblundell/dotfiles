@@ -463,14 +463,14 @@ if ! command -v rev &>/dev/null; then
   rev() {
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
-      printf "%s\n" "rev"
-      printf "\t%s\n"  "This function replicates the command 'rev'" \
-        "it reverses the order of characters in a string, so it needs input e.g." \
-        "'echo 'someword' | rev' or 'rev sometext'"
-      return 1
+      printf "%s\n" "Usage:  rev string" ""
+      printf "\t%s\n"  "Reverse the order of characters in STRING or FILE." "" \
+        "With no STRING or FILE, read standard input instead." "" \
+        "Note: This is a bash function to provide the basic functionality of the command 'rev'"
+      return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf "%s\n" "rev - ERROR: Please select either piping in or declaring a string to reverse, not both."
+      printf "%s\n" "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
       return 1
     fi
 

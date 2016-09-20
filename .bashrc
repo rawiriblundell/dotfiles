@@ -166,9 +166,11 @@ unssh() {
 # SSH auto-completion based on ~/.ssh/config.
 if [[ -e ~/.ssh/config ]]; then
   complete -o "default" -o "nospace" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
+fi
+
 # SSH auto-completion based on ~/.ssh/known_hosts.
-elif [[ -e ~/.ssh/known_hosts ]]; then
-  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr '\n' ' ')" ssh
+if [[ -e ~/.ssh/known_hosts ]]; then
+  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr ' ' '\n')" scp sftp ssh
 fi
 
 # Enable color support of ls and also add handy aliases

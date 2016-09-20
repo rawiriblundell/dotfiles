@@ -215,6 +215,35 @@ alias l='ls -CF'
 ################################################################################
 # Functions
 
+# Capitalise words
+capitalise() {
+  # Check that stdin or $1 isn't empty
+  if [[ -t 0 ]] && [[ -z $1 ]]; then
+    printf "%s\n" "Usage:  capitalise string" ""
+    printf "\t%s\n" "Capitalises the first character of STRING." 
+    return 0
+  # Disallow both piping in strings and declaring strings
+  elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+    printf "%s\n" "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
+    return 1
+  fi
+
+  # If a parameter exists, then capitalise it
+  if [[ -n "$@" ]]; then
+    inString=$*
+    inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+    outWord="$inWord${inString:1}"
+    printf "%s\n" "${outWord}"
+  # Otherwise, cater for piped/redirected stdin
+  else
+    while read -r inString; do
+      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+      outWord="$inWord${inString:1}"
+      printf "%s\n" "${outWord}"
+    done < "${1:-/dev/stdin}"
+  fi
+}
+
 # Print the given text in the center of the screen.
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
@@ -416,7 +445,7 @@ printline() {
     printf "%s\n" "Usage:  printline n [file]" ""
     printf "\t%s\n" "Print the Nth line of FILE." "" \
       "With no FILE or when FILE is -, read standard input instead."
-    return 1
+    return 0
   fi
 
   # Check that $1 is a number, if it isn't print an error message
@@ -463,7 +492,7 @@ if ! command -v rev &>/dev/null; then
   rev() {
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
-      printf "%s\n" "Usage:  rev string" ""
+      printf "%s\n" "Usage:  rev string|file" ""
       printf "\t%s\n"  "Reverse the order of characters in STRING or FILE." "" \
         "With no STRING or FILE, read standard input instead." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
@@ -561,18 +590,18 @@ if ! command -v shuf &>/dev/null; then
     shufArray=()
 
     # Handle the input, checking whether it's a file or stdin
-    # Check that stdin or $1 isn't empty, and handly any attempts to use -opts
+    # Check that stdin or $1 isn't empty, and handle any attempts to use -opts
     if [[ -t 0 ]] && [[ -z $1 ]] || [[ $1 = "-?" ]]; then
-      printf "%s\n" "shuf"
-      printf "\t%s\n"  "This function replicates the command 'shuf'" \
-        "it shuffles the order of lines, so it needs input e.g." \
-        "'command | shuf' or 'shuf somefile' or 'shuf words to shuffle'" \
-        "" "It does not offer any of shuf's options, you will need to do that yourself" \
+      printf "%s\n" "Usage:  shuf string|file" ""
+      printf "\t%s\n"  "Write a random permutation of the input lines to standard output." "" \
+        "With no FILE, or when FILE is -, read standard input." "" \
+        "Note: This is a bash function to provide the basic functionality of the command 'shuf'" \
+        "It does not offer any of shuf's options, you will need to do that yourself" \
         "e.g. instead of 'shuf -n 2 filename', use 'shuf filename | head -2'"
-      return 1
+      return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf "%s\n" "shuf - ERROR: Please either piping in or declaring a filename to shuffle, not both."
+      printf "%s\n" "[ERROR] shuf: Please select either piping in or declaring a filename to shuffle, not both."
       return 1
     fi
 
@@ -647,11 +676,10 @@ ssh() {
 throttle() {
   # Check that stdin isn't empty
   if [[ -t 0 ]]; then
-    printf "%s\n" "throttle"
-    printf "\t%s\n"  "This function increments line by line through the output" \
-      "of other commands.  It requires input on stdin i.e." \
-      "'somecommand | anothercommand | throttle [optional increment value in seconds]'"
-    return 1
+    printf "%s\n" "Usage: pipe | to | throttle [n]" ""
+    printf "\t%s\n"  "Increment line by line through the output of other commands" "" \
+      "Delay between each increment can be defined.  Default is 1 second."
+    return 0
   fi
 
   # Default the sleep time to 1 second
@@ -662,7 +690,7 @@ throttle() {
     # We do another check for portability
     # (GNU sleep can handle fractional seconds, non-GNU cannot)
     if ! sleep "${Sleep}" &>/dev/null; then
-      printf "%s\n" "INFO: That time increment is not supported, defaulting to 1s"
+      printf "%s\n" "[INFO] throttle: That time increment is not supported, defaulting to 1s"
       Sleep=1
     fi
   fi

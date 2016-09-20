@@ -83,6 +83,23 @@ pathfind() {
   return 1
 }
 
+# Check if /usr/bin/sudo and /bin/bash exist
+# If not, try to find them and suggest a symlink
+if [[ ! -f /usr/bin/sudo ]]; then
+  if pathfind sudo &>/dev/null; then
+    printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
+  else
+    printf "%s\n" "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
+  fi
+fi
+if [[ ! -f /bin/bash ]]; then
+  if pathfind bash &>/dev/null; then
+    printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
+  else
+    printf "%s\n" "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
+  fi
+fi
+
 ################################################################################
 # Set the PROMPT_COMMAND
 # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
@@ -159,22 +176,7 @@ fi
 if [[ "$(uname)" = "SunOS" ]]; then
   # Sort out "Terminal Too Wide" issue in vi on Solaris
   stty columns 140
-  
-  # Check if /usr/bin/sudo and /bin/bash exist
-  if [[ ! -f /usr/bin/sudo ]]; then
-    if pathfind sudo &>/dev/null; then
-      printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
-    else
-      printf "%s\n" "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
-    fi
-  fi
-  if [[ ! -f /bin/bash ]]; then
-    if pathfind bash &>/dev/null; then
-      printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
-    else
-      printf "%s\n" "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
-    fi
-  fi
+
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU
@@ -216,11 +218,13 @@ alias l='ls -CF'
 # Functions
 
 # Capitalise words
+# This is a bash-portable way to do this.
+# In bash-4 onwards, you can use ${var^} or ${arr[@]^}
 capitalise() {
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z $1 ]]; then
     printf "%s\n" "Usage:  capitalise string" ""
-    printf "\t%s\n" "Capitalises the first character of STRING." 
+    printf "\t%s\n" "Capitalises the first character of STRING."
     return 0
   # Disallow both piping in strings and declaring strings
   elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
@@ -228,30 +232,33 @@ capitalise() {
     return 1
   fi
 
-  # If a parameter exists, then capitalise all given elements
-  if [[ -n "$@" ]]; then
-    for inString in "$@"; do
-      # Split off the first character and translate it to uppercase
-      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
-      # Print out the uppercase var and the rest of the string
-      outWord="$inWord${inString:1}"
-      # Pad the output so that elements are spaced out
-      printf "%s " "${outWord}"
-    # Remove any space between the last element and the end of line
-    done | sed -e 's/[ \t]*$//'
-    # After processing, insert a newline
-    printf "%s\n" ""
-  # Otherwise, cater for piped/redirected stdin
-  else
-    # This works much the same as before, just line by line
+  # If parameter is a file, or stdin is used, action that first
+  if [[ -f $1 ]]||[[ ! -t 0 ]]; then
+    # Read each line of input
     while read -r inLine; do
+      # Split each line element for processing
       for inString in ${inLine}; do
+        # Split off the first character and capitalise it
         inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+        # Print out the uppercase var and the rest of the element
         outWord="$inWord${inString:1}"
+        # Pad the output so that multiple elements are spaced out
         printf "%s " "${outWord}"
+      # Remove any space between the last element in a line an the end of line
       done | sed -e 's/[ \t]*$//'
+      # After processing, insert a newline
       printf "%s\n" ""
     done < "${1:-/dev/stdin}"
+
+  # Otherwise, if a parameter exists, then capitalise all given elements
+  # Processing follows the same path as before.
+  elif [[ -n "$@" ]]; then
+    for inString in "$@"; do
+      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+      outWord="$inWord${inString:1}"
+      printf "%s " "${outWord}"
+    done | sed -e 's/[ \t]*$//'
+    printf "%s\n" ""
   fi
 }
 
@@ -514,27 +521,8 @@ if ! command -v rev &>/dev/null; then
       return 1
     fi
 
-    # If parameter is a file, action that first
-    if [[ -f $1 ]]; then
-      while read -r Line; do
-        len=${#Line}
-        rev=
-        for((i=len-1;i>=0;i--)); do
-          rev="$rev${Line:$i:1}"
-        done
-        printf "%s\n" "${rev}"
-      done < "$1"
-    # else, if parameter exists, action that
-    elif [[ ! -z "$@" ]]; then
-      Line=$*
-      rev=
-      len=${#Line}
-      for((i=len-1;i>=0;i--)); do 
-        rev="$rev${Line:$i:1}"
-      done
-      printf "%s\n" "${rev}"
-    # Finally, cater for piped/redirected stdin
-    else
+    # If parameter is a file, or stdin in used, action that first
+    if [[ -f $1 ]]||[[ ! -t 0 ]]; then
       while read -r Line; do
         len=${#Line}
         rev=
@@ -543,6 +531,15 @@ if ! command -v rev &>/dev/null; then
         done
         printf "%s\n" "${rev}"
       done < "${1:-/dev/stdin}"
+    # Else, if parameter exists, action that
+    elif [[ ! -z "$@" ]]; then
+      Line=$*
+      rev=
+      len=${#Line}
+      for((i=len-1;i>=0;i--)); do 
+        rev="$rev${Line:$i:1}"
+      done
+      printf "%s\n" "${rev}"
     fi
   }
 fi

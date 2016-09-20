@@ -239,16 +239,14 @@ checkyaml() {
 
   # Check that $1 is defined...
   if [[ -z $1 ]]; then
-    printf "%s\n" "${textGreen}checkyaml${textRst}"
-    printf "\t%s\n"  "This function tries to check YAML syntax" \
-      "Usage: 'checkyaml [filename]'"
+    printf "%s\n" "Usage:  checkyaml file" ""
+    printf "\t%s\n"  "Check the YAML syntax in FILE"
     return 1
   fi
 
   # ...and readable
   if [[ ! -r "$1" ]]; then
-    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it." \
-      "Usage: 'checkyaml [filename]'"
+    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it."
     return 1
   else
     local file

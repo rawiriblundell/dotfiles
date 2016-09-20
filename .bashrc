@@ -228,20 +228,28 @@ capitalise() {
     return 1
   fi
 
-  # If a parameter exists, then capitalise it
+  # If a parameter exists, then capitalise all given elements
   if [[ -n "$@" ]]; then
     for inString in "$@"; do
+      # Split off the first character and translate it to uppercase
       inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+      # Print out the uppercase var and the rest of the string
       outWord="$inWord${inString:1}"
+      # Pad the output
       printf "%s " "${outWord}"
     done
+    # After processing, insert a newline
     printf "%s\n" ""
   # Otherwise, cater for piped/redirected stdin
   else
-    while read -r inString; do
-      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
-      outWord="$inWord${inString:1}"
-      printf "%s\n" "${outWord}"
+    # This works much the same as before, just line by line
+    while read -r inLine; do
+      for inString in ${inLine}; do
+        inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+        outWord="$inWord${inString:1}"
+        printf "%s " "${outWord}"
+      done
+      printf "%s\n" ""
     done < "${1:-/dev/stdin}"
   fi
 }

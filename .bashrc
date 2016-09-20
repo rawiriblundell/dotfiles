@@ -746,11 +746,13 @@ fi
 
 # Get local weather and present it nicely
 weather() {
+  # We require 'curl' so check for it
   if ! command -v curl &>/dev/null; then
-    printf "%s\n" "[ERROR] - weather: This command requires 'curl', please install it"
+    printf "%s\n" "[ERROR] weather: This command requires 'curl', please install it."
     exit 1
   fi
 
+  # If no arg is given, default to Wellington NZ
   if [[ -z $1 ]]; then
     curl "http://wttr.in/Wellington"
   else

@@ -266,6 +266,7 @@ checkyaml() {
 
 # Calculate how many days since epoch
 epochdays() {
+  local epoch
   if command -v perl &>/dev/null; then
     epoch=$(perl -e "print time")
   elif command -v truss >/dev/null 2>&1 && [[ $(uname) = SunOS ]]; then
@@ -275,7 +276,7 @@ epochdays() {
   elif date +%s &>/dev/null; then
     epoch=$(date +%s)
   else
-    printf "%s\n" "ERROR - epochdays: unable to find out the number of seconds since epoch"
+    printf "%s\n" "[ERROR] epochdays: unable to find out the number of seconds since epoch."
     return 1
   fi
   printf "%s\n" "$(( epoch / 86400 ))"

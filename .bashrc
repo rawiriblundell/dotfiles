@@ -235,9 +235,10 @@ capitalise() {
       inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
       # Print out the uppercase var and the rest of the string
       outWord="$inWord${inString:1}"
-      # Pad the output
+      # Pad the output so that elements are spaced out
       printf "%s " "${outWord}"
-    done
+    # Remove any space between the last element and the end of line
+    done | sed -e 's/[ \t]*$//'
     # After processing, insert a newline
     printf "%s\n" ""
   # Otherwise, cater for piped/redirected stdin
@@ -248,7 +249,7 @@ capitalise() {
         inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
         outWord="$inWord${inString:1}"
         printf "%s " "${outWord}"
-      done
+      done | sed -e 's/[ \t]*$//'
       printf "%s\n" ""
     done < "${1:-/dev/stdin}"
   fi

@@ -1474,16 +1474,16 @@ else
 fi
 
 # Throw it all together, starting with checking if we're root
-# Previously this tried to failover to a tput based alternative but it didn't work well...
+# Previously this tried to failover to a tput based alternative but it didn't work well on Solaris...
 if [[ -w / ]]; then
-  export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
+  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
 # Otherwise show the usual prompt
 else
-  export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
+  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
 fi
 
 # Alias the root PS1 into sudo for edge cases
-alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
+alias sudo="PS1='\\[${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 
 # Useful for debugging
 export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '

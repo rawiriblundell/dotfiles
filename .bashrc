@@ -1468,31 +1468,24 @@ txtrst='\e[0m\]'    # Text Reset
 
 # The double backslash at the start also helps with this behaviour.
 
-# Throw it all together, starting with checking if tput is available
-# It's more predictable/readable.  Generated via kirsle.net/wizards/ps1.html 
-if command -v tput &>/dev/null; then
-  # Check if we're root, and adjust to suit
-  if [[ "${EUID}" -eq 0 ]]; then
-    export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
-  # Otherwise show the usual prompt
-  else
-    export PS1="\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput sgr0)\]\[$(tput setaf 2)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 2)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]"
-  fi
-  # Alias the root PS1 into sudo for edge cases
-  alias sudo="PS1='\\[$(tput bold)\]\[$(tput setaf 1)\][\$(date +%y%m%d/%H:%M)]\[$(tput setaf 3)\][\u@\h \[$(tput setaf 7)\]\W\[$(tput setaf 3)\]]\[$(tput setaf 7)\]$ \[$(tput sgr0)\]' sudo"
-
-# Otherwise, revert to the portable option
+# Try to find out if we're authenticating locally or remotely
+if grep "^${USER}:" /etc/passwd &>/dev/null; then
+  auth="LCL"
 else
-  # Check if we're root, and adjust to suit
-  if [[ "${EUID}" -eq 0 ]]; then
-    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
-  # Otherwise show the usual prompt
-  else
-    export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
-  fi
-  # Alias the root PS1 into sudo for edge cases
-  alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
+  auth="AD"
 fi
+
+# Throw it all together, starting with checking if we're root
+# Previously this tried to failover to a tput based alternative but it didn't work well...
+if [[ -w / ]]; then
+  export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
+# Otherwise show the usual prompt
+else
+  export PS1="\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtrst}${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
+fi
+
+# Alias the root PS1 into sudo for edge cases
+alias sudo="PS1='\\[${txtrst}${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${txtrst}${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 
 # Useful for debugging
 export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '

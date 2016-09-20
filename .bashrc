@@ -242,6 +242,44 @@ center() {
   echo "$str";
 }
 
+# Check YAML syntax
+checkyaml() {
+  local textGreen
+  local textRed
+  local textRst
+  textGreen=$(tput setaf 2)
+  textRed=$(tput setaf 1)
+  textRst=$(tput sgr0)
+
+  # Check that $1 is defined...
+  if [[ -z $1 ]]; then
+    printf "%s\n" "${textGreen}checkyaml${textRst}"
+    printf "\t%s\n"  "This function tries to check YAML syntax" \
+      "Usage: 'checkyaml [filename]'"
+    return 1
+  fi
+
+  # ...and readable
+  if [[ ! -r "$1" ]]; then
+    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it." \
+      "Usage: 'checkyaml [filename]'"
+    return 1
+  else
+    local file
+    file="$1"
+  fi
+
+  # Check the YAML contents, if there's no error, print out a message saying so
+  if python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
+    printf "%s\n" "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
+
+  # Otherwise, print out an error message and dump the trace
+  else
+    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
+    python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}"
+  fi
+}
+
 # Calculate how many days since epoch
 epochdays() {
   if command -v perl &>/dev/null; then

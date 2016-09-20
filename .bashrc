@@ -472,7 +472,7 @@ printline() {
 
   # Finally after all that testing is done, we throw in a cursory test for 'sed'
   if command -v sed &>/dev/null; then
-    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$w /dev/stderr' "${file:-/dev/stdin}"
+    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
     printf "%s\n" "[ERROR] printline: This function depends on 'sed' which was not found."

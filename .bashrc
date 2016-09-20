@@ -230,10 +230,12 @@ capitalise() {
 
   # If a parameter exists, then capitalise it
   if [[ -n "$@" ]]; then
-    inString=$*
-    inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
-    outWord="$inWord${inString:1}"
-    printf "%s\n" "${outWord}"
+    for inString in "$@"; do
+      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+      outWord="$inWord${inString:1}"
+      printf "%s " "${outWord}"
+    done
+    printf "%s\n" ""
   # Otherwise, cater for piped/redirected stdin
   else
     while read -r inString; do

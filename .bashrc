@@ -72,9 +72,9 @@ export PATH
 pathfind() {
   OLDIFS="$IFS"
   IFS=:
-  for p in $PATH; do
-    if [ -x "$p/$*" ]; then
-      printf "%s\n" "$p/$*"
+  for prog in $PATH; do
+    if [[ -x "$prog/$*" ]]; then
+      printf "%s\n" "$prog/$*"
       IFS="$OLDIFS"
       return 0
     fi
@@ -140,59 +140,21 @@ if ! shopt -oq posix; then
   fi
 fi
 
-################################################################################
 # Fix 'cd' tab completion
-
 complete -d cd
-
-################################################################################
-# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
-if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
-  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
-fi
-
-# Silence ssh motd's etc using "-q"
-# Adding "-o StrictHostKeyChecking=no" prevents key prompts
-# and automatically adds them to ~/.ssh/known_hosts
-ssh() {
-  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
-}
-
-# Provide normal, no-options ssh for error checking
-unssh() {
-  /usr/bin/ssh "$@"
-}
 
 # SSH auto-completion based on ~/.ssh/config.
 if [[ -e ~/.ssh/config ]]; then
-  complete -o "default" -o "nospace" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
+  complete -o "default" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
 fi
 
 # SSH auto-completion based on ~/.ssh/known_hosts.
 if [[ -e ~/.ssh/known_hosts ]]; then
-  complete -o "default" -o "nospace" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr ' ' '\n')" scp sftp ssh
+  complete -o "default" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr ' ' '\n')" scp sftp ssh
 fi
 
-# Enable color support of ls and also add handy aliases
-if [[ -x /usr/bin/dircolors ]]; then
-  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-  alias ls='ls --color=auto'
-  #alias dir='dir --color=auto'
-  #alias vdir='vdir --color=auto'
-  alias grep='grep --color=auto'
-  alias fgrep='fgrep --color=auto'
-  alias egrep='egrep --color=auto'
-fi
-
-# Some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias lh='ls -lah'
-alias l='ls -CF'
-
-########################################
+################################################################################
 # OS specific tweaks
-########################################
 
 if [[ "$(uname)" = "SunOS" ]]; then
   # Sort out "Terminal Too Wide" issue in vi on Solaris
@@ -225,9 +187,33 @@ elif [[ "$(uname)" = "Linux" ]]; then
   fi
 fi
 
-########################################
+################################################################################
+# Aliases
+
+# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
+if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
+  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
+fi
+
+# Enable color support of ls and also add handy aliases
+if [[ -x /usr/bin/dircolors ]]; then
+  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  alias ls='ls --color=auto'
+  #alias dir='dir --color=auto'
+  #alias vdir='vdir --color=auto'
+  alias grep='grep --color=auto'
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+fi
+
+# Some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias lh='ls -lah'
+alias l='ls -CF'
+
+################################################################################
 # Functions
-########################################
 
 # Print the given text in the center of the screen.
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
@@ -651,6 +637,13 @@ if ! command -v shuf &>/dev/null; then
   }
 fi
 
+# Silence ssh motd's etc using "-q"
+# Adding "-o StrictHostKeyChecking=no" prevents key prompts
+# and automatically adds them to ~/.ssh/known_hosts
+ssh() {
+  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
+}
+
 # Throttle stdout
 throttle() {
   # Check that stdin isn't empty
@@ -680,6 +673,11 @@ throttle() {
     printf "%s\n" "${Line}"
     sleep "${Sleep}"
   done
+}
+
+# Provide normal, no-options ssh for error checking
+unssh() {
+  /usr/bin/ssh "$@"
 }
 
 # Provide 'up', so instead of 'cd ../../../' you simply type 'up 3'

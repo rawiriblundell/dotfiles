@@ -368,44 +368,38 @@ printline() {
   # If $1 is empty, print a usage message
   if [[ -z $1 ]]; then
     printf "%s\n" "printline"
-    printf "\t%s\n" "This function prints a specified line from a file" \
-      "Usage: 'printline line-number file-name'"
+    printf "\t%s\n" "This function prints a specified line from a file or pipe." \
+      "Usage: 'printline [line-number] (file-name)' or 'pipe | to | printline [line-number]'"
     return 1
   fi
 
-  # Check that $1 is a number
+  # Check that $1 is a number, if it isn't print an error message
+  # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
     ''|*[!0-9]*)  printf "%s\n" "[ERROR] printline: '$1' does not appear to be a number." \
-                    "Usage: printline line-number file-name";
+                    "Usage: printline [line-number] (file-name) or 'pipe | to | printline [line-number]'";
                   return 1 ;;
-    *)            local lineNo="$1" ;;
+    *)            local lineNo="$((10#$1))" ;;
   esac
-  
-  # Next, check that $2 is a file that exists
-  if [[ ! -f "$2" ]]; then
-    printf "%s\n" "[ERROR] printline: '$2' does not appear to exist or I can't read it." \
-      "Usage: printline line-number file-name"
-    return 1
-  else
-    local file="$2"
+
+  # Next, if $2 is set, check that we can actually read it
+  if [[ -n "$2" ]]; then
+    if [[ ! -r "$2" ]]; then
+      printf "%s\n" "[ERROR] printline: '$2' does not appear to exist or I can't read it." \
+        "Usage: printline [line-number] (file-name) or 'pipe | to | printline [line-number]'"
+      return 1
+    else
+      local file="$2"
+    fi
   fi
 
-  # Desired line must be less than the number of lines in the file
-  local fileLength
-  fileLength=$(grep -c . "${file}")
-  if [[ "${lineNo}" -gt "${fileLength}" ]]; then
-    printf "%s\n" "[ERROR] printline: '${file}' is ${fileLength} lines long." \
-      "You want line number '${lineNo}'.  Do you see the problem here?"
-    return 1
-  fi
-
-  # Finally after all that testing is done...
-  # We try for 'sed' first as it's the fastest way to do this on massive files
+  # Finally after all that testing is done, we throw in a cursory test for 'sed'
   if command -v sed &>/dev/null; then
-    sed -n "${lineNo}{p;q;}" < "${file}"
-  # Otherwise we try a POSIX portable use of 'head | tail'
+    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./p" "${file:-/dev/stdin}"
+  # Otherwise we print a message that 'sed' isn't available
   else
-    head -n "${lineNo}" "${file}" | tail -n 1
+    printf "%s\n" "[ERROR] printline: This function depends on 'sed' which was not found."
+    return 1
   fi
 }
 

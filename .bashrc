@@ -35,7 +35,26 @@ umask 027
 
 ################################################################################
 # Set the PATH, add in xpg6 and xpg4 in case we're on Solaris
-PATH=/usr/xpg6/bin:/usr/xpg4/bin:/bin:/usr/bin:/usr/local/bin:/opt/csw/bin:/usr/sfw/bin:$HOME/bin:$PATH
+PATH=/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/csw/bin:/opt/csw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/usr/sfw/bin:/usr/sfw/sbin:$PATH
+
+# We sanitise the PATH variable to only include
+# directories that exist on the host.
+newPath=
+# Split the PATH out into individual loop elements
+for dir in $(echo "${PATH}" | tr ":" "\n"); do
+  # If the directory exists, add it to the newPath variable
+  if [ -d "${dir}" ]; then
+    newPath="${newPath}:${dir}"
+  fi
+done
+
+# If a leading colon sneaks in, get rid of it
+if echo "${newPath}" | grep "^:" &>/dev/null; then
+  newPath=$(echo "${newPath}" | cut -d ":" -f2-)
+fi
+
+# Now assign our freshly built newPath variable
+PATH="${newPath}"
 
 # If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
 #if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
@@ -45,6 +64,8 @@ if ! echo "$PATH" | grep "$HOME/bin" &>/dev/null; then
     PATH=$PATH:$HOME/bin
   fi
 fi
+
+# Finally, export the PATH
 export PATH
 
 # A portable alternative to command -v/which/type

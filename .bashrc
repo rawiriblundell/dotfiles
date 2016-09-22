@@ -849,7 +849,7 @@ genpasswd() {
   PwdChars=10
   PwdNum=1
   PwdSet="[:alnum:]"
-  PwdCols="false"
+  PwdCols=cat
   PwdKrypt="false"
   PwdKryptMode=1
   KryptMethod=
@@ -860,7 +860,13 @@ genpasswd() {
 
   while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
     case "${Flags}" in
-      C)  PwdCols="true";;
+      C)  if command -v column &>/dev/null; then
+            PwdCols=column
+          else
+            printf "%s\n" "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
+            return 1
+          fi
+          ;;
       c)  PwdChars="${OPTARG}";;
       D)  ReqSet="${ReqSet}[0-9]+"
           PwdCheck="true";;
@@ -921,20 +927,15 @@ genpasswd() {
   # If these two are false, there's no point doing further checks.  We just slam through
   # the absolute simplest bit of code in this function.  This is here for performance reasons.
   if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
-    if [[ "${PwdCols}" = "false" ]]; then
-      tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" 2> /dev/null
-      return 0
-    elif [[ "${PwdCols}" = "true" ]]; then
-      tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -"${PwdNum}" | column 2> /dev/null
-      return 0
-    fi
+    tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n "${PwdNum}" | "${PwdCols}" 2> /dev/null
+    return 0
   fi
 
   # Let's start with checking for the Krypt option
   if [[ "${PwdKrypt}" = "true" ]]; then
     # Disallow columns
-    if [[ "${PwdCols}" = "true" ]]; then
-      printf "%s\n" "ERROR: Use of -C and -k together is disallowed.  Please choose one, but not both."
+    if [[ "${PwdCols}" = "column" ]]; then
+      printf "%s\n" "[ERROR] genpasswd: Use of '-C' and '-k' together is disallowed.  Please choose one, but not both."
       return 1
     fi
     
@@ -954,13 +955,13 @@ genpasswd() {
     while [[ "${n}" -lt "${PwdNum}" ]]; do
       # And let's get these variables figured out.  Needs to be inside the loop
       # to correctly pickup other arg values and to rotate properly
-      Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1) 2> /dev/null
-      Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
+      Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1) 2> /dev/null
+      Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
       
       # Now we ensure that Pwd matches any character requirements
       if [[ "${PwdCheck}" = "true" ]]; then
         while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
         done
       fi
 
@@ -1006,9 +1007,6 @@ genpasswd() {
   # Otherwise, let's just do plain old passwords.  This is considerably more straightforward
   # First, if the character check variable is true, then we go through that process
   if [[ "${PwdCheck}" = "true" ]]; then
-    # We handle for no columns, running a loop until the required number of
-    # passwords is generated
-    if [[ "${PwdCols}" = "false" ]]; then
       n=0
       while [[ "${n}" -lt "${PwdNum}" ]]; do
         Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
@@ -1038,35 +1036,8 @@ genpasswd() {
           printf "%s\n" "${Pwd}"
         fi
       ((n = n + 1))
-      done
-    # Otherwise, pipe it to 'column'.  I haven't bothered putting in a check, if column isn't available, just let bash tell the user
-    elif [[ "${PwdCols}" = "true" ]]; then
-      n=0
-        while [[ "${n}" -lt "${PwdNum}" ]]; do
-          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-          while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-            Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
-          done
-          if [[ "${SpecialChar}" = "true" ]]; then
-            Shuffle=$((RANDOM % ${#InputChars[@]}))
-            PwdSeed=${InputChars[*]:$Shuffle:1}
-            SeedLoc=$((RANDOM % ${#Pwd}))
-            ((PwdLen = ${#Pwd} - 1))
-            Pwd="${Pwd:0:$PwdLen}"
-            printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
-          else
-            printf "%s\n" "${Pwd}"
-          fi
-        ((n = n + 1))
-        done | column 2> /dev/null
-    fi
+      done | "${PwdCols}" 2>/dev/null
   fi
-  
-  # Uncomment for debug
-  #echo "ReqSet is: ${ReqSet}"
-  #echo "PwdSet is: ${PwdSet}" 
-  #echo "PwdChars is: ${PwdChars}"
-  #echo "PwdNum is: ${PwdNum}"
 }
 ################################################################################
 

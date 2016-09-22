@@ -713,6 +713,73 @@ throttle() {
   done
 }
 
+# Check if 'timeout' is available, if not, enable a stop-gap function
+# Based in part on Dmitry V Golovashkin's 'timeout3' bash example script
+if ! command -v timeout &>/dev/null; then
+  timeout() {
+
+    # $# should be at least 1, if not, print a usage message
+    if (($# == 0 )); then
+      printf "%s\n" "Usage:  timeout DURATION COMMAND" ""
+      printf "\t%s\n" "Start COMMAND, and kill it if still running after DURATION." "" \
+        "DURATION is an integer with an optional  suffix:  's'  for" \
+        "seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days." "" \
+        "Note: This is a bash function to provide the basic functionality of the command 'timeout'"
+      return 0
+    fi
+    
+    # Check that $1 complies, if not error out, if so, set the duration variable
+    case "$1" in
+      (*[!0-9smhd]*|'') printf "%s\n" "[ERROR] timeout: '$1' is not valid.  Run 'timeout' for usage."; return 1;;
+      (*)           local duration=$1;;
+    esac
+    # shift so that the rest of the line is the command to execute
+    shift
+
+    # Convert timeout period into seconds
+    # If it contains 'm', then convert to minutes
+    if echo "${duration}" | grep "m" &>/dev/null; then
+      duration=$(( duration * 60 ))
+      
+    # ...and 'h' is for hours...
+    elif echo "${duration}" | grep "h" &>/dev/null; then
+      duration=$(( duration * 60 * 60 ))
+      
+    # ...and 'd' is for days...
+    elif echo "${duration}" | grep "d" &>/dev/null; then
+      duration=$(( duration * 60 * 60 * 24 ))
+      
+    # Otherwise, sanitise the variable of any other non-numeric characters
+    else
+      duration="${duration//[!0-9]/}"
+    fi
+
+    # If 'perl' is available, it has a few pretty good one-line options
+    # see: http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time
+    if command -v perl &>/dev/null; then
+      perl -e '$s = shift; $SIG{ALRM} = sub { kill INT => $p; exit 77 }; exec(@ARGV) unless $p = fork; alarm $s; waitpid $p, 0; exit ($? >> 8)' "${duration}" "$@"
+      #perl -MPOSIX -e '$SIG{ALRM} = sub { kill(SIGTERM, -$$); }; alarm shift; $exit = system @ARGV; exit(WIFEXITED($exit) ? WEXITSTATUS($exit) : WTERMSIG($exit));' "$@"
+
+    # Otherwise we offer a shell based failover.
+    # I tested a few, this one works nicely and is fairly simple
+    # http://stackoverflow.com/questions/24412721/elegant-solution-to-implement-timeout-for-bash-commands-and-functions/24413646?noredirect=1#24413646
+    else
+      # Run in a subshell to avoid job control messages
+      ( "$@" &
+        child=$! # Grab the PID of the COMMAND
+        
+        # Avoid default notification in non-interactive shell for SIGTERM
+        trap -- "" SIGTERM
+        ( sleep "${duration}"
+          kill "${child}" 
+        ) 2> /dev/null &
+        
+        wait "${child}"
+      )
+    fi
+  }
+fi
+
 # Provide normal, no-options ssh for error checking
 unssh() {
   /usr/bin/ssh "$@"

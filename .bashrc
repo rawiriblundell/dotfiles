@@ -687,7 +687,7 @@ ssh() {
 throttle() {
   # Check that stdin isn't empty
   if [[ -t 0 ]]; then
-    printf "%s\n" "Usage: pipe | to | throttle [n]" ""
+    printf "%s\n" "Usage:  pipe | to | throttle [n]" ""
     printf "\t%s\n"  "Increment line by line through the output of other commands" "" \
       "Delay between each increment can be defined.  Default is 1 second."
     return 0
@@ -714,7 +714,6 @@ throttle() {
 }
 
 # Check if 'timeout' is available, if not, enable a stop-gap function
-# Based in part on Dmitry V Golovashkin's 'timeout3' bash example script
 if ! command -v timeout &>/dev/null; then
   timeout() {
 

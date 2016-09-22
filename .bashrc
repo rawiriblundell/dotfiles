@@ -1131,10 +1131,10 @@ cryptpasswd() {
 genphrase() {
   # Some examples of methods to do this (fastest to slowest):
   # shuf:         printf "%s\n" "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
-  # perl:    printf "%s\n" "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
-  # sed:    printf "$s\n" "sed -n $((RANDOM%$(wc -l < ~/.pwords.dict)+1))p ~/.pwords.dict"
-  # python:  printf "%s\n" "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${PphraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
-  # oawk/nawk:  printf "%s\n" "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
+  # perl:         printf "%s\n" "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
+  # sed:          printf "$s\n" "sed -n $((RANDOM%$(wc -l < ~/.pwords.dict)+1))p ~/.pwords.dict"
+  # python:       printf "%s\n" "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${PphraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
+  # oawk/nawk:    printf "%s\n" "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
   # gawk:         printf "%s\n" "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
   # sort -R:      printf "%s\n" "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
   # bash $RANDOM: printf "%s\n" "$(for i in $(<~/.pwords.dict); do echo "$RANDOM $i"; done | sort | cut -d' ' -f2 | head -3 | tr -d "\n")"
@@ -1159,14 +1159,20 @@ genphrase() {
   # Default the vars
   PphraseWords=3
   PphraseNum=1
-  PphraseCols="False"
+  PphraseCols=cat
   PphraseSeed="False"
   PphraseSeedDoc="False"
   SeedWord=
 
   while getopts ":Chn:s:Sw:" Flags; do
     case "${Flags}" in
-      C)  PphraseCols="True";;
+      C)  if command -v column &>/dev/null; then
+            PphraseCols=column
+          else
+            printf "%s\n" "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
+            return 1
+          fi
+          ;;
       h)  printf "%s\n" "genphrase - a basic passphrase generator" \
           "Optional Arguments:" \
           "-C [attempt to output into columns (Default:off)]" \
@@ -1190,7 +1196,8 @@ genphrase() {
   
   # If -S is selected, print out the documentation for word seeding
   if [[ "${PphraseSeedDoc}" = "True" ]]; then
-    printf "%s\n"   "======================================================================" \
+    printf "%s\n" \
+    "======================================================================" \
     "genphrase and the -s option: Why you would want to seed your own word?" \
     "======================================================================" \
     "One method for effectively using passphrases is known as 'root and extension.'" \
@@ -1233,120 +1240,73 @@ genphrase() {
   # Now generate the passphrase(s)
   # First we test to see if shuf is available, avoiding the earlier shuf function for now
   if command -v shuf &>/dev/null && ! type shuf | head -1 | grep -q function; then
-#    echo "Using shuf!" #Debug
-    if [[ "${PphraseCols}" = "True" ]]; then
-      # Now we use a loop to run the number of times required to match the -n setting
-      # Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
-      # Obviously this will have to be run a sufficient number of times to make the use of
-      # 'column' worth it.  Fortunately shuf is very fast.
-#     echo "Columns true" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        #Older methods left commented out to show the evolution of this function
-        #printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
-        #read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
-        
-        # Create an array with the seeded word in place if it's used
-        #PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
-        # Read the array in and shuffle it
-        #read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
-        # Now implement CamelCasing on the non-seed words and print the result
-        #printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
-                                
-        # Well, I wanted to do it the above way, but Solaris got upset
-        # So instead we have to do it like some kind of barbarians
-                               
-        # First let's create an array of shuffled words with their first char uppercased
-        DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
-          do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
-          OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
-        # Now we print out the seed word and the array, shuffle them, 
-        # and remove the the newlines, leaving a passphrase
-        printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
-        printf "\n"
-        let ++n
-      done | column
-    else
-#     echo "Columns false" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
-          do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
-          OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
-        printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
-        printf "\n"
-        let ++n
-      done
-    fi
+    # Now we use a loop to run the number of times required to match the -n setting
+    # Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
+    # Obviously this will have to be run a sufficient number of times to make the use of
+    # 'column' worth it.  Fortunately shuf is very fast.
+    n=0
+    while [[ $n -lt "${PphraseNum}" ]]; do
+      #Older methods left commented out to show the evolution of this function
+      #printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
+      #read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
+      
+      # Create an array with the seeded word in place if it's used
+      #PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
+      # Read the array in and shuffle it
+      #read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
+      # Now implement CamelCasing on the non-seed words and print the result
+      #printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
+                              
+      # Well, I wanted to do it the above way, but Solaris got upset
+      # So instead we have to do it like some kind of barbarians
+                             
+      # First let's create an array of shuffled words with their first char uppercased
+      DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
+        do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
+        OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
+      # Now we print out the seed word and the array, shuffle them, 
+      # and remove the the newlines, leaving a passphrase
+      printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
+      printf "\n"
+      let ++n
+    done | "${PphraseCols}"
     return 0 # Prevent subsequent run of perl/bash
-  fi  
+  fi
+  
   # Next we try perl, installed almost everywhere and reasonably fast
   # For portability we have to be a bit more hands-on with our loops, which impacts performance
   if command -v perl &>/dev/null; then
-#    echo "Using perl!" #Debug
-    if [[ "${PphraseCols}" = "True" ]]; then
-#     echo "Columns true" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        #If it's there, print the seedword
-        printf "%s" "${SeedWord}"
-        # And now get the random words
-        w=0
-        while [[ $w -lt "${PphraseWords}" ]]; do
-          printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
-          ((w = w + 1))
-        done | tr -d "\n"
-        printf "\n"
-      ((n = n + 1))
-      done | column
-    else
-#     echo "Columns false" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        printf "%s" "${SeedWord}"
-        w=0
-        while [[ $w -lt "${PphraseWords}" ]]; do
-          printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
-          ((w = w + 1));
-        done | tr -d "\n"
-        printf "\n"
-      ((n = n + 1))
-      done
-    fi
+    n=0
+    while [[ $n -lt "${PphraseNum}" ]]; do
+      #If it's there, print the seedword
+      printf "%s" "${SeedWord}"
+      # And now get the random words
+      w=0
+      while [[ $w -lt "${PphraseWords}" ]]; do
+        printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
+        ((w = w + 1))
+      done | tr -d "\n"
+      printf "\n"
+    ((n = n + 1))
+    done | "${PphraseCols}"
+
   # Otherwise, we switch to bash, which is slower still
   # Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function
   # It is BRUTALLY slow.  The method shown here is almost as fast as perl.
   else
-#   echo "Using bash!" #debug
-    if [[ "${PphraseCols}" = "True" ]]; then
-#     echo "Columns true" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        # If it's there, print the seedword
-        printf "%s" "${SeedWord}"
-        # And now get the random words
-        w=0
-        while [[ $w -lt "${PphraseWords}" ]]; do
-          printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
-          ((w = w + 1))
-        done | tr -d "\n"
-      printf "\n"
-      ((n = n + 1))
-      done | column
-    else
-#     echo "Columns false" #Debug
-      n=0
-      while [[ $n -lt "${PphraseNum}" ]]; do
-        printf "%s" "${SeedWord}"
-        w=0
-        while [[ $w -lt "${PphraseWords}" ]]; do
-          printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
-          ((w = w + 1))
-        done | tr -d "\n"
-      printf "\n"     
-      ((n = n + 1))
-      done
-    fi
+    n=0
+    while [[ $n -lt "${PphraseNum}" ]]; do
+      # If it's there, print the seedword
+      printf "%s" "${SeedWord}"
+      # And now get the random words
+      w=0
+      while [[ $w -lt "${PphraseWords}" ]]; do
+        printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
+        ((w = w + 1))
+      done | tr -d "\n"
+    printf "\n"
+    ((n = n + 1))
+    done | "${PphraseCols}"
   fi
 }
 ################################################################################

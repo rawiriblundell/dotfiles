@@ -1182,12 +1182,12 @@ genphrase() {
   # First, double check that the dictionary file exists.  I usually have my .bash_profile take care of this
   if [[ ! -f ~/.pwords.dict ]] ; then
     # Test if we have internet access, if so, download the peerio wordlist
-    if nc -zw1 google.com 80; then
+    if timeout 2 nc -zw1 google.com 80; then
       wget https://passphrases.peerio.com/dict/en.txt
       mv en.txt ~/.pwords.dict
     # Otherwise, create our own wordlist using what's available
     else
-      egrep -h '^.{4,7}$' /usr/{,share/}dict/words | egrep -v "é|'|-" > ~/.pwords.dict 2>/dev/null
+      egrep -h '^.{4,7}$' /usr/{,share/}dict/words 2>/dev/null | egrep -v "é|'|-" > ~/.pwords.dict
     fi
   fi
 
@@ -1341,7 +1341,7 @@ genphrase() {
       while [[ $w -lt "${PphraseWords}" ]]; do
         printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
         ((w = w + 1))
-      done | tr -d "\n"
+      done | capitalise | tr -d "\n"
     printf "\n"
     ((n = n + 1))
     done | "${PphraseCols}"

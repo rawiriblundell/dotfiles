@@ -738,14 +738,18 @@ if ! command -v timeout &>/dev/null; then
     # Convert timeout period into seconds
     # If it contains 'm', then convert to minutes
     if echo "${duration}" | grep "m" &>/dev/null; then
+      # Make the variable numeric only
+      duration="${duration//[!0-9]/}" 
       duration=$(( duration * 60 ))
       
     # ...and 'h' is for hours...
     elif echo "${duration}" | grep "h" &>/dev/null; then
+      duration="${duration//[!0-9]/}" 
       duration=$(( duration * 60 * 60 ))
       
     # ...and 'd' is for days...
     elif echo "${duration}" | grep "d" &>/dev/null; then
+      duration="${duration//[!0-9]/}" 
       duration=$(( duration * 60 * 60 * 24 ))
       
     # Otherwise, sanitise the variable of any other non-numeric characters

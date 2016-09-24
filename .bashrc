@@ -597,18 +597,17 @@ fi
 # Performance tests: perl non-portable, python, perl-portable, bash.  In that order.
 if ! command -v shuf &>/dev/null; then
   shuf() {
+    local OPTIND
+
     # Let's set a blank array
     shufArray=()
 
-    # Handle the input, checking whether it's a file or stdin
-    # Check that stdin or $1 isn't empty, and handle any attempts to use -opts
-    if [[ -t 0 ]] && [[ -z $1 ]] || [[ $1 = "-?" ]]; then
+    # Handle the input, checking that stdin or $1 isn't empty
+    if [[ -t 0 ]] && [[ -z $1 ]]; then
       printf "%s\n" "Usage:  shuf string|file" ""
       printf "\t%s\n"  "Write a random permutation of the input lines to standard output." "" \
         "With no FILE, or when FILE is -, read standard input." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'shuf'" \
-        "It does not offer any of shuf's options, you will need to do that yourself" \
-        "e.g. instead of 'shuf -n 2 filename', use 'shuf filename | head -2'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
@@ -616,34 +615,62 @@ if ! command -v shuf &>/dev/null; then
       return 1
     fi
 
-    # If there is more than one parameter, we read that into the array
-    if [[ $# -ge 2 ]]; then
-      shufArray=( $@ )
-    # Otherwise, we handle $1 (as a file), or piped/redirected stdin
+    # Default the command variable for when '-n' is not used
+    headOut=( cat - )
+
+    while getopts ":hn:v" Flags; do
+      case "${Flags}" in
+        h)  printf "%s\n" "shuf - generate random permutations" \
+              "Options:" \
+              "  -h, help.      Print a summary of the options" \
+              "  -n, count.     Output at most n lines" \
+              "  -v, version.   Print the version information"
+            return 0;;
+        n)  numCount="${OPTARG}";
+            headOut=( head -n "${numCount}" - )
+            ;;
+        v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
+            return 0;;
+        \?)  printf "%s\n" "shuf: invalid option -- '-$OPTARG'." \
+               "Try -h for usage or -v for version info." >&2
+             return 1;;
+        :)  printf "%s\n" "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+            return 1;;
+      esac
+    done
+    shift $(( OPTIND - 1 ))
+
+    # If parameter is a file, or stdin is used, action that first
     # We manage IFS to ensure that lines remain intact
-    else
+    if [[ -f $1 ]]||[[ ! -t 0 ]]; then
       oldIFS="$IFS"
       IFS=$'\n'
-      # If it's a file, we read it straight in.  Faster than the line by line method for stdin
-      # Possible TO-DO: add a check for mapfile or readarray
-      if [[ -f $1 ]]; then
-        GLOBIGNORE='*' :; shufArray=($(<"$1"))
-      else
-        while read -r line; do
-          shufArray+=( "$line" )
-        done
-      fi
+      # This is a fast alternative to reading line by line
+      GLOBIGNORE='*' :; shufArray=($(<"${1:-/dev/stdin}"))
       IFS="${oldIFS}"
+
+    # Otherwise, if a parameter or more exists, then read it into an array
+    # In GNU 'shuf', this functionality requires the '-e' option, but it's
+    # a bit too exhaustive to code multi-arg getopts, so instead we
+    # keep this here as an undocumented feature
+    elif [[ -n "$@" ]]; then
+      shufArray=( $@ )
     fi
 
-    # First, perl is usually available, so let's check for that
-    if command -v perl &>/dev/null; then
-      # Need to figure out a test to see if this module is available, if so, use it.
-      #printf "%s\n" "${shufArray[@]}" | perl -MList::Util=shuffle -e 'print shuffle(<>);' 
+    # First, ruby is the fastest way to do this, so let's check for it
+    if command -v ruby &>/dev/null; then
+    printf "%s\n" "${shufArray[@]}" | ruby -e 'Signal.trap("SIGPIPE", "SYSTEM_DEFAULT");puts ARGF.readlines.shuffle'
 
-      # Here is a slower, but portable-ish alternative, tested down to Solaris 8
-      printf "%s\n" "${shufArray[@]}" | perl -e 'srand(time|$$); @a =<>; while ( @a ) { $choice = splice(@a, rand @a, 1); print $choice; }'
-
+    # Next, perl is usually available, so this will probably be the most used option
+    elif command -v perl &>/dev/null; then
+      # First we test if the shuffle module is available, if so, use it
+      if echo "word1 word2" | perl -MList::Util=shuffle -e 'print shuffle(<>);' &>/dev/null; then
+        printf "%s\n" "${shufArray[@]}" | perl -MList::Util=shuffle -e 'print shuffle(<>);'
+      else
+        # Here is a slower, but portable-ish alternative, tested down to Solaris 8
+        printf "%s\n" "${shufArray[@]}" | perl -e 'srand(time|$$); @a =<>; while ( @a ) { $choice = splice(@a, rand @a, 1); print $choice; }'
+      fi
+      
     # Otherwise, we try python.  Less available than perl but a relatively portable oneliner
     elif command -v python &>/dev/null; then
       printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
@@ -665,14 +692,15 @@ if ! command -v shuf &>/dev/null; then
         # Use that random number to randomly select an element from shufArray, then append it to the end of the array
         shufArray+=( "${shufArray[numRand]}" )
         # Remove that element from shufArray and the reindex it to prevent duplicate reads
-        unset shufArray[numRand]
+        unset "${shufArray[numRand]}"
         shufArray=( "${shufArray[@]}" )
         # Decrement arrSize
         arrSize=$(( arrSize - 1 ))
       done
-      # Now that shufArray is rebuilt, print it out
+      # Now that shufArray is rebuilt, print it
       printf "%s\n" "${shufArray[@]}"
-    fi
+    # If '-n' was used, we need to determine that and use 'head', otherwise just 'cat' it out
+    fi | "${headOut[@]}" 
   }
 fi
 

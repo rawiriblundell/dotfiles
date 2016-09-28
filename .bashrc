@@ -248,7 +248,8 @@ capitalise() {
         # Pad the output so that multiple elements are spaced out
         printf "%s " "${outWord}"
       # Remove any space between the last element in a line an the end of line
-      done | sed -e 's/[ \t]*$//'
+      # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
+      done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
       # After processing, insert a newline
       printf "%s\n" ""
     done < "${1:-/dev/stdin}"
@@ -260,7 +261,7 @@ capitalise() {
       inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
       outWord="$inWord${inString:1}"
       printf "%s " "${outWord}"
-    done | sed -e 's/[ \t]*$//'
+    done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
     printf "%s\n" ""
   fi
 }

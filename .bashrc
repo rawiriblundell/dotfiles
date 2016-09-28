@@ -594,20 +594,20 @@ if ! command -v seq &>/dev/null; then
 fi
 
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
-# Performance tests: perl non-portable, python, perl-portable, bash.  In that order.
+# Performance tests: ruby, perl non-portable, python, perl-portable, bash.  In that order.
 if ! command -v shuf &>/dev/null; then
   shuf() {
     local OPTIND
 
     # Let's set a blank array
-    shufArray=()
+    local shufArray=()
 
     # Handle the input, checking that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
       printf "%s\n" "Usage:  shuf string|file" ""
       printf "\t%s\n"  "Write a random permutation of the input lines to standard output." "" \
         "With no FILE, or when FILE is -, read standard input." "" \
-        "Note: This is a bash function to provide the basic functionality of the command 'shuf'" \
+        "Note: This is a bash function to provide the basic functionality of the command 'shuf'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
@@ -616,18 +616,18 @@ if ! command -v shuf &>/dev/null; then
     fi
 
     # Default the command variable for when '-n' is not used
-    headOut=( cat - )
+    local headOut=( cat - )
 
     while getopts ":hn:v" Flags; do
       case "${Flags}" in
-        h)  printf "%s\n" "shuf - generate random permutations" \
-              "Options:" \
+        h)  printf "%s\n" "" "shuf - generate random permutations" \
+              "" "Options:" \
               "  -h, help.      Print a summary of the options" \
               "  -n, count.     Output at most n lines" \
-              "  -v, version.   Print the version information"
+              "  -v, version.   Print the version information" ""
             return 0;;
-        n)  numCount="${OPTARG}";
-            headOut=( head -n "${numCount}" - )
+        n)  local numCount="${OPTARG}";
+            local headOut=( head -n "${numCount}" )
             ;;
         v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
             return 0;;
@@ -659,7 +659,7 @@ if ! command -v shuf &>/dev/null; then
 
     # First, ruby is the fastest way to do this, so let's check for it
     if command -v ruby &>/dev/null; then
-    printf "%s\n" "${shufArray[@]}" | ruby -e 'Signal.trap("SIGPIPE", "SYSTEM_DEFAULT");puts ARGF.readlines.shuffle'
+      printf "%s\n" "${shufArray[@]}" | ruby -e 'Signal.trap("SIGPIPE", "SYSTEM_DEFAULT");puts ARGF.readlines.shuffle'
 
     # Next, perl is usually available, so this will probably be the most used option
     elif command -v perl &>/dev/null; then
@@ -675,30 +675,35 @@ if ! command -v shuf &>/dev/null; then
     elif command -v python &>/dev/null; then
       printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
 
-    # Otherwise, we failover to bash native, this can potentially be brutally slow
-    # This is the third method coded, it allows some biasing in exchange for a slight performance boost
+    # Otherwise, we failover to our bash alternative, based on the new
+    # and improved version of 'rand' from https://github.com/rawiriblundell/scripts/blob/master/rand
     else
-      # Figure out the size of the array, this tells us how many shuffles we have to do
-      arrSize=${#shufArray[@]}
-      # If the array is over 100 elements, print out a courtesy warning
-      if [[ ${arrSize} -gt 100 ]]; then
-        printf "%s\n" "[shuf INFO]: Using bash native shuffle method, this can be extremely slow e.g. 1 shuffle per second" \
-          "The content that you would like shuffled has ${arrSize} elements to shuffle.  Use Ctrl+C to cancel, or please wait patiently."
+      # Check that we have the prerequisite 'rand' command
+      if ! command -v rand &>/dev/null; then
+        printf "%s\n" "[ERROR] shuf: The command 'rand' is required but was not found."
+        return 1
       fi
-      # So long as shufArray has more than 0 elements, we work on it
-      while [[ ${arrSize} -gt 0 ]]; do
-        # Choose a random number up to 32768 (this eventually reduces as arrSize decrements)
-        numRand=$(( RANDOM % arrSize ))
-        # Use that random number to randomly select an element from shufArray, then append it to the end of the array
-        shufArray+=( "${shufArray[numRand]}" )
-        # Remove that element from shufArray and the reindex it to prevent duplicate reads
-        unset "${shufArray[numRand]}"
-        shufArray=( "${shufArray[@]}" )
-        # Decrement arrSize
-        arrSize=$(( arrSize - 1 ))
+      
+      # Figure out the size of shufArray, this tells us how many elements to manage
+      local arrSize=${#shufArray[@]}
+
+      # Open up a blank array for handling some random numbers
+      local randArray=()
+
+      # If '-n' is in use, we want to manually define the amount of generated numbers
+      # We do this for the sake of performance i.e. only parse as much as needed
+      if [[ -n "${numCount}" ]]; then
+        randArray=( $(rand -N "${numCount}" -M "${arrSize}") )
+      # Otherwise, we generate a full set of randomised numbers  
+      else
+        randArray=( $(rand -N "${arrSize}" -M "${arrSize}") )
+      fi
+
+      # Now go through randArray and
+      # print the matching lines from shufArray
+      for line in "${randArray[@]}"; do
+        printf -- "%s\n" "${shufArray[line]}"
       done
-      # Now that shufArray is rebuilt, print it
-      printf "%s\n" "${shufArray[@]}"
     # If '-n' was used, we need to determine that and use 'head', otherwise just 'cat' it out
     fi | "${headOut[@]}" 
   }

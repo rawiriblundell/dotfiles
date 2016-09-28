@@ -247,7 +247,7 @@ capitalise() {
         outWord="$inWord${inString:1}"
         # Pad the output so that multiple elements are spaced out
         printf "%s " "${outWord}"
-      # Remove any space between the last element in a line an the end of line
+      # Remove any space between the last element in a line and the end of line
       # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
       done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
       # After processing, insert a newline

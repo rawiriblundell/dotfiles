@@ -41,7 +41,7 @@ PATH=/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin
 # directories that exist on the host.
 newPath=
 # Split the PATH out into individual loop elements
-for dir in $(echo "${PATH}" | tr ":" "\n" | sort | uniq); do
+for dir in $(echo "${PATH}" | tr ":" "\n" | grep -v "\$PATH" | sort | uniq); do
   # If the directory exists, add it to the newPath variable
   if [ -d "${dir}" ]; then
     newPath="${newPath}:${dir}"

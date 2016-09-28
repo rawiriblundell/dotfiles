@@ -1200,9 +1200,9 @@ cryptpasswd() {
 # genphrase passphrase generator
 ################################################################################
 # A passphrase generator, because: why not?
-# Note: This will only generate XKCD "Correct Horse Battery Staple" level phrases, which actually aren't that secure
-# without some character randomisation.
-# You should use the Schneier Method instead i.e. "This little piggy went to market" = "tlpWENT2m"
+# Note: This will only generate XKCD "Correct Horse Battery Staple" level phrases, 
+# which arguably aren't that secure without some character randomisation.
+# See the Schneier Method alternative i.e. "This little piggy went to market" = "tlpWENT2m"
 genphrase() {
   # Some examples of methods to do this (fastest to slowest):
   # shuf:         printf "%s\n" "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
@@ -1225,6 +1225,13 @@ genphrase() {
     fi
   fi
 
+  # Test we have the capitalise function available
+  if ! type capitalise | head -1 | grep -q function &>/dev/null; then
+    printf "%s\n" "[ERROR] genphrase: 'capitalise' function is required but was not found." \
+      "This function can be retrieved from https://github.com/rawiriblundell"
+    return 1
+  fi
+
   # Declare OPTIND as local for safety
   local OPTIND
 
@@ -1245,14 +1252,14 @@ genphrase() {
             return 1
           fi
           ;;
-      h)  printf "%s\n" "genphrase - a basic passphrase generator" \
-          "Optional Arguments:" \
+      h)  printf "%s\n" "" "genphrase - a basic passphrase generator" \
+          "" "Optional Arguments:" \
           "-C [attempt to output into columns (Default:off)]" \
           "-h [help]" \
           "-n [number of passphrases to generate (Default:${PphraseNum})]" \
           "-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \
           "-S [explanation for the word seeding option: -s]" \
-          "-w [number of random words to use (Default:${PphraseWords})]"
+          "-w [number of random words to use (Default:${PphraseWords})]" ""
           return 0;;
       n)  PphraseNum="${OPTARG}";;
       s)  PphraseSeed="True"
@@ -1310,35 +1317,22 @@ genphrase() {
   fi
   
   # Now generate the passphrase(s)
-  # First we test to see if shuf is available, avoiding the earlier shuf function for now
-  if command -v shuf &>/dev/null && ! type shuf | head -1 | grep -q function; then
+  # First we test to see if shuf is available.  This should now work with the
+  # 'shuf' step-in function and 'rand' scripts available from https://github.com/rawiriblundell
+  # Also requires the 'capitalise' function from said source.
+  if command -v shuf &>/dev/null; then
     # Now we use a loop to run the number of times required to match the -n setting
     # Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
     # Obviously this will have to be run a sufficient number of times to make the use of
     # 'column' worth it.  Fortunately shuf is very fast.
     n=0
     while [[ $n -lt "${PphraseNum}" ]]; do
-      #Older methods left commented out to show the evolution of this function
-      #printf "%s\n" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | tr -d "\n")" 
-      #read -ra words <<< $(shuf -n "${PphraseWords}" ~/.pwords.dict) && printf "%s\n" $(tr -d " " <<< "${words[@]^}")
-      
-      # Create an array with the seeded word in place if it's used
-      #PphraseArray=("${SeedWord}" $(shuf -n "${PphraseWords}" ~/.pwords.dict))
-      # Read the array in and shuffle it
-      #read -ra words <<< $(printf "%s\n" ${PphraseArray[*]} | shuf)
-      # Now implement CamelCasing on the non-seed words and print the result
-      #printf "%s\n" "$(tr -d " " <<< "${words[@]^}")"
-                              
-      # Well, I wanted to do it the above way, but Solaris got upset
-      # So instead we have to do it like some kind of barbarians
+      # See commit history for the evolution of this.  Lots of good alternatives
+      # shot down due to Solaris being a precious little tulip.
                              
-      # First let's create an array of shuffled words with their first char uppercased
-      DictWords=$(for i in $(shuf -n "${PphraseWords}" ~/.pwords.dict); \
-        do InWord=$(echo "${i:0:1}" | tr '[:lower:]' '[:upper:]'); \
-        OutWord=$InWord${i:1}; printf "%s\n" "${OutWord}"; done)
-      # Now we print out the seed word and the array, shuffle them, 
-      # and remove the the newlines, leaving a passphrase
-      printf "%s\n" "${SeedWord}" "${DictWords[@]}" | shuf | tr -d "\n"
+      # Print the seedword, followed by the randomly selected words (capitalised)
+      # Next, shuffle the selected words, then butt them together
+      printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | capitalise)" | shuf | tr -d "\n"
       printf "\n"
       let ++n
     done | "${PphraseCols}"
@@ -1366,18 +1360,28 @@ genphrase() {
   # Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function
   # It is BRUTALLY slow.  The method shown here is almost as fast as perl.
   else
+    if ! command -v rand &>/dev/null; then
+      printf "%s\n" "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
+        "You can get this script from https://github.com/rawiriblundell"
+      return 1
+    fi
+    if ! type printline | head -1 | grep -q function &>/dev/null; then
+      printf "%s\n" "[ERROR] genphrase: 'printline' function is required but was not found." \
+        "This function can be retrieved from https://github.com/rawiriblundell"
+      return 1
+    fi
     n=0
     while [[ $n -lt "${PphraseNum}" ]]; do
-      # If it's there, print the seedword
-      printf "%s" "${SeedWord}"
-      # And now get the random words
-      w=0
-      while [[ $w -lt "${PphraseWords}" ]]; do
-        printf "%s\n" "$(head -n $((RANDOM%$(wc -l <~/.pwords.dict))) ~/.pwords.dict | tail -1)"
-        ((w = w + 1))
-      done | capitalise | tr -d "\n"
-    printf "\n"
-    ((n = n + 1))
+      # Build an array of words
+      wordArray=( "${SeedWord}" )
+      for line in $(rand -N "${PphraseWords}" -M "$(wc -l ~/.pwords.dict)"); do
+        wordArray+=( $(printline "${line}" ~/.pwords.dict | capitalise) )
+      done
+      for word in "${wordArray[@]}"; do
+        printf "%s\n" "${RANDOM} ${word}"
+      done | sort | cut -f2-
+      printf "\n"
+      ((n = n + 1))
     done | "${PphraseCols}"
   fi
 }

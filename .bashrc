@@ -40,8 +40,8 @@ PATH=/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin
 # We sanitise the PATH variable to only include
 # directories that exist on the host.
 newPath=
-# Split the PATH out into individual loop elements
-for dir in $(echo "${PATH}" | tr ":" "\n" | grep -v "\$PATH" | sort | uniq); do
+# Split the PATH out into individual loop elements and deduplicate
+for dir in $(echo "${PATH}" | tr ":" "\n" | grep -v "\$PATH" | nl | sort -u -k2 | sort | awk '{print $2}'); do
   # If the directory exists, add it to the newPath variable
   if [ -d "${dir}" ]; then
     newPath="${newPath}:${dir}"

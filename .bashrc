@@ -1226,7 +1226,7 @@ genphrase() {
   fi
 
   # Test we have the capitalise function available
-  if ! type capitalise | head -1 | grep -q function &>/dev/null; then
+  if ! type capitalise &>/dev/null; then
     printf "%s\n" "[ERROR] genphrase: 'capitalise' function is required but was not found." \
       "This function can be retrieved from https://github.com/rawiriblundell"
     return 1
@@ -1365,7 +1365,7 @@ genphrase() {
         "You can get this script from https://github.com/rawiriblundell"
       return 1
     fi
-    if ! type printline | head -1 | grep -q function &>/dev/null; then
+    if ! type printline &>/dev/null; then
       printf "%s\n" "[ERROR] genphrase: 'printline' function is required but was not found." \
         "This function can be retrieved from https://github.com/rawiriblundell"
       return 1

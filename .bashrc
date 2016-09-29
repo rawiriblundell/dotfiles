@@ -617,7 +617,8 @@ if ! command -v shuf &>/dev/null; then
     fi
 
     # Default the command variable for when '-n' is not used
-    local headOut=( cat - )
+    # I don't like using a nested function, but this is required for older bash versions
+    headOut() { cat -; }
 
     while getopts ":hn:v" Flags; do
       case "${Flags}" in
@@ -628,7 +629,7 @@ if ! command -v shuf &>/dev/null; then
               "  -v, version.   Print the version information" ""
             return 0;;
         n)  local numCount="${OPTARG}";
-            local headOut=( head -n "${numCount}" )
+            headOut() { head -n "${numCount}"; }
             ;;
         v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
             return 0;;
@@ -705,8 +706,12 @@ if ! command -v shuf &>/dev/null; then
       for line in "${randArray[@]}"; do
         printf -- "%s\n" "${shufArray[line]}"
       done
-    # If '-n' was used, we need to determine that and use 'head', otherwise just 'cat' it out
-    fi | "${headOut[@]}" 
+    # We pass the output to the headOut function.
+    # If '-n' was used, headOut will use 'head', otherwise it will just 'cat' the output
+    fi | headOut
+    
+    # Don't let headOut go global
+    unset headOut
   }
 fi
 

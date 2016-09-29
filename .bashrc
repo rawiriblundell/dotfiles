@@ -1377,14 +1377,14 @@ genphrase() {
       # Generate some random numbers within the linecount of .pwords.dict
       # With those random numbers, use the printline function to select those
       # specific random lines, then pass them through the capitalise function
-      for line in $(rand -N "${PphraseWords}" -M "$(wc -l ~/.pwords.dict)"); do
+      for line in $(rand -N "${PphraseWords}" -M $(wc -l ~/.pwords.dict)); do
         wordArray+=( $(printline "${line}" ~/.pwords.dict | capitalise) )
       done
       # Now that the array is built, we use a $RANDOM+sort shuffle
       # This ensures that the seed word is placed randomly in the passphrase
       for word in "${wordArray[@]}"; do
         printf "%s\n" "${RANDOM} ${word}"
-      done | sort | cut -f2-
+      done | sort | awk '{print $2}' | tr -d "\n"
       printf "\n"
       ((n = n + 1))
     done | "${PphraseCols}"

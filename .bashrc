@@ -187,8 +187,9 @@ elif [[ "$(uname)" = "Linux" ]]; then
   if tty --quiet; then
     stty erase '^?'
   fi
-  # I haven't used HP-UX in a while, but just to be sure
-  # we fix the backspace quirk for xterm
+  
+# I haven't used HP-UX in a while, but just to be sure
+# we fix the backspace quirk for xterm
 elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "$TERM" = "xterm" ]]; then
   stty intr ^c
   stty erase ^?

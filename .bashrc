@@ -763,6 +763,13 @@ ssh() {
   /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
 }
 
+# Provide a very simple 'tac' step-in function
+if ! command -v tac &>/dev/null; then
+  tac() {
+    sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
+  }
+fi
+
 # Throttle stdout
 throttle() {
   # Check that stdin isn't empty
@@ -927,7 +934,7 @@ if ! command -v watch &>/dev/null; then
       tput sgr0
       printf "%s\n" "" ""
     fi
-    $Command
+    eval "${Command}"
     sleep "${Sleep}"
   done
   }

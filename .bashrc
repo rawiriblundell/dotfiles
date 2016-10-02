@@ -234,6 +234,33 @@ fi
 ################################################################################
 # Functions
 
+# Bytes to Human Readable conversion function from http://unix.stackexchange.com/a/98790
+# Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]
+bytestohuman() {
+  # converts a byte count to a human readable format in IEC binary notation (base-1024),
+  # rounded to two decimal places for anything larger than a byte. 
+  # switchable to padded format and base-1000 if desired.
+  local L_BYTES="${1:-0}"
+  local L_PAD="${2:-no}"
+  local L_BASE="${3:-1024}"
+  awk -v bytes="${L_BYTES}" -v pad="${L_PAD}" -v base="${L_BASE}" 'function human(x, pad, base) {
+   if(base!=1024)base=1000
+   basesuf=(base==1024)?"iB":"B"
+
+   s="BKMGTEPYZ"
+   while (x>=base && length(s)>1)
+         {x/=base; s=substr(s,2)}
+   s=substr(s,1,1)
+
+   xf=(pad=="yes") ? ((s=="B")?"%5d   ":"%8.2f") : ((s=="B")?"%d":"%.2f")
+   s=(s!="B") ? (s basesuf) : ((pad=="no") ? s : ((basesuf=="iB")?(s "  "):(s " ")))
+
+   return sprintf( (xf " %s\n"), x, s)
+  }
+  BEGIN{print human(bytes, pad, base)}'
+  return $?
+}
+
 # Capitalise words
 # This is a bash-portable way to do this.
 # In bash-4 onwards, you can use ${var^} or ${arr[@]^}

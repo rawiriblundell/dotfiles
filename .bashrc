@@ -35,7 +35,7 @@ umask 027
 
 ################################################################################
 # Set the PATH, add in xpg6 and xpg4 in case we're on Solaris
-PATH=/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/csw/bin:/opt/csw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/usr/sfw/bin:/usr/sfw/sbin:$PATH
+PATH=/usr/gnu/bin:/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/csw/bin:/opt/csw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/usr/sfw/bin:/usr/sfw/sbin:$PATH
 
 # We sanitise the PATH variable to only include
 # directories that exist on the host.
@@ -187,6 +187,11 @@ elif [[ "$(uname)" = "Linux" ]]; then
   if tty --quiet; then
     stty erase '^?'
   fi
+  # I haven't used HP-UX in a while, but just to be sure
+  # we fix the backspace quirk for xterm
+elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "$TERM" = "xterm" ]]; then
+  stty intr ^c
+  stty erase ^?
 fi
 
 ################################################################################
@@ -211,11 +216,20 @@ if [[ -x /usr/bin/dircolors ]]; then
   fi
 fi
 
-# Some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias lh='ls -lah'
-alias l='ls -CF'
+# Check whether 'ls' supports human readable ( -h )
+ls -h /dev/null 2> /dev/null 1>&2 && H='-h'
+
+alias l.='ls -lAdF ${H} .*'    # list only hidden things
+alias la='ls -lAF ${H}'        # list all
+alias ll='ls -alF ${H}'        # list long
+alias ls='ls -F'               # list with flags
+
+# When EDITOR == vim ; alias vi to vim
+[[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
+
+if command -v vim &>/dev/null; then
+  alias vi='vim'
+fi
 
 ################################################################################
 # Functions
@@ -1548,6 +1562,9 @@ fi
 # Previously this tried to failover to a tput based alternative but it didn't work well on Solaris...
 if [[ -w / ]]; then
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
+# If we can't write in this directory, give a subtle hint
+elif [[ ! -w $PWD ]]; then
+  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \${bldred}\W\[${txtgrn}]\[${txtrst}$ "
 # Otherwise show the usual prompt
 else
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "

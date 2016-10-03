@@ -1334,11 +1334,12 @@ genphrase() {
     "genphrase and the -s option: Why you would want to seed your own word?" \
     "======================================================================" \
     "One method for effectively using passphrases is known as 'root and extension.'" \
-    "This can be expressed in a few ways, but in this context, it's to choose at least two" \
-    "random words (your 'root') and to seed those two words with a task specific word (your 'extension')." \
+    "This can be expressed in a few ways, but in this context, it's to choose" \
+    "at least two random words (your 'root') and to seed those two words" \
+    "with a task specific word (your 'extension')." "" \
     "So let's take two words:" \
-    "---" "pings genre" "---" \
-    "Now if we capitalise both words to get CamelCasing, we meet the usual"\
+    "---" "pings genre" "---" "" \
+    "Now if we capitalise both words to get TitleCasing, we meet the usual"\
     "UPPER and lowercase password requirements, as well as very likely" \
     "meeting the password length requirement: 'PingsGenre'" ""\
     "So then we add a task specific word: Let's say this passphrase is for" \
@@ -1348,7 +1349,7 @@ genphrase() {
     "The random words are the same, but the task-specific word is the key." \
     "" "Problem is, this arguably isn't good enough.  According to Bruce Schneier" \
     "CorrectHorseBatteryStaple is not that secure.  Others argue otherwise." \
-    "See: https://goo.gl/ZGlkfm and http://goo.gl/kunYbu." \
+    "See: https://goo.gl/ZGlkfm and http://goo.gl/kunYbu." "" \
     "So we need to randomise those words, introduce some special characters," \
     "and some numbers.  'PingsGenrebank' becomes 'Pings{B4nk}Genre'" \
     "and likewise 'PingsGenreFBook' becomes '(FB0ok)GenrePings'." \

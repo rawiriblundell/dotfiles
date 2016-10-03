@@ -1597,9 +1597,6 @@ fi
 # Previously this tried to failover to a tput based alternative but it didn't work well on Solaris...
 if [[ -w / ]]; then
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
-# If we can't write in this directory, give a subtle hint
-elif [[ ! -w $PWD ]]; then
-  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \${bldred}\W\[${txtgrn}]\[${txtrst}$ "
 # Otherwise show the usual prompt
 else
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "

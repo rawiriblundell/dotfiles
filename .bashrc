@@ -1275,7 +1275,8 @@ genphrase() {
     # Test if we can download the peerio wordlist, if not
     # create our own wordlist using what's available
     if ! wget -T 2 https://passphrases.peerio.com/dict/en.txt -O ~/.pwords.dict &>/dev/null; then
-      egrep -h '^.{4,7}$' /usr/{,share/}dict/words 2>/dev/null | egrep -v "é|'|-" > ~/.pwords.dict
+      # Alternatively, we could just use egrep -v "[[:punct:]]", but we err on the side of portability
+      egrep -h '^.{4,7}$' /usr/{,share/}dict/words 2>/dev/null | egrep -v "é|'|-|\.|/|&" > ~/.pwords.dict
     fi
   fi
 

@@ -1142,7 +1142,7 @@ genpasswd() {
       # Otherwise, we failover to openssl
       # If command can't find it, we try to search some common Linux and Solaris paths for it
       elif ! command -v openssl &>/dev/null; then
-        OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
+        OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -n 1)
         # We can only generate an MD5 password using OpenSSL
         PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
         KryptMethod=OpenSSL
@@ -1167,12 +1167,12 @@ genpasswd() {
   if [[ "${PwdCheck}" = "true" ]]; then
       n=0
       while [[ "${n}" -lt "${PwdNum}" ]]; do
-        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
         # Now we run through a loop that will grep out generated passwords that match
         # the required character classes.  For portability, we shunt the lot to /dev/null
         # Because Solaris egrep doesn't behave with -q or -s as it should.
         while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -1 2> /dev/null)
+          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
         done
         # For each matched password, print it out, iterate and loop again.
         # But first we need to check if -Y is set, and if so, force in a random special character
@@ -1207,7 +1207,7 @@ cryptpasswd() {
 
   # Default the vars
   Pwd="${1}"
-  Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -1) 2> /dev/null
+  Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
   PwdKryptMode="${2}"
   
   if [[ -z "${1}" ]]; then
@@ -1234,7 +1234,7 @@ cryptpasswd() {
   # Otherwise, we failover to openssl
   # If command can't find it, we try to search some common Linux and Solaris paths for it
   elif ! command -v openssl &>/dev/null; then
-    OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -1)
+    OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -n 1)
     # We can only generate an MD5 password using OpenSSL
     PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
     KryptMethod=OpenSSL

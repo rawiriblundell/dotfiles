@@ -1125,12 +1125,9 @@ genpasswd() {
 
       # If -Y is set, we need to mix in a special character
       if [[ "${SpecialChar}" = "true" ]]; then
-        Shuffle=$((RANDOM % ${#InputChars[@]}))
-        PwdSeed=${InputChars[*]:$Shuffle:1}
+        PwdSeed="${InputChars[*]:$((RANDOM % ${#InputChars[@]})):1}"
         SeedLoc=$((RANDOM % ${#Pwd}))
-        ((PwdLen = ${#Pwd} - 1))
-        Pwd="${Pwd:0:$PwdLen}"
-        Pwd=$(printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
+        Pwd=$(printf "%s\n" "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
       fi
 
       # We check for python and if it's there, we use it
@@ -1177,18 +1174,14 @@ genpasswd() {
         # For each matched password, print it out, iterate and loop again.
         # But first we need to check if -Y is set, and if so, force in a random special character
         if [[ "${SpecialChar}" = "true" ]]; then
-          # Generate a random element number to select from the special characters array
-          Shuffle=$((RANDOM % ${#InputChars[@]}))
-          # Using the above, get the randomly selected character from the array
-          PwdSeed=${InputChars[*]:$Shuffle:1}
+          # Select a random character from the array by selecting a random number
+          # based on the array length, then selecting the appropriate element
+          PwdSeed="${InputChars[*]:$((RANDOM % ${#InputChars[@]})):1}"
           # Choose a random location within the max password length in which to insert it
           SeedLoc=$((RANDOM % ${#Pwd}))
-          # Calculate the password length minus 1, as we need to shorten the password
-          ((PwdLen = ${#Pwd} - 1))
-          # Shorten the password in order to make space for the inserted character
-          Pwd="${Pwd:0:$PwdLen}"
-          # Print out the password, then use sed to insert the special character into the preselected place
-          printf "%s\n" "${Pwd}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
+          # Print out the password with one less character, 
+          # then use sed to insert the special character into the preselected place
+          printf "%s\n" "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
         # If -Y isn't set, just print it out.  Easy!
         else
           printf "%s\n" "${Pwd}"

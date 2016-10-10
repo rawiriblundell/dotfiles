@@ -1346,26 +1346,9 @@ genphrase() {
       printf "\n"
       let ++n
     done | "${PphraseCols}"
-    return 0 # Prevent subsequent run of perl/bash
+    return 0 # Prevent subsequent run of bash
   fi
   
-  # Next we try perl, installed almost everywhere and reasonably fast
-  # For portability we have to be a bit more hands-on with our loops, which impacts performance
-  if command -v perl &>/dev/null; then
-    n=0
-    while [[ $n -lt "${PphraseNum}" ]]; do
-      #If it's there, print the seedword
-      printf "%s" "${SeedWord}"
-      # And now get the random words
-      w=0
-      while [[ $w -lt "${PphraseWords}" ]]; do
-        printf "%s\n" "$(perl -nle '$word = $_ if rand($.) < 1; END { print "\u$word" }' ~/.pwords.dict)"
-        ((w = w + 1))
-      done | tr -d "\n"
-      printf "\n"
-    ((n = n + 1))
-    done | "${PphraseCols}"
-
   # Otherwise, we switch to bash, which is slower still
   # Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function
   # It is BRUTALLY slow.  The method shown here is almost as fast as perl.

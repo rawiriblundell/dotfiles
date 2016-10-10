@@ -1161,7 +1161,7 @@ cryptpasswd() {
 
   # Default the vars
   Pwd="${1}"
-  Salt=$(tr -dc '[:graph:]' < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
+  Salt=$(tr -dc '[:alnum:]#$&+/<}^%@' < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
   PwdKryptMode="${2}"
   
   if [[ -z "${1}" ]]; then
@@ -1347,7 +1347,6 @@ genphrase() {
       let ++n
     done | "${PphraseCols}"
     return 0 # Prevent subsequent run of bash
-  fi
   
   # Otherwise, we switch to bash, which is slower still
   # Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function

@@ -266,10 +266,13 @@ bytestohuman() {
 # This is a bash-portable way to do this.
 # In bash-4 onwards, you can use ${var^} or ${arr[@]^}
 capitalise() {
+  # Ignore any instances of '*' that may be in a file
+  local GLOBIGNORE=*
+  
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z $1 ]]; then
     printf "%s\n" "Usage:  capitalise string" ""
-    printf "\t%s\n" "Capitalises the first character of STRING."
+    printf "\t%s\n" "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
   elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
@@ -293,7 +296,7 @@ capitalise() {
       # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
       done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
       # After processing, insert a newline
-      printf "%s\n" ""
+      #printf "%s\n" ""
     done < "${1:-/dev/stdin}"
 
   # Otherwise, if a parameter exists, then capitalise all given elements
@@ -306,6 +309,9 @@ capitalise() {
     done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
     printf "%s\n" ""
   fi
+  
+  # Unset GLOBIGNORE, even though we've tried to limit it to this function
+  local GLOBIGNORE=
 }
 
 # Print the given text in the center of the screen.

@@ -425,31 +425,31 @@ exesudo () {
 # Usage: flocate searchterm1 searchterm2 searchterm[n]
 # Source: http://solarum.com/v.php?l=1149LV99
 flocate() {
-if ! command -v locate &>/dev/null; then
-  printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
-  return 1
-fi
-if [[ $# -gt 1 ]]; then
-  display_divider=1
-else
-  display_divider=0
-fi
-
-current_argument=0
-total_arguments=$#
-while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
-  current_file=$1
-  if [ "${display_divider}" = "1" ] ; then
-    printf "%s\n" "----------------------------------------" \
-    "Matches for ${current_file}" \
-    "----------------------------------------"
+  if ! command -v locate &>/dev/null; then
+    printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
+    return 1
+  fi
+  if [[ $# -gt 1 ]]; then
+    display_divider=1
+  else
+    display_divider=0
   fi
 
-  filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
-  locate -r "${filename_re}"
-  shift
-  (( current_argument = current_argument + 1 ))
-done
+  current_argument=0
+  total_arguments=$#
+  while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
+    current_file=$1
+    if [ "${display_divider}" = "1" ] ; then
+      printf "%s\n" "----------------------------------------" \
+      "Matches for ${current_file}" \
+      "----------------------------------------"
+    fi
+
+    filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
+    locate -r "${filename_re}"
+    shift
+    (( current_argument = current_argument + 1 ))
+  done
 }
 
 # Enable X-Windows for cygwin, finds and assigns an available display env variable.

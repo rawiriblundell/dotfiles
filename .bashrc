@@ -1028,15 +1028,14 @@ genpasswd() {
       c)  PwdChars="${OPTARG}";;
       D)  ReqSet="${ReqSet}[0-9]+"
           PwdCheck="true";;
-      h)  printf "%s\n" "genpasswd - a poor sysadmin's pwgen" \
+      h)  printf "%s\n" "" "genpasswd - a poor sysadmin's pwgen" \
           "" "Usage: genpasswd [options]" "" \
           "Optional arguments:" \
           "-C [Attempt to output into columns (Default:off)]" \
           "-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
           "-D [Require at least one digit (Default:off)]" \
           "-h [Help]" \
-          "-k [Krypt, generates a crypted/salted password for tools like 'usermod -p' and 'chpasswd -e'" \
-          "    use of -C [columns] will be disallowed when this mode is enabled." \
+          "-k [Krypt, generates a hashed password for tools like 'newusers', 'usermod -p' and 'chpasswd -e'." \
           "    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
           "    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
           "-L [Require at least one lowercase character (Default:off)]" \
@@ -1064,10 +1063,10 @@ genpasswd() {
       Y)  #ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
           SpecialChar="true"
           PwdCheck="true";;
-      \?)  printf "%s\n" "ERROR: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
+      \?)  printf "%s\n" "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
            return 1;;
       
-      :)  echo "Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+      :)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
           return 1;;
     esac
   done
@@ -1075,7 +1074,7 @@ genpasswd() {
   # We need to check that the character length is more than 4 to protect against
   # infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
   if [[ "${PwdChars}" -lt 4 ]]; then
-    printf "%s\n" "ERROR: Password length must be greater than four characters."
+    printf "%s\n" "[ERROR] genpasswd: Password length must be greater than four characters."
     return 1
   fi
 
@@ -1091,30 +1090,12 @@ genpasswd() {
 
   # Let's start with checking for the Krypt option
   if [[ "${PwdKrypt}" = "true" ]]; then
-    # Disallow columns
-    if [[ "${PwdCols}" = "column" ]]; then
-      printf "%s\n" "[ERROR] genpasswd: Use of '-C' and '-k' together is disallowed.  Please choose one, but not both."
-      return 1
-    fi
-    
-    # Now figure out the crypt mode
-    # 1 = MD5
-    # 5 = SHA256
-    # 6 = SHA512
-    # We don't want to mess around with other options as it requires more error handling than I can be bothered with
-    # If the crypt mode isn't 5 or 6, default it to 1, otherwise leave it be
-    if [[ "${PwdKryptMode}" -ne 5 && "${PwdKryptMode}" -ne 6 ]]; then
-      # Otherwise, default to MD5.  This catches 
-      PwdKryptMode=1
-    fi
-    
     # Let's make sure we get the right number of passwords
     n=0
     while [[ "${n}" -lt "${PwdNum}" ]]; do
       # And let's get these variables figured out.  Needs to be inside the loop
       # to correctly pickup other arg values and to rotate properly
       Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1) 2> /dev/null
-      Salt=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
       
       # Now we ensure that Pwd matches any character requirements
       if [[ "${PwdCheck}" = "true" ]]; then
@@ -1130,35 +1111,15 @@ genpasswd() {
         Pwd=$(printf "%s\n" "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
       fi
 
-      # We check for python and if it's there, we use it
-      if command -v python &>/dev/null; then
-        PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
-      # Next we failover to perl
-      elif command -v perl &>/dev/null; then
-        PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
-      # Otherwise, we failover to openssl
-      # If command can't find it, we try to search some common Linux and Solaris paths for it
-      elif ! command -v openssl &>/dev/null; then
-        OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -n 1)
-        # We can only generate an MD5 password using OpenSSL
-        PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
-        KryptMethod=OpenSSL
-      fi
-
-      # Now let's print out the result.  People can always awk/cut to get just the crypted password
-      # This should probably be tee'd off to a dotfile so that they can get the original password too
-      printf "%s\n" "Original: ${Pwd} Crypted: ${PwdSalted}"
+      # Feed the generated password to the cryptpasswd function
+      cryptpasswd "${Pwd}" "${PwdKryptMode}"
       
       # And we tick the counter up by one increment
       ((n = n + 1))
     done
-    # In case OpenSSL is used, give an FYI before we exit out
-    if [ "${KryptMethod}" = "OpenSSL" ]; then
-      printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
-    fi
     return 0
   fi
-
+  
   # Otherwise, let's just do plain old passwords.  This is considerably more straightforward
   # First, if the character check variable is true, then we go through that process
   if [[ "${PwdCheck}" = "true" ]]; then
@@ -1204,7 +1165,7 @@ cryptpasswd() {
   PwdKryptMode="${2}"
   
   if [[ -z "${1}" ]]; then
-    printf "%s\n" "cryptpasswd - a tool for hashing passwords" \
+    printf "%s\n" "" "cryptpasswd - a tool for hashing passwords" "" \
     "Usage: cryptpasswd [password to hash] [1|5|6]" \
     "    Crypt method can be set using '1' (MD5, default), '5' (SHA256) or '6' (SHA512)" \
     "    Any other arguments will default to MD5."

@@ -267,7 +267,7 @@ bytestohuman() {
 # In bash-4 onwards, you can use ${var^} or ${arr[@]^}
 capitalise() {
   # Ignore any instances of '*' that may be in a file
-  local GLOBIGNORE=*
+  local GLOBIGNORE="*"
   
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z $1 ]]; then
@@ -284,6 +284,11 @@ capitalise() {
   if [[ -f $1 ]]||[[ ! -t 0 ]]; then
     # Read each line of input
     while read -r inLine; do
+      # If the line is blank, then do that
+      if [[ -z "${inLine}" ]]; then
+        printf "%s\n" ""
+        break
+      fi
       # Split each line element for processing
       for inString in ${inLine}; do
         # Split off the first character and capitalise it

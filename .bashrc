@@ -265,6 +265,8 @@ bytestohuman() {
 # Capitalise words
 # This is a bash-portable way to do this.
 # In bash-4 onwards, you can use ${var^} or ${arr[@]^}
+# To achieve with awk, use awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
+# Known problem: leading whitespace is chomped.
 capitalise() {
   # Ignore any instances of '*' that may be in a file
   local GLOBIGNORE="*"

@@ -284,10 +284,10 @@ capitalise() {
   if [[ -f $1 ]]||[[ ! -t 0 ]]; then
     # Read each line of input
     while read -r inLine; do
-      # If the line is blank, then do that
+      # If the line is blank, then print a blank line and continue
       if [[ -z "${inLine}" ]]; then
         printf "%s\n" ""
-        break
+        continue
       fi
       # Split each line element for processing
       for inString in ${inLine}; do

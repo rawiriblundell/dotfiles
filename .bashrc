@@ -21,13 +21,13 @@ fi
 # Aliases
 # Some people use a different file for aliases
 if [[ -f "${HOME}/.bash_aliases" ]]; then
-  source "${HOME}/.bash_aliases"
+  . "${HOME}/.bash_aliases"
 fi
 
 # Functions
 # Some people use a different file for functions
 if [[ -f "${HOME}/.bash_functions" ]]; then
-  source "${HOME}/.bash_functions"
+  . "${HOME}/.bash_functions"
 fi
 
 # Set umask for new files
@@ -136,7 +136,7 @@ HISTFILESIZE=5000
 # Standardise the title header
 settitle() {
   #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
-  printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
+  printf "%s" "\033]0;${HOSTNAME%%.*}:${PWD}\a"
 }
 
 # Disable ctrl+s (XOFF) in PuTTY
@@ -325,10 +325,10 @@ capitalise() {
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
   width=$(tput cols);
-  str="$@";
+  str="$*";
   len=${#str};
-  [ $len -ge $width ] && echo "$str" && return;
-  for ((i = 0; i < $(((($width - $len)) / 2)); i++)); do
+  [ "${len}" -ge "${width}" ] && echo "$str" && return;
+  for ((i = 0; i < $((((width - len)) / 2)); i++)); do
     echo -n " ";
   done;
   echo "$str";
@@ -458,7 +458,7 @@ flocate() {
       "----------------------------------------"
     fi
 
-    filename_re="^\(.*/\)*$( echo ${current_file} | sed s%\\.%\\\\.%g )$"
+    filename_re="^\(.*/\)*$( echo "${current_file}" | sed s%\\.%\\\\.%g )$"
     locate -r "${filename_re}"
     shift
     (( current_argument = current_argument + 1 ))
@@ -677,22 +677,22 @@ if ! command -v shuf &>/dev/null; then
 
     while getopts ":hn:v" Flags; do
       case "${Flags}" in
-        h)  printf "%s\n" "" "shuf - generate random permutations" \
-              "" "Options:" \
-              "  -h, help.      Print a summary of the options" \
-              "  -n, count.     Output at most n lines" \
-              "  -v, version.   Print the version information" ""
-            return 0;;
-        n)  local numCount="${OPTARG}";
-            headOut() { head -n "${numCount}"; }
-            ;;
-        v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
-            return 0;;
-        \?)  printf "%s\n" "shuf: invalid option -- '-$OPTARG'." \
-               "Try -h for usage or -v for version info." >&2
+        (h)  printf "%s\n" "" "shuf - generate random permutations" \
+               "" "Options:" \
+               "  -h, help.      Print a summary of the options" \
+               "  -n, count.     Output at most n lines" \
+               "  -v, version.   Print the version information" ""
+             return 0;;
+        (n)  local numCount="${OPTARG}";
+             headOut() { head -n "${numCount}"; }
+             ;;
+        (v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
+             return 0;;
+        (\?)  printf "%s\n" "shuf: invalid option -- '-$OPTARG'." \
+                "Try -h for usage or -v for version info." >&2
+              return 1;;
+        (:)  printf "%s\n" "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
              return 1;;
-        :)  printf "%s\n" "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-            return 1;;
       esac
     done
     shift $(( OPTIND - 1 ))
@@ -913,21 +913,21 @@ if ! command -v watch &>/dev/null; then
 
   while getopts ":hn:vt" Flags; do
     case "${Flags}" in
-      h)  printf "%s\n" "Usage:" " watch [-hntv] <command>" "" \
-            "Options:" \
-            "  -h, help.      Print a summary of the options" \
-            "  -n, interval.  Seconds to wait between updates" \
-            "  -v, version.   Print the version number" \
-            "  -t, no title.  Turns off showing the header"
-          return 0;;
-      n)  Sleep="${OPTARG}";;
-      v)  printf "%s\n" "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
-          return 0;;
-      t)  Title=false;;
-      \?)  printf "%s\n" "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
+      (h)  printf "%s\n" "Usage:" " watch [-hntv] <command>" "" \
+             "Options:" \
+             "  -h, help.      Print a summary of the options" \
+             "  -n, interval.  Seconds to wait between updates" \
+             "  -v, version.   Print the version number" \
+             "  -t, no title.  Turns off showing the header"
+           return 0;;
+      (n)  Sleep="${OPTARG}";;
+      (v)  printf "%s\n" "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
+           return 0;;
+      (t)  Title=false;;
+      (\?)  printf "%s\n" "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
+            return 1;;
+      (:)  printf "%s\n" "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
            return 1;;
-      :)  printf "%s\n" "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-          return 1;;
     esac
   done
 
@@ -974,7 +974,7 @@ weather() {
 # Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
 wclip() {
   echo -ne '\e''[5i'
-  cat $*
+  cat "$*"
   echo -ne '\e''[4i'
   echo "Copied to Windows clipboard" 1>&2
 }
@@ -1031,56 +1031,56 @@ genpasswd() {
 
   while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
     case "${Flags}" in
-      C)  if command -v column &>/dev/null; then
-            PwdCols=column
-          else
-            printf "%s\n" "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
-            return 1
-          fi
-          ;;
-      c)  PwdChars="${OPTARG}";;
-      D)  ReqSet="${ReqSet}[0-9]+"
-          PwdCheck="true";;
-      h)  printf "%s\n" "" "genpasswd - a poor sysadmin's pwgen" \
-          "" "Usage: genpasswd [options]" "" \
-          "Optional arguments:" \
-          "-C [Attempt to output into columns (Default:off)]" \
-          "-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
-          "-D [Require at least one digit (Default:off)]" \
-          "-h [Help]" \
-          "-k [Krypt, generates a hashed password for tools like 'newusers', 'usermod -p' and 'chpasswd -e'." \
-          "    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
-          "    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
-          "-L [Require at least one lowercase character (Default:off)]" \
-          "-n [Number of passwords (Default:${PwdNum})]" \
-          "-s [Strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
-          "-S [Stronger mode, complete mix of characters (Default:off)]" \
-          "-U [Require at least one uppercase character (Default:off)]" \
-          "-Y [Require at least one special character (Default:off)]" \
-          "" "Note1: Broken Pipe errors, (older bash versions) can be ignored" \
-          "Note2: If you get umlauts, cyrillic etc, export LC_ALL= to something like en_US.UTF-8"
-          return 0;;
-      k)  PwdKrypt="true"
-          PwdKryptMode="${OPTARG}";;
-      L)  ReqSet="${ReqSet}[a-z]+"
-          PwdCheck="true";;
-      n)  PwdNum="${OPTARG}";;
+      (C)  if command -v column &>/dev/null; then
+             PwdCols=column
+           else
+             printf "%s\n" "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
+             return 1
+           fi
+           ;;
+      (c)  PwdChars="${OPTARG}";;
+      (D)  ReqSet="${ReqSet}[0-9]+"
+           PwdCheck="true";;
+      (h)  printf "%s\n" "" "genpasswd - a poor sysadmin's pwgen" \
+             "" "Usage: genpasswd [options]" "" \
+             "Optional arguments:" \
+             "-C [Attempt to output into columns (Default:off)]" \
+             "-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
+             "-D [Require at least one digit (Default:off)]" \
+             "-h [Help]" \
+             "-k [Krypt, generates a hashed password for tools like 'newusers', 'usermod -p' and 'chpasswd -e'." \
+             "    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
+             "    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
+             "-L [Require at least one lowercase character (Default:off)]" \
+             "-n [Number of passwords (Default:${PwdNum})]" \
+             "-s [Strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
+             "-S [Stronger mode, complete mix of characters (Default:off)]" \
+             "-U [Require at least one uppercase character (Default:off)]" \
+             "-Y [Require at least one special character (Default:off)]" \
+             "" "Note1: Broken Pipe errors, (older bash versions) can be ignored" \
+             "Note2: If you get umlauts, cyrillic etc, export LC_ALL= to something like en_US.UTF-8"
+           return 0;;
+      (k)  PwdKrypt="true"
+           PwdKryptMode="${OPTARG}";;
+      (L)  ReqSet="${ReqSet}[a-z]+"
+           PwdCheck="true";;
+      (n)  PwdNum="${OPTARG}";;
       # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
       # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
-      s)  PwdSet="[:alnum:]#$&+/<}^%@";;
-      S)  PwdSet="[:graph:]";;
-      U)  ReqSet="${ReqSet}[A-Z]+"
-          PwdCheck="true";;
+      (s)  PwdSet="[:alnum:]#$&+/<}^%@";;
+      (S)  PwdSet="[:graph:]";;
+      (U)  ReqSet="${ReqSet}[A-Z]+"
+           PwdCheck="true";;
       # If a special character is required, we feed in more special chars than in -s
       # This improves performance a bit by better guaranteeing seeding and matching
-      Y)  #ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
-          SpecialChar="true"
-          PwdCheck="true";;
-      \?)  printf "%s\n" "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
-           return 1;;
+      (Y)  #ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
+           SpecialChar="true"
+           PwdCheck="true";;
+      (\?)  printf "%s\n" "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
+            return 1;;
       
-      :)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-          return 1;;
+      (:)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+           return 1;;
     esac
   done
 
@@ -1267,31 +1267,31 @@ genphrase() {
 
   while getopts ":Chn:s:Sw:" Flags; do
     case "${Flags}" in
-      C)  if command -v column &>/dev/null; then
-            PphraseCols=column
-          else
-            printf "%s\n" "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
-            return 1
-          fi
-          ;;
-      h)  printf "%s\n" "" "genphrase - a basic passphrase generator" \
-          "" "Optional Arguments:" \
-          "-C [attempt to output into columns (Default:off)]" \
-          "-h [help]" \
-          "-n [number of passphrases to generate (Default:${PphraseNum})]" \
-          "-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \
-          "-S [explanation for the word seeding option: -s]" \
-          "-w [number of random words to use (Default:${PphraseWords})]" ""
-          return 0;;
-      n)  PphraseNum="${OPTARG}";;
-      s)  PphraseSeed="True"
-          SeedWord="[${OPTARG}]";;
-      S)  PphraseSeedDoc="True";;
-      w)  PphraseWords="${OPTARG}";;
-      \?)  echo "ERROR: Invalid option: '-$OPTARG'.  Try 'genphrase -h' for usage." >&2
+      (C)  if command -v column &>/dev/null; then
+             PphraseCols=column
+           else
+             printf "%s\n" "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
+             return 1
+           fi
+           ;;
+      (h)  printf "%s\n" "" "genphrase - a basic passphrase generator" \
+             "" "Optional Arguments:" \
+             "-C [attempt to output into columns (Default:off)]" \
+             "-h [help]" \
+             "-n [number of passphrases to generate (Default:${PphraseNum})]" \
+             "-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \
+             "-S [explanation for the word seeding option: -s]" \
+             "-w [number of random words to use (Default:${PphraseWords})]" ""
+           return 0;;
+      (n)  PphraseNum="${OPTARG}";;
+      (s)  PphraseSeed="True"
+           SeedWord="[${OPTARG}]";;
+      (S)  PphraseSeedDoc="True";;
+      (w)  PphraseWords="${OPTARG}";;
+      (\?)  echo "ERROR: Invalid option: '-$OPTARG'.  Try 'genphrase -h' for usage." >&2
+            return 1;;
+      (:)  echo "Option '-$OPTARG' requires an argument. e.g. '-$OPTARG 10'" >&2
            return 1;;
-      :)  echo "Option '-$OPTARG' requires an argument. e.g. '-$OPTARG 10'" >&2
-          return 1;;
     esac
   done
   
@@ -1382,7 +1382,7 @@ genphrase() {
       # Generate some random numbers within the linecount of .pwords.dict
       # With those random numbers, use the printline function to select those
       # specific random lines, then pass them through the capitalise function
-      for line in $(rand -N "${PphraseWords}" -M $(wc -l ~/.pwords.dict)); do
+      for line in $(rand -N "${PphraseWords}" -M "$(wc -l ~/.pwords.dict)"); do
         wordArray+=( $(printline "${line}" ~/.pwords.dict | capitalise) )
       done
       # Now that the array is built, we use a $RANDOM+sort shuffle

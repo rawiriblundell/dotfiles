@@ -780,7 +780,13 @@ ssh() {
 # Provide a very simple 'tac' step-in function
 if ! command -v tac &>/dev/null; then
   tac() {
-    sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
+    if command -v perl &>/dev/null; then
+      perl -e 'print reverse<>' < "${1:-/dev/stdin}"
+    elif command -v awk &>/dev/null; then
+      awk '{line[NR]=$0} END {for (i=NR; i>=1; i--) print line[i]}' < "${1:-/dev/stdin}"
+    elif command -v sed &>/dev/null; then
+      sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
+    fi
   }
 fi
 

@@ -1180,7 +1180,7 @@ cryptpasswd() {
 
   # Default the vars
   Pwd="${1}"
-  Salt=$(tr -dc '[:alnum:]#$&+/<}^%@' < /dev/urandom | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
+  Salt=$(tr -dc '[:alnum:]' < /dev/urandom | tr '[:upper:]' '[:lower:]' | tr -d ' ' | fold -w 8 | head -n 1) 2> /dev/null
   PwdKryptMode="${2}"
   
   if [[ -z "${1}" ]]; then

@@ -969,11 +969,7 @@ weather() {
   fi
 
   # If no arg is given, default to Wellington NZ
-  if [[ -z $1 ]]; then
-    curl "http://wttr.in/Wellington"
-  else
-    curl "http://wttr.in/$1"
-  fi
+  curl "http://wttr.in/${*:-Wellington}"
 }
 
 # Enable piping to Windows Clipboard from with PuTTY

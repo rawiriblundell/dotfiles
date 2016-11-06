@@ -969,7 +969,7 @@ weather() {
   fi
 
   # If no arg is given, default to Wellington NZ
-  curl "http://wttr.in/${*:-Wellington}"
+  curl -m 10 "http://wttr.in/${*:-Wellington}" 2>/dev/null || printf "%s\n" "[ERROR] weather: Could not connect to weather service."
 }
 
 # Enable piping to Windows Clipboard from with PuTTY

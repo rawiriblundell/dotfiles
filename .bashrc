@@ -1241,6 +1241,8 @@ cryptpasswd() {
   # We check for python and if it's there, we use it
   if command -v python &>/dev/null; then
     PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
+    # Alternative
+    #python -c 'import crypt; print(crypt.crypt('${Pwd}', crypt.mksalt(crypt.METHOD_SHA512)))'
     # Next we failover to perl
   elif command -v perl &>/dev/null; then
     PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")

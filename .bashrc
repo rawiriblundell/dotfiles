@@ -350,11 +350,6 @@ checkyaml() {
     return 1
   fi
   
-  # If we can see the internet, let's use it!
-  if ! wget -T 1 http://yamllint.com/ &>/dev/null; then
-    curl --data-urlencode yaml'@'"${file:-/dev/stdin}" -d utf8='%E2%9C%93' -d commit=Go  http://yamllint.com/ --trace-ascii out -G 2>&1 | egrep 'div.*background-color'
-  fi
-
   # ...and readable
   if [[ ! -r "$1" ]]; then
     printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it."
@@ -364,8 +359,12 @@ checkyaml() {
     file="$1"
   fi
 
+  # If we can see the internet, let's use it!
+  if ! wget -T 1 http://yamllint.com/ &>/dev/null; then
+    curl --data-urlencode yaml'@'"${file:-/dev/stdin}" -d utf8='%E2%9C%93' -d commit=Go  http://yamllint.com/ --trace-ascii out -G 2>&1 | egrep 'div.*background-color'
+
   # Check the YAML contents, if there's no error, print out a message saying so
-  if python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
+  elif python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
     printf "%s\n" "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
 
   # Otherwise, print out an error message and dump the trace

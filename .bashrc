@@ -349,6 +349,11 @@ checkyaml() {
     printf "\t%s\n"  "Check the YAML syntax in FILE"
     return 1
   fi
+  
+  # If we can see the internet, let's use it!
+  if ! wget -T 1 http://yamllint.com/ &>/dev/null; then
+    curl --data-urlencode yaml'@'"${file:-/dev/stdin}" -d utf8='%E2%9C%93' -d commit=Go  http://yamllint.com/ --trace-ascii out -G 2>&1 | egrep 'div.*background-color'
+  fi
 
   # ...and readable
   if [[ ! -r "$1" ]]; then

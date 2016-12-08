@@ -667,6 +667,29 @@ repeat() {
   done
 }
 
+# Create the file structure for an Ansible role
+rolesetup() {
+  if [[ -z "$1" ]]; then
+    printf "%s\n" "rolesetup - setup the file structure for an Ansible role." \
+      "By default this creates into '~/ansible/roles/[rolename]/'" \
+      "and you can recursively copy the structure from there." "" \
+      "Usage: rolesetup rolename" "" \
+      "Example: 'rolesetup sudoers' will create '~/ansible/roles/sudoers/' and its subdirs."
+    return 1
+  fi
+
+  if [[ ! -d ~/ansible/roles ]]; then
+    mkdir -p ~/ansible/roles
+  fi
+
+  if [[ -d ~/ansible/roles/$1 ]]; then
+    printf "%s\n" "'~/ansible/roles/$1' seems to already exist!"
+    return 1
+  else
+    mkdir -p ~/ansible/roles/"$1"/{files,handlers,meta,templates,tasks,vars}
+  fi
+}
+
 # Check if 'seq' is available, if not, provide a basic replacement function
 if ! command -v seq &>/dev/null; then
   seq() {
@@ -823,6 +846,19 @@ fi
 # and automatically adds them to ~/.ssh/known_hosts
 ssh() {
   /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
+}
+
+# Display the fingerprint for a host
+ssh-fingerprint() {
+  if [[ -z $1 ]]; then
+    printf "%s\n" "Usage: ssh-fingerprint [hostname]"
+	return 1
+  fi
+  
+  fingerprint=$(mktemp)
+  ssh-keyscan "$1" > "${fingerprint}" 2> /dev/null
+  ssh-keygen -l -f "${fingerprint}"
+  rm -f "${fingerprint}"
 }
 
 # Provide a very simple 'tac' step-in function

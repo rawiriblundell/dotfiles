@@ -374,17 +374,29 @@ checkyaml() {
   fi
 }
 
+# Provide a function to extract common compressed filetypes
 compress() {
-    FILE=$1
-    shift
-    case $FILE in
-        *.tar.bz2) tar cjf $FILE $*  ;;
-        *.tar.gz)  tar czf $FILE $*  ;;
-        *.tgz)     tar czf $FILE $*  ;;
-        *.zip)     zip $FILE $*      ;;
-        *.rar)     rar $FILE $*      ;;
-        *)         echo "Filetype not recognized" ;;
-   esac
+  FILE=$1
+  shift
+  case $FILE in
+    *.tar.bz2) tar cjf $FILE $*  ;;
+    *.tar.gz)  tar czf $FILE $*  ;;
+    *.tgz)     tar czf $FILE $*  ;;
+    *.zip)     zip $FILE $*      ;;
+    *.rar)     rar $FILE $*      ;;
+    *)         echo "Filetype not recognized" ;;
+  esac
+}
+
+# Optional error handling function
+# See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
+die() {
+  local format="$1"
+  shift
+  tput setaf 1
+  printf >&2 "$format\n" "$@"
+  tput sgr0
+  return 1
 }
 
 # Calculate how many days since epoch

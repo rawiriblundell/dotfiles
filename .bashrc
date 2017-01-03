@@ -135,8 +135,11 @@ HISTFILESIZE=5000
 
 # Standardise the title header
 settitle() {
-  #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
-  printf "%s" "\033]0;${HOSTNAME%%.*}:${PWD}\a"
+  # This one appears to break on some OSes
+  printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+  # This one breaks on others (FreeBSD)
+  #printf "%s" "\033]0;${HOSTNAME%%.*}:${PWD}\a"
+  # I need to test and figure out a way to auto-switch between these two
 }
 
 # Disable ctrl+s (XOFF) in PuTTY

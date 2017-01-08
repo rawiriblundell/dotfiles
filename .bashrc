@@ -377,6 +377,11 @@ checkyaml() {
   fi
 }
 
+# Indent code by four spaces, useful for posting in markdown
+codecat() {
+  cat "$@" | sed 's!^!    !g'
+}
+
 # Provide a function to extract common compressed filetypes
 compress() {
   FILE=$1
@@ -576,6 +581,11 @@ ncp() {
 
   tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
   ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
+}
+
+# Backup a file with the extension '.old'
+old() { 
+  cp "$1"{,.old}
 }
 
 # A function to print a specific line from a file

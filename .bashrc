@@ -379,7 +379,7 @@ checkyaml() {
 
 # Indent code by four spaces, useful for posting in markdown
 codecat() {
-  cat "$@" | sed 's!^!    !g'
+  sed 's/^/    /' "$@"
 }
 
 # Provide a function to extract common compressed filetypes
@@ -585,7 +585,7 @@ ncp() {
 
 # Backup a file with the extension '.old'
 old() { 
-  cp "$1"{,.old}
+  cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}
 }
 
 # A function to print a specific line from a file

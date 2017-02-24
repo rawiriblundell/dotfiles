@@ -855,6 +855,8 @@ if ! command -v shuf &>/dev/null; then
       # Now go through randArray and
       # print the matching lines from shufArray
       for line in "${randArray[@]}"; do
+        # We have to adjust for array elements starting at 0
+	(( line-- ))
         printf -- "%s\n" "${shufArray[line]}"
       done
     # We pass the output to the headOut function.

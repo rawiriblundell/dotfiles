@@ -693,25 +693,24 @@ repeat() {
 }
 
 # Create the file structure for an Ansible role
+# Create the file structure for an Ansible role
 rolesetup() {
   if [[ -z "$1" ]]; then
     printf "%s\n" "rolesetup - setup the file structure for an Ansible role." \
-      "By default this creates into '~/ansible/roles/[rolename]/'" \
+      "By default this creates into the current directory" \
       "and you can recursively copy the structure from there." "" \
-      "Usage: rolesetup rolename" "" \
-      "Example: 'rolesetup sudoers' will create '~/ansible/roles/sudoers/' and its subdirs."
+      "Usage: rolesetup rolename" ""
     return 1
   fi
 
-  if [[ ! -d ~/ansible/roles ]]; then
-    mkdir -p ~/ansible/roles
-  fi
-
-  if [[ -d ~/ansible/roles/$1 ]]; then
-    printf "%s\n" "'~/ansible/roles/$1' seems to already exist!"
+  if [[ ! -w . ]]; then
+    printf "%s\n" "Unable to write to the current directory"
+    return 1
+  elif [[ -d "$1" ]]; then
+    printf "%s\n" "The directory '$1' seems to already exist!"
     return 1
   else
-    mkdir -p ~/ansible/roles/"$1"/{files,handlers,meta,templates,tasks,vars}
+    mkdir -p "$1"/{files,handlers,meta,templates,tasks,vars}
   fi
 }
 

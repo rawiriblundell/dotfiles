@@ -382,7 +382,7 @@ codecat() {
   sed 's/^/    /' "$@"
 }
 
-# Provide a function to extract common compressed filetypes
+# Provide a function to compress common compressed filetypes
 compress() {
   FILE=$1
   shift
@@ -470,6 +470,7 @@ exesudo () {
   rm "$tmpfile"
 }
 
+# Function to extract common compressed file types
 extract() {
  if [ -z "$1" ]; then
     # display usage if no parameters given
@@ -533,6 +534,18 @@ flocate() {
   done
 }
 
+# Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
+histrank() { 
+  HISTTIMEFORMAT="%y/%m/%d %T " history | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' | sort | uniq -c | sort -nk1 | tail -n "${1:-$(tput lines)}"
+}
+
+# Replicate 'let'.  Likely to not be needed in bash, mostly for my reference
+if ! command -v let &>/dev/null; then
+  let() {
+    return "$((!($1)))"
+  }
+fi
+
 # Enable X-Windows for cygwin, finds and assigns an available display env variable.
 # To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
 
@@ -557,13 +570,6 @@ if [[ "$(uname)" != "SunOS" ]]; then
       xterm -fn 9x15bold -bg black -fg orange -sb &
     }
   fi
-fi
-
-# Replicate 'let'.  Likely to not be needed in bash, mostly for my reference
-if ! command -v let &>/dev/null; then
-  let() {
-    return "$((!($1)))"
-  }
 fi
 
 # Provide a faster-than-scp file transfer function

@@ -699,7 +699,6 @@ repeat() {
 }
 
 # Create the file structure for an Ansible role
-# Create the file structure for an Ansible role
 rolesetup() {
   if [[ -z "$1" ]]; then
     printf "%s\n" "rolesetup - setup the file structure for an Ansible role." \

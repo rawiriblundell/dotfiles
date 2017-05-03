@@ -1118,7 +1118,7 @@ whoowns() {
   # Next is BSD-style 'stat'
   elif stat -f '%Su' "$1" >/dev/null 2>&1; then
     stat -f '%Su' "$1"
-  # Otherwise, we failover to 'ls', which is not undesireable
+  # Otherwise, we failover to 'ls', which is not usually desireable
   else
     ls -ld "$1" | awk 'NR==1 {print $3}'
   fi
@@ -1283,8 +1283,7 @@ genpasswd() {
 }
 ################################################################################
 
-# A separate password encryption tool, so that you can encrypt passwords
-# of your own choice, rather than depending on something that genpasswd has spat out
+# A separate password encryption tool, so that you can encrypt passwords of your own choice
 cryptpasswd() {
   # Declare OPTIND as local for safety
   local OPTIND
@@ -1314,7 +1313,7 @@ cryptpasswd() {
     PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
     # Alternative
     #python -c 'import crypt; print(crypt.crypt('${Pwd}', crypt.mksalt(crypt.METHOD_SHA512)))'
-    # Next we failover to perl
+  # Next we failover to perl
   elif command -v perl &>/dev/null; then
     PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
   # Otherwise, we failover to openssl

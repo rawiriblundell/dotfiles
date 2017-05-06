@@ -382,17 +382,17 @@ codecat() {
   sed 's/^/    /' "$@"
 }
 
-# Provide a function to compress common compressed filetypes
+# Provide a function to compress common compressed Filetypes
 compress() {
-  FILE=$1
+  File=$1
   shift
-  case $FILE in
-    *.tar.bz2) tar cjf $FILE $*  ;;
-    *.tar.gz)  tar czf $FILE $*  ;;
-    *.tgz)     tar czf $FILE $*  ;;
-    *.zip)     zip $FILE $*      ;;
-    *.rar)     rar $FILE $*      ;;
-    *)         echo "Filetype not recognized" ;;
+  case "${File}" in
+    (*.tar.bz2) tar cjf "${File}" "$@"  ;;
+    (*.tar.gz)  tar czf "${File}" "$@"  ;;
+    (*.tgz)     tar czf "${File}" "$@"  ;;
+    (*.zip)     zip "${File}" "$@"      ;;
+    (*.rar)     rar "${File}" "$@"      ;;
+    (*)         echo "Filetype not recognized" ;;
   esac
 }
 

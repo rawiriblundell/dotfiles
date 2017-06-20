@@ -1004,6 +1004,11 @@ if ! command -v timeout &>/dev/null; then
   }
 fi
 
+# A small function to trim whitespace either side of a (sub)string
+trim() {
+  awk '{$1=$1};1'
+}
+
 # Provide normal, no-options ssh for error checking
 unssh() {
   /usr/bin/ssh "$@"

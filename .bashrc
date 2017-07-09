@@ -208,15 +208,21 @@ fi
 # Enable color support of ls and also add handy aliases
 if [[ -x /usr/bin/dircolors ]]; then
   test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-  alias ls='ls --color=auto'
+fi
 
-  # It looks like blindly asserting the following upsets certain 
-  # Solaris versions of *grep.  So we throw in an extra check
-  if echo "test" | grep --color=auto test &>/dev/null; then
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-  fi
+# It looks like blindly asserting the following upsets certain 
+# Solaris versions of *grep.  So we throw in an extra check
+if echo "test" | grep --color=auto test &>/dev/null; then
+  alias grep='grep --color=auto'
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+fi
+
+# Again, cater for Solaris
+if ls --color=auto &>/dev/null; then
+  alias ls='ls --color=auto -F'
+else
+  alias ls='ls -F'
 fi
 
 # Check whether 'ls' supports human readable ( -h )
@@ -225,7 +231,6 @@ ls -h /dev/null 2> /dev/null 1>&2 && H='-h'
 alias l.='ls -lAdF ${H} .*'    # list only hidden things
 alias la='ls -lAF ${H}'        # list all
 alias ll='ls -alF ${H}'        # list long
-alias ls='ls -F'               # list with flags
 
 # When EDITOR == vim ; alias vi to vim
 [[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'

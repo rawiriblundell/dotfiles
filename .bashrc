@@ -550,6 +550,31 @@ if ! command -v let &>/dev/null; then
   }
 fi
 
+# A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
+# This provides human readable 'ls' output for systems
+# whose version of 'ls' does not have the '-h' option
+# Requires: bytestohuman function
+llh() {
+  # Print out the total line
+  ls -l | head -n 1
+
+  # Read each line of 'ls -l', excluding the total line
+  ls -l | grep -v "total" | while read -r line; do
+    # Get the size of the file
+    size=$(awk '{print $5}' <<< "${line}")
+    
+    # Convert it to human readable
+    newSize=$(bytestohuman ${size} no 1024)
+    
+    # Grab the filename from the $9th field onwards
+    # This caters for files with spaces
+    fileName=$(awk '{print substr($0, index($0,$9))}' <<< "${line}")
+    
+    # Echo the line into awk, format it nicely and insert our substitutions
+    awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}' <<< "${line}"
+  done
+}
+
 # Enable X-Windows for cygwin, finds and assigns an available display env variable.
 # To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
 

@@ -218,9 +218,12 @@ if echo "test" | grep --color=auto test &>/dev/null; then
   alias egrep='egrep --color=auto'
 fi
 
-# Again, cater for Solaris
+# Again, cater for Solaris.  First test for GNU:
 if ls --color=auto &>/dev/null; then
   alias ls='ls --color=auto -F'
+# Try for OSX, why not?
+elif [[ $(uname) = "Darwin" ]]; then
+  alias ls='ls -FG'
 else
   alias ls='ls -F'
 fi

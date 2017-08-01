@@ -553,6 +553,11 @@ if ! command -v let &>/dev/null; then
   }
 fi
 
+# Write a horizontal line of characters
+hr() {
+  printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
+}
+
 # A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
 # This provides human readable 'ls' output for systems
 # whose version of 'ls' does not have the '-h' option

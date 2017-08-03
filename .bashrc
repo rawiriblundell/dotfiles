@@ -576,10 +576,10 @@ llh() {
     
     # Grab the filename from the $9th field onwards
     # This caters for files with spaces
-    fileName=$(awk '{print substr($0, index($0,$9))}' <<< "${line}")
+    fileName=$(echo "${line}" | awk '{print substr($0, index($0,$9))}')
     
     # Echo the line into awk, format it nicely and insert our substitutions
-    awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}' <<< "${line}"
+    echo "${line}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
   done
 }
 

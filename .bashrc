@@ -752,7 +752,8 @@ rolesetup() {
     printf "%s\n" "The directory '$1' seems to already exist!"
     return 1
   else
-    mkdir -p "$1"/{files,handlers,meta,templates,tasks,vars}
+    mkdir -p "$1"/{defaults,files,handlers,meta,templates,tasks,vars}
+    printf '%s\n' "---" > generate-dhkeys/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
   fi
 }
 

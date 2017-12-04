@@ -920,12 +920,23 @@ ssh() {
 # Display the fingerprint for a host
 ssh-fingerprint() {
   if [[ -z $1 ]]; then
-    printf "%s\n" "Usage: ssh-fingerprint [hostname]"
-	return 1
+    printf '%s\n' "Usage: ssh-fingerprint [hostname]"
+    return 1
+  fi
+
+  # Does the local host support ed25519?
+  # Ancient versions of ssh don't have '-Q' so also likely won't have ed25519
+  # If you wanted a more portable test: man ssh | grep ed25519
+  if ssh -Q key 2>/dev/null | grep -q ed25519; then
+    local localED25519=true
   fi
   
   fingerprint=$(mktemp)
-  ssh-keyscan "$1" > "${fingerprint}" 2> /dev/null
+  if [[ "${localED25519}" = "true" ]]; then
+    ssh-keyscan -t ed25519,rsa,ecdsa "$1" > "${fingerprint}" 2> /dev/null
+  else
+    ssh-keyscan "$1" > "${fingerprint}" 2> /dev/null
+  fi
   ssh-keygen -l -f "${fingerprint}"
   rm -f "${fingerprint}"
 }

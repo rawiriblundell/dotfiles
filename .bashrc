@@ -1151,6 +1151,7 @@ wclip() {
 }
 
 # Function to display a list of users and their memory and cpu usage
+# Non-portable swap: for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r
 what() {
   # Start processing $1.  I initially tried coding this with getopts but it blew up
   if [[ "$1" = "-c" ]]; then

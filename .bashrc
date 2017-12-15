@@ -74,7 +74,7 @@ pathfind() {
   IFS=:
   for prog in $PATH; do
     if [[ -x "$prog/$*" ]]; then
-      printf "%s\n" "$prog/$*"
+      printf '%s\n' "$prog/$*"
       IFS="$OLDIFS"
       return 0
     fi
@@ -87,16 +87,16 @@ pathfind() {
 # If not, try to find them and suggest a symlink
 if [[ ! -f /usr/bin/sudo ]]; then
   if pathfind sudo &>/dev/null; then
-    printf "%s\n" "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
+    printf '%s\n' "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
   else
-    printf "%s\n" "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
+    printf '%s\n' "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
   fi
 fi
 if [[ ! -f /bin/bash ]]; then
   if pathfind bash &>/dev/null; then
-    printf "%s\n" "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
+    printf '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
   else
-    printf "%s\n" "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
+    printf '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
   fi
 fi
 
@@ -283,12 +283,12 @@ capitalise() {
   
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z $1 ]]; then
-    printf "%s\n" "Usage:  capitalise string" ""
+    printf '%s\n' "Usage:  capitalise string" ""
     printf "\t%s\n" "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
   elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-    printf "%s\n" "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
+    printf '%s\n' "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
     return 1
   fi
 
@@ -298,7 +298,7 @@ capitalise() {
     while read -r inLine; do
       # If the line is blank, then print a blank line and continue
       if [[ -z "${inLine}" ]]; then
-        printf "%s\n" ""
+        printf '%s\n' ""
         continue
       fi
       # Split each line element for processing
@@ -313,7 +313,7 @@ capitalise() {
       # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
       done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
       # After processing, insert a newline
-      #printf "%s\n" ""
+      #printf '%s\n' ""
     done < "${1:-/dev/stdin}"
 
   # Otherwise, if a parameter exists, then capitalise all given elements
@@ -324,7 +324,7 @@ capitalise() {
       outWord="$inWord${inString:1}"
       printf "%s " "${outWord}"
     done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
-    printf "%s\n" ""
+    printf '%s\n' ""
   fi
   
   # Unset GLOBIGNORE, even though we've tried to limit it to this function
@@ -355,14 +355,14 @@ checkyaml() {
 
   # Check that $1 is defined...
   if [[ -z $1 ]]; then
-    printf "%s\n" "Usage:  checkyaml file" ""
+    printf '%s\n' "Usage:  checkyaml file" ""
     printf "\t%s\n"  "Check the YAML syntax in FILE"
     return 1
   fi
   
   # ...and readable
   if [[ ! -r "$1" ]]; then
-    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it."
+    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it."
     return 1
   else
     local file
@@ -375,11 +375,11 @@ checkyaml() {
 
   # Check the YAML contents, if there's no error, print out a message saying so
   elif python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
-    printf "%s\n" "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
+    printf '%s\n' "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
 
   # Otherwise, print out an error message and dump the trace
   else
-    printf "%s\n" "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
+    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
     python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}"
   fi
 }
@@ -426,10 +426,10 @@ epochdays() {
   elif date +%s &>/dev/null; then
     epoch=$(date +%s)
   else
-    printf "%s\n" "[ERROR] epochdays: unable to find out the number of seconds since epoch."
+    printf '%s\n' "[ERROR] epochdays: unable to find out the number of seconds since epoch."
     return 1
   fi
-  printf "%s\n" "$(( epoch / 86400 ))"
+  printf '%s\n' "$(( epoch / 86400 ))"
 }
 
 # Enable launching a function with sudo
@@ -515,7 +515,7 @@ extract() {
 # Source: http://solarum.com/v.php?l=1149LV99
 flocate() {
   if ! command -v locate &>/dev/null; then
-    printf "%s\n" "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
+    printf '%s\n' "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
     return 1
   fi
   if [[ $# -gt 1 ]]; then
@@ -529,7 +529,7 @@ flocate() {
   while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
     current_file=$1
     if [ "${display_divider}" = "1" ] ; then
-      printf "%s\n" "----------------------------------------" \
+      printf '%s\n' "----------------------------------------" \
       "Matches for ${current_file}" \
       "----------------------------------------"
     fi
@@ -635,7 +635,7 @@ old() {
 printline() {
   # If $1 is empty, print a usage message
   if [[ -z $1 ]]; then
-    printf "%s\n" "Usage:  printline n [file]" ""
+    printf '%s\n' "Usage:  printline n [file]" ""
     printf "\t%s\n" "Print the Nth line of FILE." "" \
       "With no FILE or when FILE is -, read standard input instead."
     return 0
@@ -644,7 +644,7 @@ printline() {
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    ''|*[!0-9]*)  printf "%s\n" "[ERROR] printline: '$1' does not appear to be a number." "" \
+    ''|*[!0-9]*)  printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
                     "Run 'printline' with no arguments for usage.";
                   return 1 ;;
     *)            local lineNo="$((10#$1))" ;;
@@ -653,7 +653,7 @@ printline() {
   # Next, if $2 is set, check that we can actually read it
   if [[ -n "$2" ]]; then
     if [[ ! -r "$2" ]]; then
-      printf "%s\n" "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
+      printf '%s\n' "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
         "Run 'printline' with no arguments for usage."
       return 1
     else
@@ -666,7 +666,7 @@ printline() {
     sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
-    printf "%s\n" "[ERROR] printline: This function depends on 'sed' which was not found."
+    printf '%s\n' "[ERROR] printline: This function depends on 'sed' which was not found."
     return 1
   fi
 }
@@ -685,14 +685,14 @@ if ! command -v rev &>/dev/null; then
   rev() {
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
-      printf "%s\n" "Usage:  rev string|file" ""
+      printf '%s\n' "Usage:  rev string|file" ""
       printf "\t%s\n"  "Reverse the order of characters in STRING or FILE." "" \
         "With no STRING or FILE, read standard input instead." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf "%s\n" "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
+      printf '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
       return 1
     fi
 
@@ -704,7 +704,7 @@ if ! command -v rev &>/dev/null; then
         for((i=len-1;i>=0;i--)); do
           rev="$rev${Line:$i:1}"
         done
-        printf "%s\n" "${rev}"
+        printf '%s\n' "${rev}"
       done < "${1:-/dev/stdin}"
     # Else, if parameter exists, action that
     elif [[ ! -z "$@" ]]; then
@@ -714,7 +714,7 @@ if ! command -v rev &>/dev/null; then
       for((i=len-1;i>=0;i--)); do 
         rev="$rev${Line:$i:1}"
       done
-      printf "%s\n" "${rev}"
+      printf '%s\n' "${rev}"
     fi
   }
 fi
@@ -723,7 +723,7 @@ fi
 repeat() {
   # check that $1 is a digit, if not error out, if so, set the repeatNum variable
   case "$1" in
-    (*[!0-9]*|'') printf "%s\n" "[ERROR]: '$1' is not a number.  Usage: 'repeat n command'"; return 1;;
+    (*[!0-9]*|'') printf '%s\n' "[ERROR]: '$1' is not a number.  Usage: 'repeat n command'"; return 1;;
     (*)           local repeatNum=$1;;
   esac
   # shift so that the rest of the line is the command to execute
@@ -738,7 +738,7 @@ repeat() {
 # Create the file structure for an Ansible role
 rolesetup() {
   if [[ -z "$1" ]]; then
-    printf "%s\n" "rolesetup - setup the file structure for an Ansible role." \
+    printf '%s\n' "rolesetup - setup the file structure for an Ansible role." \
       "By default this creates into the current directory" \
       "and you can recursively copy the structure from there." "" \
       "Usage: rolesetup rolename" ""
@@ -746,10 +746,10 @@ rolesetup() {
   fi
 
   if [[ ! -w . ]]; then
-    printf "%s\n" "Unable to write to the current directory"
+    printf '%s\n' "Unable to write to the current directory"
     return 1
   elif [[ -d "$1" ]]; then
-    printf "%s\n" "The directory '$1' seems to already exist!"
+    printf '%s\n' "The directory '$1' seems to already exist!"
     return 1
   else
     mkdir -p "$1"/{defaults,files,handlers,meta,templates,tasks,vars}
@@ -762,26 +762,26 @@ if ! command -v seq &>/dev/null; then
   seq() {
     # If no parameters are given, print out usage
     if [[ -z "$@" ]]; then
-      printf "%s\n" "Usage: seq x [y]"
+      printf '%s\n' "Usage: seq x [y]"
       return 0
     fi
     
     # If only one number is given, we assume 1..n
     if [[ -z $2 ]]; then
       for ((i=1; i<=$1; i++))
-        do printf "%s\n" "$i"
+        do printf '%s\n' "$i"
       done
       
     # If two numbers are given in ascending order, we print ascending
     elif [[ $1 -lt $2 ]]; then
       for ((i=$1; i<=$2; i++))
-        do printf "%s\n" "$i"
+        do printf '%s\n' "$i"
       done
       
     # Otherwise, we assume descending order
     else
       for ((i=$1; i>=$2; i--))
-        do printf "%s\n" "$i"
+        do printf '%s\n' "$i"
       done
     fi
   }
@@ -798,14 +798,14 @@ if ! command -v shuf &>/dev/null; then
 
     # Handle the input, checking that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
-      printf "%s\n" "Usage:  shuf string|file" ""
+      printf '%s\n' "Usage:  shuf string|file" ""
       printf "\t%s\n"  "Write a random permutation of the input lines to standard output." "" \
         "With no FILE, or when FILE is -, read standard input." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'shuf'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf "%s\n" "[ERROR] shuf: Please select either piping in or declaring a filename to shuffle, not both."
+      printf '%s\n' "[ERROR] shuf: Please select either piping in or declaring a filename to shuffle, not both."
       return 1
     fi
 
@@ -815,7 +815,7 @@ if ! command -v shuf &>/dev/null; then
 
     while getopts ":hn:v" Flags; do
       case "${Flags}" in
-        (h)  printf "%s\n" "" "shuf - generate random permutations" \
+        (h)  printf '%s\n' "" "shuf - generate random permutations" \
                "" "Options:" \
                "  -h, help.      Print a summary of the options" \
                "  -n, count.     Output at most n lines" \
@@ -824,12 +824,12 @@ if ! command -v shuf &>/dev/null; then
         (n)  local numCount="${OPTARG}";
              headOut() { head -n "${numCount}"; }
              ;;
-        (v)  printf "%s\n" "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
+        (v)  printf '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
              return 0;;
-        (\?)  printf "%s\n" "shuf: invalid option -- '-$OPTARG'." \
+        (\?)  printf '%s\n' "shuf: invalid option -- '-$OPTARG'." \
                 "Try -h for usage or -v for version info." >&2
               return 1;;
-        (:)  printf "%s\n" "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+        (:)  printf '%s\n' "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
              return 1;;
       esac
     done
@@ -854,28 +854,28 @@ if ! command -v shuf &>/dev/null; then
 
     # First, ruby is the fastest way to do this, so let's check for it
     if command -v ruby &>/dev/null; then
-      printf "%s\n" "${shufArray[@]}" | ruby -e 'Signal.trap("SIGPIPE", "SYSTEM_DEFAULT");puts ARGF.readlines.shuffle'
+      printf '%s\n' "${shufArray[@]}" | ruby -e 'Signal.trap("SIGPIPE", "SYSTEM_DEFAULT");puts ARGF.readlines.shuffle'
 
     # Next, perl is usually available, so this will probably be the most used option
     elif command -v perl &>/dev/null; then
       # First we test if the shuffle module is available, if so, use it
       if echo "word1 word2" | perl -MList::Util=shuffle -e 'print shuffle(<>);' &>/dev/null; then
-        printf "%s\n" "${shufArray[@]}" | perl -MList::Util=shuffle -e 'print shuffle(<>);'
+        printf '%s\n' "${shufArray[@]}" | perl -MList::Util=shuffle -e 'print shuffle(<>);'
       else
         # Here is a slower, but portable-ish alternative, tested down to Solaris 8
-        printf "%s\n" "${shufArray[@]}" | perl -e 'srand(time|$$); @a =<>; while ( @a ) { $choice = splice(@a, rand @a, 1); print $choice; }'
+        printf '%s\n' "${shufArray[@]}" | perl -e 'srand(time|$$); @a =<>; while ( @a ) { $choice = splice(@a, rand @a, 1); print $choice; }'
       fi
       
     # Otherwise, we try python.  Less available than perl but a relatively portable oneliner
     elif command -v python &>/dev/null; then
-      printf "%s\n" "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
+      printf '%s\n' "${shufArray[@]}" | python -c 'import sys, random; L = sys.stdin.readlines(); random.shuffle(L); print "".join(L),'
 
     # Otherwise, we failover to our bash alternative, based on the new
     # and improved version of 'rand' from https://github.com/rawiriblundell/scripts/blob/master/rand
     else
       # Check that we have the prerequisite 'rand' command
       if ! command -v rand &>/dev/null; then
-        printf "%s\n" "[ERROR] shuf: The command 'rand' is required but was not found."
+        printf '%s\n' "[ERROR] shuf: The command 'rand' is required but was not found."
         return 1
       fi
       
@@ -899,7 +899,7 @@ if ! command -v shuf &>/dev/null; then
       for line in "${randArray[@]}"; do
         # We have to adjust for array elements starting at 0
 	(( line-- ))
-        printf -- "%s\n" "${shufArray[line]}"
+        printf -- '%s\n' "${shufArray[line]}"
       done
     # We pass the output to the headOut function.
     # If '-n' was used, headOut will use 'head', otherwise it will just 'cat' the output
@@ -958,7 +958,7 @@ fi
 throttle() {
   # Check that stdin isn't empty
   if [[ -t 0 ]]; then
-    printf "%s\n" "Usage:  pipe | to | throttle [n]" ""
+    printf '%s\n' "Usage:  pipe | to | throttle [n]" ""
     printf "\t%s\n"  "Increment line by line through the output of other commands" "" \
       "Delay between each increment can be defined.  Default is 1 second."
     return 0
@@ -972,14 +972,14 @@ throttle() {
     # We do another check for portability
     # (GNU sleep can handle fractional seconds, non-GNU cannot)
     if ! sleep "${Sleep}" &>/dev/null; then
-      printf "%s\n" "[INFO] throttle: That time increment is not supported, defaulting to 1s"
+      printf '%s\n' "[INFO] throttle: That time increment is not supported, defaulting to 1s"
       Sleep=1
     fi
   fi
 
   # Now we output line by line with a sleep in the middle
   while read -r Line; do
-    printf "%s\n" "${Line}"
+    printf '%s\n' "${Line}"
     sleep "${Sleep}"
   done
 }
@@ -990,7 +990,7 @@ if ! command -v timeout &>/dev/null; then
 
     # $# should be at least 1, if not, print a usage message
     if (($# == 0 )); then
-      printf "%s\n" "Usage:  timeout DURATION COMMAND" ""
+      printf '%s\n' "Usage:  timeout DURATION COMMAND" ""
       printf "\t%s\n" "Start COMMAND, and kill it if still running after DURATION." "" \
         "DURATION is an integer with an optional  suffix:  's'  for" \
         "seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days." "" \
@@ -1000,7 +1000,7 @@ if ! command -v timeout &>/dev/null; then
     
     # Check that $1 complies, if not error out, if so, set the duration variable
     case "$1" in
-      (*[!0-9smhd]*|'') printf "%s\n" "[ERROR] timeout: '$1' is not valid.  Run 'timeout' for usage."; return 1;;
+      (*[!0-9smhd]*|'') printf '%s\n' "[ERROR] timeout: '$1' is not valid.  Run 'timeout' for usage."; return 1;;
       (*)           local duration=$1;;
     esac
     # shift so that the rest of the line is the command to execute
@@ -1088,7 +1088,7 @@ if ! command -v watch &>/dev/null; then
 
   while getopts ":hn:vt" Flags; do
     case "${Flags}" in
-      (h)  printf "%s\n" "Usage:" " watch [-hntv] <command>" "" \
+      (h)  printf '%s\n' "Usage:" " watch [-hntv] <command>" "" \
              "Options:" \
              "  -h, help.      Print a summary of the options" \
              "  -n, interval.  Seconds to wait between updates" \
@@ -1096,12 +1096,12 @@ if ! command -v watch &>/dev/null; then
              "  -t, no title.  Turns off showing the header"
            return 0;;
       (n)  Sleep="${OPTARG}";;
-      (v)  printf "%s\n" "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
+      (v)  printf '%s\n' "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
            return 0;;
       (t)  Title=false;;
-      (\?)  printf "%s\n" "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
+      (\?)  printf '%s\n' "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
             return 1;;
-      (:)  printf "%s\n" "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+      (:)  printf '%s\n' "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
            return 1;;
     esac
   done
@@ -1110,7 +1110,7 @@ if ! command -v watch &>/dev/null; then
   Command=$*
 
   if [[ -z "${Command}" ]]; then
-    printf "%s\n" "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
+    printf '%s\n' "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
     return 1
   fi
 
@@ -1121,7 +1121,7 @@ if ! command -v watch &>/dev/null; then
       let Col=$(tput cols)-${#Date}
       printf "%s%${Col}s" "Every ${Sleep}s: ${Command}" "${Date}"
       tput sgr0
-      printf "%s\n" "" ""
+      printf '%s\n' "" ""
     fi
     eval "${Command}"
     sleep "${Sleep}"
@@ -1133,12 +1133,12 @@ fi
 weather() {
   # We require 'curl' so check for it
   if ! command -v curl &>/dev/null; then
-    printf "%s\n" "[ERROR] weather: This command requires 'curl', please install it."
+    printf '%s\n' "[ERROR] weather: This command requires 'curl', please install it."
     return 1
   fi
 
   # If no arg is given, default to Wellington NZ
-  curl -m 10 "http://wttr.in/${*:-Wellington}" 2>/dev/null || printf "%s\n" "[ERROR] weather: Could not connect to weather service."
+  curl -m 10 "http://wttr.in/${*:-Wellington}" 2>/dev/null || printf '%s\n' "[ERROR] weather: Could not connect to weather service."
 }
 
 # Enable piping to Windows Clipboard from with PuTTY
@@ -1161,7 +1161,7 @@ what() {
   elif [[ -z "$1" ]]; then
     ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
   else
-    printf "%s\n" "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
+    printf '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
   fi
 }
 
@@ -1206,14 +1206,14 @@ genpasswd() {
       (C)  if command -v column &>/dev/null; then
              PwdCols=column
            else
-             printf "%s\n" "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
+             printf '%s\n' "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
              return 1
            fi
            ;;
       (c)  PwdChars="${OPTARG}";;
       (D)  ReqSet="${ReqSet}[0-9]+"
            PwdCheck="true";;
-      (h)  printf "%s\n" "" "genpasswd - a poor sysadmin's pwgen" \
+      (h)  printf '%s\n' "" "genpasswd - a poor sysadmin's pwgen" \
              "" "Usage: genpasswd [options]" "" \
              "Optional arguments:" \
              "-C [Attempt to output into columns (Default:off)]" \
@@ -1248,7 +1248,7 @@ genpasswd() {
       (Y)  #ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
            SpecialChar="true"
            PwdCheck="true";;
-      (\?)  printf "%s\n" "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
+      (\?)  printf '%s\n' "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
             return 1;;
       
       (:)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
@@ -1259,7 +1259,7 @@ genpasswd() {
   # We need to check that the character length is more than 4 to protect against
   # infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
   if [[ "${PwdChars}" -lt 4 ]]; then
-    printf "%s\n" "[ERROR] genpasswd: Password length must be greater than four characters."
+    printf '%s\n' "[ERROR] genpasswd: Password length must be greater than four characters."
     return 1
   fi
 
@@ -1284,7 +1284,7 @@ genpasswd() {
       
       # Now we ensure that Pwd matches any character requirements
       if [[ "${PwdCheck}" = "true" ]]; then
-        while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+        while ! printf '%s\n' "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
           Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
         done
       fi
@@ -1293,7 +1293,7 @@ genpasswd() {
       if [[ "${SpecialChar}" = "true" ]]; then
         PwdSeed="${InputChars[*]:$((RANDOM % ${#InputChars[@]})):1}"
         SeedLoc=$((RANDOM % ${#Pwd}))
-        Pwd=$(printf "%s\n" "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
+        Pwd=$(printf '%s\n' "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
       fi
 
       # Feed the generated password to the cryptpasswd function
@@ -1314,7 +1314,7 @@ genpasswd() {
         # Now we run through a loop that will grep out generated passwords that match
         # the required character classes.  For portability, we shunt the lot to /dev/null
         # Because Solaris egrep doesn't behave with -q or -s as it should.
-        while ! printf "%s\n" "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
+        while ! printf '%s\n' "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
           Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
         done
         # For each matched password, print it out, iterate and loop again.
@@ -1327,10 +1327,10 @@ genpasswd() {
           SeedLoc=$((RANDOM % ${#Pwd}))
           # Print out the password with one less character, 
           # then use sed to insert the special character into the preselected place
-          printf "%s\n" "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
+          printf '%s\n' "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
         # If -Y isn't set, just print it out.  Easy!
         else
-          printf "%s\n" "${Pwd}"
+          printf '%s\n' "${Pwd}"
         fi
       ((n = n + 1))
       done | "${PwdCols}" 2>/dev/null
@@ -1349,7 +1349,7 @@ cryptpasswd() {
   PwdKryptMode="${2}"
   
   if [[ -z "${1}" ]]; then
-    printf "%s\n" "" "cryptpasswd - a tool for hashing passwords" "" \
+    printf '%s\n' "" "cryptpasswd - a tool for hashing passwords" "" \
     "Usage: cryptpasswd [password to hash] [1|5|6]" \
     "    Crypt method can be set using '1' (MD5, default), '5' (SHA256) or '6' (SHA512)" \
     "    Any other arguments will default to MD5."
@@ -1382,11 +1382,11 @@ cryptpasswd() {
 
   # Now let's print out the result.  People can always awk/cut to get just the crypted password
   # This should probably be tee'd off to a dotfile so that they can get the original password too
-  printf "%s\n" "Original: ${Pwd} Crypted: ${PwdSalted}"
+  printf '%s\n' "Original: ${Pwd} Crypted: ${PwdSalted}"
 
   # In case OpenSSL is used, give an FYI before we exit out
   if [[ "${KryptMethod}" = "OpenSSL" ]]; then
-    printf "%s\n" "Password encryption was handled by OpenSSL which is only MD5 capable."
+    printf '%s\n' "Password encryption was handled by OpenSSL which is only MD5 capable."
   fi
 }
 
@@ -1399,14 +1399,14 @@ cryptpasswd() {
 # See the Schneier Method alternative i.e. "This little piggy went to market" = "tlpWENT2m"
 genphrase() {
   # Some examples of methods to do this (fastest to slowest):
-  # shuf:         printf "%s\n" "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
-  # perl:         printf "%s\n" "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
+  # shuf:         printf '%s\n' "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
+  # perl:         printf '%s\n' "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
   # sed:          printf "$s\n" "sed -n $((RANDOM%$(wc -l < ~/.pwords.dict)+1))p ~/.pwords.dict"
-  # python:       printf "%s\n" "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${PphraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
-  # oawk/nawk:    printf "%s\n" "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
-  # gawk:         printf "%s\n" "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
-  # sort -R:      printf "%s\n" "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
-  # bash $RANDOM: printf "%s\n" "$(for i in $(<~/.pwords.dict); do echo "$RANDOM $i"; done | sort | cut -d' ' -f2 | head -3 | tr -d "\n")"
+  # python:       printf '%s\n' "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${PphraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
+  # oawk/nawk:    printf '%s\n' "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
+  # gawk:         printf '%s\n' "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
+  # sort -R:      printf '%s\n' "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
+  # bash $RANDOM: printf '%s\n' "$(for i in $(<~/.pwords.dict); do echo "$RANDOM $i"; done | sort | cut -d' ' -f2 | head -3 | tr -d "\n")"
 
   # perl, sed, oawk/nawk and bash are the most portable options in order of speed.  The bash $RANDOM example is horribly slow, but reliable.  Avoid if possible.
 
@@ -1422,7 +1422,7 @@ genphrase() {
 
   # Test we have the capitalise function available
   if ! type capitalise &>/dev/null; then
-    printf "%s\n" "[ERROR] genphrase: 'capitalise' function is required but was not found." \
+    printf '%s\n' "[ERROR] genphrase: 'capitalise' function is required but was not found." \
       "This function can be retrieved from https://github.com/rawiriblundell"
     return 1
   fi
@@ -1443,11 +1443,11 @@ genphrase() {
       (C)  if command -v column &>/dev/null; then
              PphraseCols=column
            else
-             printf "%s\n" "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
+             printf '%s\n' "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
              return 1
            fi
            ;;
-      (h)  printf "%s\n" "" "genphrase - a basic passphrase generator" \
+      (h)  printf '%s\n' "" "genphrase - a basic passphrase generator" \
              "" "Optional Arguments:" \
              "-C [attempt to output into columns (Default:off)]" \
              "-h [help]" \
@@ -1470,7 +1470,7 @@ genphrase() {
   
   # If -S is selected, print out the documentation for word seeding
   if [[ "${PphraseSeedDoc}" = "True" ]]; then
-    printf "%s\n" \
+    printf '%s\n' \
     "======================================================================" \
     "genphrase and the -s option: Why you would want to seed your own word?" \
     "======================================================================" \
@@ -1522,13 +1522,13 @@ genphrase() {
     # Obviously this will have to be run a sufficient number of times to make the use of
     # 'column' worth it.  Fortunately shuf is very fast.
     n=0
-    while [[ $n -lt "${PphraseNum}" ]]; do
+    while (( n < PphraseNum )); do
       # See commit history for the evolution of this.  Lots of good alternatives
       # shot down due to Solaris being a precious little tulip.
                              
       # Print the seedword, followed by the randomly selected words (capitalised)
       # Next, shuffle the selected words, then butt them together
-      printf "%s\n" "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | capitalise)" | shuf | tr -d "\n"
+      printf '%s\n' "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | capitalise)" | shuf | tr -d "\n"
       printf "\n"
       let ++n
     done | "${PphraseCols}"
@@ -1539,29 +1539,29 @@ genphrase() {
   # It is BRUTALLY slow.  The method shown here is almost as fast as perl.
   else
     if ! command -v rand &>/dev/null; then
-      printf "%s\n" "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
+      printf '%s\n' "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
         "You can get this script from https://github.com/rawiriblundell"
       return 1
     fi
     if ! type printline &>/dev/null; then
-      printf "%s\n" "[ERROR] genphrase: 'printline' function is required but was not found." \
+      printf '%s\n' "[ERROR] genphrase: 'printline' function is required but was not found." \
         "This function can be retrieved from https://github.com/rawiriblundell"
       return 1
     fi
     n=0
-    while [[ $n -lt "${PphraseNum}" ]]; do
+    while (( n < PphraseNum )); do
       # Build an array of words
       wordArray=( "${SeedWord}" )
       # Generate some random numbers within the linecount of .pwords.dict
       # With those random numbers, use the printline function to select those
       # specific random lines, then pass them through the capitalise function
-      for line in $(rand -N "${PphraseWords}" -M "$(wc -l ~/.pwords.dict)"); do
+      for line in $(rand -N "${PphraseWords}" -M "$(wc -l < ~/.pwords.dict)"); do
         wordArray+=( $(printline "${line}" ~/.pwords.dict | capitalise) )
       done
       # Now that the array is built, we use a $RANDOM+sort shuffle
       # This ensures that the seed word is placed randomly in the passphrase
       for word in "${wordArray[@]}"; do
-        printf "%s\n" "${RANDOM} ${word}"
+        printf '%s\n' "${RANDOM} ${word}"
       done | sort | awk '{print $2}' | tr -d "\n"
       printf "\n"
       ((n = n + 1))
@@ -1606,11 +1606,11 @@ pwcheck () {
       # Start cycling through each complexity requirement
       # We instantly fail for short passwords
       if [[ "${#PwdIn}" -lt "8" ]]; then
-        printf "%s\n" "pwcheck: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
+        printf '%s\n' "pwcheck: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
         return 1
       # And we instantly fail for passwords with spaces in them
       elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-        printf "%s\n" "pwcheck: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
+        printf '%s\n' "pwcheck: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
         return 1
       fi
       # Check against the dictionary
@@ -1638,7 +1638,7 @@ pwcheck () {
         ResultPunct="[FAIL]: Password should contain at least one special character.  (Score -1)"
         ((CredCount = CredCount - 1))
       fi
-      Result="$(printf "%s\n" "pwcheck: A score of 3 is required to pass testing, '${PwdIn}' scored ${CredCount}." \
+      Result="$(printf '%s\n' "pwcheck: A score of 3 is required to pass testing, '${PwdIn}' scored ${CredCount}." \
         "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
       PWCheck="false" #Exit condition for the loop
     done
@@ -1656,10 +1656,10 @@ pwcheck () {
 
   # Output result
   if [[ "${Okay}" == "OK" ]]; then
-    printf "%s\n" "pwcheck: The password/phrase passed my testing."
+    printf '%s\n' "pwcheck: The password/phrase passed my testing."
     return 0
   else
-    printf "%s\n" "pwcheck: The check failed for password '${PwdIn}' using the ${Method} test." "${Result}" "Please try again."
+    printf '%s\n' "pwcheck: The check failed for password '${PwdIn}' using the ${Method} test." "${Result}" "Please try again."
     return 1
   fi
 }

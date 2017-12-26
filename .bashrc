@@ -1066,6 +1066,56 @@ if ! command -v timeout &>/dev/null; then
   }
 fi
 
+# Add -p option to 'touch' to combine 'mkdir -p' and 'touch'
+# The trick here is that we use 'command' to launch 'touch',
+# as it overrides the shell's lookup order.. essentially speaking.
+touch() {
+  # Check if '-p' is present.
+  # For bash3+ you could use 'if [[ "$@" =~ -p ]];'
+  if grep "\\-p" <<< "$@" >/dev/null 2>&1; then
+
+    # Transfer everything to a local array
+    local argArray=( "$@" )
+
+    # We need to remove '-p' no matter where it is in the array
+    # This means searching for it, unsetting it, and reindexing
+    # Newer bash versions could use "${!argArray[@]}" style handling
+    for (( index=0; index<"${#argArray[@]}"; index++ )); do
+      if [[ "${argArray[index]}" = "-p" ]]; then
+        unset -- argArray["${index}"]
+        argArray=( "${argArray[@]}" )
+      fi
+    done
+
+    # Next extract a list of directories to process
+    local dirArray=( "$(printf '%s\n' "${argArray[@]}" | grep "/$")" )
+    for file in $(printf '%s\n' "${argArray[@]}" | grep "/" | grep -v "/$"); do
+      dirArray+=( "$(dirname "${file}")" )
+    done
+
+    # As before, we sanitise the array to prevent issues
+    # In this case, 'mkdir -p "" '
+    for (( index=0; index<"${#dirArray[@]}"; index++ )); do
+      if [[ -z "${dirArray[index]}" ]]; then
+        unset -- dirArray["${index}"]
+        dirArray=( "${dirArray[@]}" )
+      fi
+    done   
+
+    # Okay, first, let's deal with the directories
+    if (( "${#dirArray[*]}" > 0 )); then
+      mkdir -p "${dirArray[@]}"
+    fi
+
+    # Now we can just run 'touch' with the sanitised array
+    command touch "${argArray[@]}"
+
+  # If '-p' isn't present, just use 'touch' as normal
+  else
+    command touch "$@"
+  fi
+}
+
 # A small function to trim whitespace either side of a (sub)string
 trim() {
   awk '{$1=$1};1'

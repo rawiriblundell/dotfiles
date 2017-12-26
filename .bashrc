@@ -414,21 +414,33 @@ die() {
   return 1
 }
 
+# Calculate how many seconds since epoch
+epoch() {
+  if command -v perl >/dev/null 2>&1; then
+    perl -e "print time"
+  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = SunOS ]]; then
+    truss date 2>&1 | grep ^time | awk -F"= " '{print $2}'
+  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = FreeBSD ]]; then
+    truss date 2>&1 | grep ^gettimeofday | cut -d "{" -f2 | cut -d "." -f1
+  elif date +%s >/dev/null 2>&1; then
+    date +%s
+  # Portable workaround based on http://www.etalabs.net/sh_tricks.html
+  # We take extra steps to try to prevent accidental octal interpretation
+  else
+    local secsVar=$(TZ=GMT0 date +%S)
+    local minsVar=$(TZ=GMT0 date +%M)
+    local hourVar=$(TZ=GMT0 date +%H)
+    local dayVar=$(TZ=GMT0 date +%j | sed 's/^0*//')
+    local yrOffset=$(( $(TZ=GMT0 date +%Y) - 1600 ))
+    local yearVar=$(( (yrOffset * 365 + yrOffset / 4 - yrOffset / 100 + yrOffset / 400 + dayVar - 135140) * 86400 ))
+
+    printf '%s\n' "$(( yearVar + (${hourVar#0} * 3600) + (${minsVar#0} * 60) + ${secsVar#0} ))"
+  fi
+  
+}
+
 # Calculate how many days since epoch
 epochdays() {
-  local epoch
-  if command -v perl &>/dev/null; then
-    epoch=$(perl -e "print time")
-  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = SunOS ]]; then
-    epoch=$(truss date 2>&1 | grep ^time | awk -F"= " '{print $2}')
-  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = FreeBSD ]]; then
-    epoch=$(truss date 2>&1 | grep ^gettimeofday | cut -d "{" -f2 | cut -d "." -f1)
-  elif date +%s &>/dev/null; then
-    epoch=$(date +%s)
-  else
-    printf '%s\n' "[ERROR] epochdays: unable to find out the number of seconds since epoch."
-    return 1
-  fi
   printf '%s\n' "$(( epoch / 86400 ))"
 }
 

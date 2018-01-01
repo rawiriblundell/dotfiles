@@ -1124,8 +1124,8 @@ unssh() {
 }
 
 # Provide 'up', so instead of 'cd ../../../' you simply type 'up 3'
-up () {
-  if [[ "$#" -lt 1 ]]; then
+up() {
+  if (( "$#" < 1 )); then
     cd ..
   else
     cdstr=""

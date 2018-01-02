@@ -765,7 +765,7 @@ rolesetup() {
     return 1
   else
     mkdir -p "$1"/{defaults,files,handlers,meta,templates,tasks,vars}
-    printf '%s\n' "---" > generate-dhkeys/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
+    printf '%s\n' "---" > "$1"/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
   fi
 }
 

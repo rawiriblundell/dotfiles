@@ -1063,6 +1063,29 @@ if ! command -v timeout &>/dev/null; then
   }
 fi
 
+# Functions to quickly upper or lowercase some input
+tolower() {
+  if command -v awk >/dev/null 2>&1; then
+    awk '{print tolower($0)}'
+  elif command -v tr >/dev/null 2>&1; then
+    tr '[:upper:]' '[:lower:]'
+  else
+    printf '%s\n' "tolower - no available method found" >&2
+    return 1
+  fi < "${1:-/dev/stdin}"
+}
+
+toupper() {
+  if command -v awk >/dev/null 2>&1; then
+    awk '{print toupper($0)}'
+  elif command -v tr >/dev/null 2>&1; then
+    tr '[:lower:]' '[:upper:]'
+  else
+    printf '%s\n' "toupper - no available method found" >&2
+    return 1
+  fi < "${1:-/dev/stdin}"
+}
+
 # Add -p option to 'touch' to combine 'mkdir -p' and 'touch'
 # The trick here is that we use 'command' to launch 'touch',
 # as it overrides the shell's lookup order.. essentially speaking.

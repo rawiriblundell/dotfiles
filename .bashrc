@@ -1457,13 +1457,12 @@ genphrase() {
 
   # perl, sed, oawk/nawk and bash are the most portable options in order of speed.  The bash $RANDOM example is horribly slow, but reliable.  Avoid if possible.
 
-  # First, double check that the dictionary file exists.  I usually have my .bash_profile take care of this
+  # First, double check that the dictionary file exists.
   if [[ ! -f ~/.pwords.dict ]] ; then
-    # Test if we can download the peerio wordlist, if not
-    # create our own wordlist using what's available
-    if ! wget -T 2 https://passphrases.peerio.com/dict/en.txt -O ~/.pwords.dict &>/dev/null; then
-      # Alternatively, we could just use egrep -v "[[:punct:]]", but we err on the side of portability
-      egrep -h '^.{4,7}$' /usr/{,share/}dict/words 2>/dev/null | egrep -v "é|'|-|\.|/|&" > ~/.pwords.dict
+    # Test if we can download our wordlist, otherwise use the standard 'words' file to generate something usable
+    if ! wget -T 2 https://raw.githubusercontent.com/rawiriblundell/dotfiles/master/.pwords.dict -O ~/.pwords.dict &>/dev/null; then
+      # Alternatively, we could just use grep -v "[[:punct:]]", but we err on the side of portability
+      grep -Eh '^.{3,9}$' /usr/{,share/}dict/words 2>/dev/null | grep -Ev "é|'|-|\.|/|&" > ~/.pwords.dict
     fi
   fi
 
@@ -1474,8 +1473,8 @@ genphrase() {
     return 1
   fi
 
-  # Declare OPTIND as local for safety
-  local OPTIND
+  # localise our vars for safety
+  local OPTIND  PphraseWords PphraseNum PphraseCols PphraseSeed PphraseSeedDoc SeedWord totalWords
 
   # Default the vars
   PphraseWords=3
@@ -1558,6 +1557,9 @@ genphrase() {
     # If so, make space for the seed word
     ((PphraseWords = PphraseWords - 1))
   fi
+
+  # Calculate the total number of words we might process
+  totalWords=$(( PphraseWords * PphraseNum ))
   
   # Now generate the passphrase(s)
   # First we test to see if shuf is available.  This should now work with the
@@ -1581,41 +1583,51 @@ genphrase() {
     done | "${PphraseCols}"
     return 0 # Prevent subsequent run of bash
   
-  # Otherwise, we switch to bash, which is slower still
-  # Do NOT use the "randomise then sort the dictionary" algorithm shown at the start of this function
-  # It is BRUTALLY slow.  The method shown here is almost as fast as perl.
+  # Otherwise, we switch to bash.  This is the fastest way I've found to perform this
   else
     if ! command -v rand &>/dev/null; then
       printf '%s\n' "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
         "You can get this script from https://github.com/rawiriblundell"
       return 1
     fi
-    if ! type printline &>/dev/null; then
-      printf '%s\n' "[ERROR] genphrase: 'printline' function is required but was not found." \
-        "This function can be retrieved from https://github.com/rawiriblundell"
-      return 1
+
+    # We test for 'mapfile' which indicates bash4 or some step-in function
+    if command -v mapfile &>/dev/null; then
+      # Create two arrays, one with all the words, and one with a bunch of random numbers
+      mapfile -t dictArray < ~/.pwords.dict
+      mapfile -t numArray < <(rand -M "${#dictArray[@]}" -r -N "${totalWords}")
+    # Otherwise we take the classic approach
+    else
+      read -d '' -r -a dictArray < ~/.pwords.dict
+      read -d '' -r -a numArray < <(rand -M "${#dictArray[@]}" -r -N "${totalWords}")
     fi
-    n=0
-    while (( n < PphraseNum )); do
-      # Build an array of words
-      wordArray=( "${SeedWord}" )
-      # Generate some random numbers within the linecount of .pwords.dict
-      # With those random numbers, use the printline function to select those
-      # specific random lines, then pass them through the capitalise function
-      for line in $(rand -N "${PphraseWords}" -M "$(wc -l < ~/.pwords.dict)"); do
-        wordArray+=( $(printline "${line}" ~/.pwords.dict | capitalise) )
-      done
-      # Now that the array is built, we use a $RANDOM+sort shuffle
-      # This ensures that the seed word is placed randomly in the passphrase
-      for word in "${wordArray[@]}"; do
-        printf '%s\n' "${RANDOM} ${word}"
-      done | sort | awk '{print $2}' | tr -d "\n"
-      printf "\n"
-      ((n = n + 1))
+
+    # Setup the following vars for iterating through and slicing up 'numArray'
+    loWord=0
+    hiWord=$(( PphraseWords - 1 ))
+
+    # Now start working our way through both arrays
+    while (( hiWord <= totalWords )); do
+      # Group all the following output
+      {
+        # We print out a random number with each word, this allows us to sort
+        # all of the output, which randomises the location of any seed word
+        printf '%s\n' "${RANDOM} ${SeedWord}"
+        for randInt in "${numArray[@]:loWord:PphraseWords}"; do
+          if (( BASH_VERSINFO == 4 )); then
+            printf '%s\n' "${RANDOM} ${dictArray[randInt]^}"
+          else
+            printf '%s\n' "${RANDOM} ${dictArray[randInt]}" | capitalise
+          fi
+        done
+      # Pass the grouped output for some cleanup
+      } | sort | awk '{print $2}' | paste -sd '\0'
+      # Iterate our boundary vars up and loop again until completion
+      loWord=$(( hiWord + 1 ))
+      hiWord=$(( hiWord + PphraseWords ))
     done | "${PphraseCols}"
   fi
 }
-################################################################################
 
 # Password strength check function.  Can be fed a password most ways.
 # TO-DO: add a verbose output switch

@@ -427,12 +427,13 @@ epoch() {
   # Portable workaround based on http://www.etalabs.net/sh_tricks.html
   # We take extra steps to try to prevent accidental octal interpretation
   else
-    local secsVar=$(TZ=GMT0 date +%S)
-    local minsVar=$(TZ=GMT0 date +%M)
-    local hourVar=$(TZ=GMT0 date +%H)
-    local dayVar=$(TZ=GMT0 date +%j | sed 's/^0*//')
-    local yrOffset=$(( $(TZ=GMT0 date +%Y) - 1600 ))
-    local yearVar=$(( (yrOffset * 365 + yrOffset / 4 - yrOffset / 100 + yrOffset / 400 + dayVar - 135140) * 86400 ))
+    local secsVar minsVar hourVar dayVar yrOffset yearVar
+    secsVar=$(TZ=GMT0 date +%S)
+    minsVar=$(TZ=GMT0 date +%M)
+    hourVar=$(TZ=GMT0 date +%H)
+    dayVar=$(TZ=GMT0 date +%j | sed 's/^0*//')
+    yrOffset=$(( $(TZ=GMT0 date +%Y) - 1600 ))
+    yearVar=$(( (yrOffset * 365 + yrOffset / 4 - yrOffset / 100 + yrOffset / 400 + dayVar - 135140) * 86400 ))
 
     printf '%s\n' "$(( yearVar + (${hourVar#0} * 3600) + (${minsVar#0} * 60) + ${secsVar#0} ))"
   fi

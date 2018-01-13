@@ -274,7 +274,6 @@ bytestohuman() {
 
 # Capitalise words
 # This is a bash-portable way to do this.
-# In bash-4 onwards, you can use ${var^} or ${arr[@]^}
 # To achieve with awk, use awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
 # Known problem: leading whitespace is chomped.
 capitalise() {
@@ -301,30 +300,41 @@ capitalise() {
         printf '%s\n' ""
         continue
       fi
-      # Split each line element for processing
-      for inString in ${inLine}; do
-        # Split off the first character and capitalise it
-        inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
-        # Print out the uppercase var and the rest of the element
-        outWord="$inWord${inString:1}"
-        # Pad the output so that multiple elements are spaced out
-        printf "%s " "${outWord}"
-      # Remove any space between the last element in a line and the end of line
-      # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
-      done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
-      # After processing, insert a newline
-      #printf '%s\n' ""
+      # If we're using bash4, stop mucking about
+      if (( BASH_VERSINFO == 4 )); then
+        inLine=( ${inLine} )
+        printf '%s ' "${inLine[@]^}" | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+      # Otherwise, take the more exhaustive approach
+      else
+        # Split each line element for processing
+        for inString in ${inLine}; do
+          # Split off the first character and capitalise it
+          inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+          # Print out the uppercase var and the rest of the element
+          outWord="${inWord}${inString:1}"
+          # Pad the output so that multiple elements are spaced out
+          printf "%s " "${outWord}"
+        # Remove any space between the last element in a line and the end of line
+        # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
+        done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+        # After processing, insert a newline
+        #printf '%s\n' ""
+      fi
     done < "${1:-/dev/stdin}"
 
   # Otherwise, if a parameter exists, then capitalise all given elements
   # Processing follows the same path as before.
   elif [[ -n "$@" ]]; then
-    for inString in "$@"; do
-      inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
-      outWord="$inWord${inString:1}"
-      printf "%s " "${outWord}"
-    done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
-    printf '%s\n' ""
+    if (( BASH_VERSINFO == 4 )); then
+      printf '%s ' "${@^}" | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+    else    
+      for inString in "$@"; do
+        inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+        outWord="$inWord${inString:1}"
+        printf "%s " "${outWord}"
+      done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+      printf '%s\n' ""
+    fi
   fi
   
   # Unset GLOBIGNORE, even though we've tried to limit it to this function

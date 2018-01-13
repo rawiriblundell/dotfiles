@@ -1566,20 +1566,27 @@ genphrase() {
   # 'shuf' step-in function and 'rand' scripts available from https://github.com/rawiriblundell
   # Also requires the 'capitalise' function from said source.
   if command -v shuf &>/dev/null; then
-    # Now we use a loop to run the number of times required to match the -n setting
-    # Brace expansion can't readily take a variable e.g. {1..$var} so we have to iterate instead
-    # Obviously this will have to be run a sufficient number of times to make the use of
-    # 'column' worth it.  Fortunately shuf is very fast.
-    n=0
-    while (( n < PphraseNum )); do
-      # See commit history for the evolution of this.  Lots of good alternatives
-      # shot down due to Solaris being a precious little tulip.
-                             
-      # Print the seedword, followed by the randomly selected words (capitalised)
-      # Next, shuffle the selected words, then butt them together
-      printf '%s\n' "${SeedWord}" "$(shuf -n "${PphraseWords}" ~/.pwords.dict | capitalise)" | shuf | tr -d "\n"
-      printf "\n"
-      let ++n
+    # If we're using bash4, then use mapfile for safety
+    if (( BASH_VERSINFO == 4 )); then
+      # Basically we're using shuf and awk to generate lines of random words
+      # and assigning each line to an array element
+      mapfile -t wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${PphraseWords}" 'ORS=NR%w?FS:RS')
+    # This older method should be ok for this particular usage,
+    # but otherwise is not a direct replacement for mapfile
+    # See: http://mywiki.wooledge.org/BashFAQ/005#Loading_lines_from_a_file_or_stream
+    else
+      IFS=$'\n' read -d '' -r -a wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${PphraseWords}" 'ORS=NR%w?FS:RS')
+    fi
+
+    # Iterate through each line of the array
+    for line in "${wordArray[@]}"; do
+      # Convert the line to an array of its own and add any seed word
+      lineArray=( ${SeedWord} ${line} )
+      if (( BASH_VERSINFO == 4 )); then
+        shuf -e "${lineArray[@]^}"
+      else
+        shuf -e "${lineArray[@]}" | capitalise
+      fi | paste -sd '\0'
     done | "${PphraseCols}"
     return 0 # Prevent subsequent run of bash
   

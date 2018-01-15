@@ -303,22 +303,19 @@ capitalise() {
       # If we're using bash4, stop mucking about
       if (( BASH_VERSINFO == 4 )); then
         inLine=( ${inLine} )
-        printf '%s ' "${inLine[@]^}" | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+        printf '%s ' "${inLine[@]^}" | trim
       # Otherwise, take the more exhaustive approach
       else
         # Split each line element for processing
         for inString in ${inLine}; do
           # Split off the first character and capitalise it
-          inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+          inWord=$(echo "${inString:0:1}" | toupper)
           # Print out the uppercase var and the rest of the element
           outWord="${inWord}${inString:1}"
           # Pad the output so that multiple elements are spaced out
           printf "%s " "${outWord}"
-        # Remove any space between the last element in a line and the end of line
-        # We /dev/null the stderr of sed because of Solaris and 'grep .' because of... Solaris.
-        done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
-        # After processing, insert a newline
-        #printf '%s\n' ""
+        # We use to trim to remove any trailing whitespace
+        done | trim
       fi
     done < "${1:-/dev/stdin}"
 
@@ -326,14 +323,13 @@ capitalise() {
   # Processing follows the same path as before.
   elif [[ -n "$@" ]]; then
     if (( BASH_VERSINFO == 4 )); then
-      printf '%s ' "${@^}" | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
+      printf '%s ' "${@^}" | trim
     else    
       for inString in "$@"; do
-        inWord=$(echo "${inString:0:1}" | tr '[:lower:]' '[:upper:]')
+        inWord=$(echo "${inString:0:1}" | toupper)
         outWord="$inWord${inString:1}"
         printf "%s " "${outWord}"
-      done | sed -e 's/[ \t]*$//' 2>/dev/null | grep .
-      printf '%s\n' ""
+      done | trim
     fi
   fi
   
@@ -461,7 +457,8 @@ extract() {
     printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
  else
     if [ -f "$1" ] ; then
-      local nameInLowerCase=$(awk '{print tolower($0)}' <<< "$1")
+      #local nameInLowerCase=$(awk '{print tolower($0)}' <<< "$1")
+      local nameInLowerCase=$(tolower "$1")
       case "$nameInLowerCase" in
         (*.tar.bz2)   tar xvjf ./"$1"    ;;
         (*.tar.gz)    tar xvzf ./"$1"    ;;
@@ -546,7 +543,7 @@ llh() {
   # Read each line of 'ls -l', excluding the total line
   ls -l | grep -v "total" | while read -r line; do
     # Get the size of the file
-    size=$(awk '{print $5}' <<< "${line}")
+    size=$(echo "${line}" | awk '{print $5}')
     
     # Convert it to human readable
     newSize=$(bytestohuman ${size} no 1024)
@@ -1057,7 +1054,7 @@ toupper() {
 touch() {
   # Check if '-p' is present.
   # For bash3+ you could use 'if [[ "$@" =~ -p ]];'
-  if grep "\\-p" <<< "$@" >/dev/null 2>&1; then
+  if echo "$@" | grep "\\-p" >/dev/null 2>&1; then
 
     # Transfer everything to a local array
     local argArray=( "$@" )

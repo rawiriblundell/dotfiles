@@ -524,6 +524,15 @@ histrank() {
   HISTTIMEFORMAT="%y/%m/%d %T " history | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' | sort | uniq -c | sort -nk1 | tail -n "${1:-$(tput lines)}"
 }
 
+# Test if a given value is an integer
+isinteger() {
+  if test "$1" -eq "$1" 2>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Replicate 'let'.  Likely to not be needed in bash, mostly for my reference
 if ! command -v let &>/dev/null; then
   let() {

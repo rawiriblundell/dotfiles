@@ -808,7 +808,7 @@ if ! command -v shuf &>/dev/null; then
             shufArray=( $* )
             for randInt in $(rand -M "${#shufArray[@]}" -N "${numCount:-${#shufArray[@]}}"); do
               randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
-              printf '%s\n' "${@[randInt]}"
+              printf -- '%s\n' "${shufArray[randInt]}"
             done
             return 0;;
         (h)  printf '%s\n' "" "shuf - generate random permutations" \

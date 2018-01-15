@@ -176,8 +176,7 @@ fi
 # OS specific tweaks
 
 if [[ "$(uname)" = "SunOS" ]]; then
-  # Sort out "Terminal Too Wide" issue in vi on Solaris
-  stty columns 140
+  trap solresize SIGWINCH
 
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
@@ -863,6 +862,13 @@ if ! command -v shuf &>/dev/null; then
     unset headOut
   }
 fi
+
+# Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
+solresize() {
+  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+    stty columns "${1:-160}"
+  fi
+}
 
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts

@@ -293,8 +293,12 @@ capitalise() {
 
   # If parameter is a file, or stdin is used, action that first
   if [[ -f $1 ]]||[[ ! -t 0 ]]; then
-    # Read each line of input
-    while read -r inLine; do
+    # We require an exit condition for 'read', this covers the edge case
+    # where a line is read that does not have a newline
+    eof=
+    while [[ -z "${eof}" ]]; do
+      # Read each line of input
+      read -r inLine || eof=true
       # If the line is blank, then print a blank line and continue
       if [[ -z "${inLine}" ]]; then
         printf '%s\n' ""
@@ -321,7 +325,7 @@ capitalise() {
 
   # Otherwise, if a parameter exists, then capitalise all given elements
   # Processing follows the same path as before.
-  elif [[ -n "$@" ]]; then
+  elif [[ -n "$*" ]]; then
     if (( BASH_VERSINFO == 4 )); then
       printf '%s ' "${@^}" | trim
     else    

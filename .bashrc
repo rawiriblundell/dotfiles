@@ -312,6 +312,8 @@ capitalise() {
       else
         # Split each line element for processing
         for inString in ${inLine}; do
+          # If inString is an integer, skip to the next element
+          isinteger "${inString}" && continue
           # Split off the first character and capitalise it
           inWord=$(echo "${inString:0:1}" | toupper)
           # Print out the uppercase var and the rest of the element

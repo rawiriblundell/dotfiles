@@ -807,6 +807,7 @@ if ! command -v shuf &>/dev/null; then
     while getopts ":ei:hn:v" Flags; do
       case "${Flags}" in
         (e) shift "$(( OPTIND - 1 ))";
+            [[ "$@" = *'-i'* ]] && printf '%s\n' "shuf: cannot combine -e and -i options"; return 1
             shufArray=( $* )
             for randInt in $(rand -M "${#shufArray[@]}" -N "${numCount:-${#shufArray[@]}}"); do
               randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
@@ -821,7 +822,8 @@ if ! command -v shuf &>/dev/null; then
                "  -n, count.               Output at most n lines" \
                "  -v, version.             Print the version information" ""
              return 0;;
-        (i) rand -m "${OPTARG%-*}" -M "${OPTARG##*-}" -N "${numCount:-${OPTARG##*-}}"
+        (i) [[ "$@" = *'-e'* ]] && printf '%s\n' "shuf: cannot combine -e and -i options"; return 1
+            rand -m "${OPTARG%-*}" -M "${OPTARG##*-}" -N "${numCount:-${OPTARG##*-}}"
             return 0;;
         (n)  local numCount="${OPTARG}";
              headOut() { head -n "${numCount}"; }

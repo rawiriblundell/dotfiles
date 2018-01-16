@@ -38,9 +38,8 @@ umask 027
 pathArray=(
   /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin /usr/kerberos/sbin \
   /bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /opt/csw/bin \
-  /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin /usr/sfw/bin /usr/sfw/sbin /usr/local/bin \
-  /usr/local/sbin /home/rawiri/bin /usr/games /usr/local/games /bin /sbin /usr/bin \
-  /usr/sbin $HOME/bin
+  /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin /usr/sfw/bin /usr/sfw/sbin \
+  /usr/games /usr/local/games "$HOME"/bin
 )
 
 # Iterate through the array and build the newPath variable using found paths

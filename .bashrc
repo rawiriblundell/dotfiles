@@ -733,6 +733,12 @@ rolesetup() {
   fi
 }
 
+# Escape special characters in a string, named for a similar function in R
+sanitize() {
+  printf '%q\n' "$1"
+}
+alias sanitise='sanitize'
+
 # Check if 'seq' is available, if not, provide a basic replacement function
 if ! command -v seq &>/dev/null; then
   seq() {

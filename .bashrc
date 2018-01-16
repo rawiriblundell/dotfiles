@@ -34,36 +34,29 @@ fi
 umask 027
 
 ################################################################################
-# Set the PATH, add in xpg6 and xpg4 in case we're on Solaris
-PATH=/usr/gnu/bin:/usr/xpg6/bin:/usr/xpg4/bin:/usr/kerberos/bin:/usr/kerberos/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/csw/bin:/opt/csw/sbin:/opt/sfw/bin:/opt/sfw/sbin:/usr/sfw/bin:/usr/sfw/sbin:$PATH
+# Open an array of potential PATH members, including Solaris bin/sbin paths
+pathArray=(
+  /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin /usr/kerberos/sbin \
+  /bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /opt/csw/bin \
+  /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin /usr/sfw/bin /usr/sfw/sbin /usr/local/bin \
+  /usr/local/sbin /home/rawiri/bin /usr/games /usr/local/games /bin /sbin /usr/bin \
+  /usr/sbin $HOME/bin
+)
 
-# We sanitise the PATH variable to only include
-# directories that exist on the host.
+# Iterate through the array and build the newPath variable using found paths
 newPath=
-# Split the PATH out into individual loop elements and deduplicate
-for dir in $(echo "${PATH}" | tr ":" "\n" | grep -v "\$PATH" | nl | sort -u -k2 | sort | awk '{print $2}'); do
-  # If the directory exists, add it to the newPath variable
-  if [ -d "${dir}" ]; then
-    newPath="${newPath}:${dir}"
+for dir in "${pathArray[@]}"; do
+  if [[ -d "${dir}" ]]; then
+    if [[ -z "${newPath}" ]]; then
+      newPath="${dir}"
+    else
+      newPath="${newPath}:${dir}"
+    fi
   fi
 done
 
-# If a leading colon sneaks in, get rid of it
-if echo "${newPath}" | grep "^:" &>/dev/null; then
-  newPath=$(echo "${newPath}" | cut -d ":" -f2-)
-fi
-
 # Now assign our freshly built newPath variable
 PATH="${newPath}"
-
-# If PATH doesn't contain ~/bin, then check if it exists, if so, append it to PATH
-#if [[ $PATH != ?(*:)$HOME/bin?(:*) ]]; then # This breaks on older versions of bash
-#if [[ ! $PATH =~ $HOME/bin{,:} ]]; then # This breaks on even older versions of bash e.g. 2.05
-if ! echo "$PATH" | grep "$HOME/bin" &>/dev/null; then
-  if [[ -d $HOME/bin ]]; then
-    PATH=$PATH:$HOME/bin
-  fi
-fi
 
 # Finally, export the PATH
 export PATH

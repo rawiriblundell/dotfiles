@@ -1569,7 +1569,7 @@ genphrase() {
         shuf -e "${lineArray[@]^}"
       else
         shuf -e "${lineArray[@]}" | capitalise
-      fi | paste -sd '\0'
+      fi | paste -sd '\0' -
     done | "${PphraseCols}"
     return 0 # Prevent subsequent run of bash
   
@@ -1611,7 +1611,7 @@ genphrase() {
           fi
         done
       # Pass the grouped output for some cleanup
-      } | sort | awk '{print $2}' | paste -sd '\0'
+      } | sort | awk '{print $2}' | paste -sd '\0' -
       # Iterate our boundary vars up and loop again until completion
       loWord=$(( hiWord + 1 ))
       hiWord=$(( hiWord + PphraseWords ))

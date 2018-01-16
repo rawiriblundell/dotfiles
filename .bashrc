@@ -834,7 +834,8 @@ if ! command -v shuf &>/dev/null; then
         printf -- '%s\n' "${shufArray[randInt]}"
       done
 
-    # Otherwise, if stdin is used, we use reservoir sampling, or is it knuth/fisher/yates?
+    # Otherwise, if stdin is used, we use reservoir sampling
+    # This is really knuth/fisher/yates + a stream rather than true reservoir sampling...
     elif [[ ! -t 0 ]]; then
 #      numCount=1024 #k
 #      eof=
@@ -854,7 +855,11 @@ if ! command -v shuf &>/dev/null; then
 #          (( i++ ))
 #        fi
 #      done < /dev/stdin
-
+        # Now empty what's left
+#      for randInt in "${numArray[@]}"; do
+#        randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
+#        printf -- '%s\n' "${shufArray[randInt]}"
+#      done    
       : #no-op for now.
 
     fi    

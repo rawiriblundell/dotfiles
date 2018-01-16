@@ -838,18 +838,21 @@ if ! command -v shuf &>/dev/null; then
     elif [[ ! -t 0 ]]; then
 #      numCount=1024 #k
 #      eof=
+#      i=0
 #      mapfile -t numArray < <(rand -M "${numCount}" -N "${numCount}") 
-#
+#      mapfile -t shufArray -n "${numCount}" # Fill the reservoir
 #      while [[ -z "${eof}" ]]; do
-#        mapfile -t shufArray -n "${numCount}" # Fill the reservoir
-#        while (( i=0; i > "${#numArray[@]}"; i++ ))
-#          randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
-#          printf -- '%s\n' "${shufArray[randInt]}"
-#          # Read a line of input
-#          read -r inLine || eof=true
-#          shufArray[randInt]="${inLine}"
-#          numArray[i]=$(rand -M "${numCount}")
-#        done
+#        randInt="${numArray[i]}"
+#        printf -- '%s\n' "${shufArray[randInt]}"
+#        # Read a line of input
+#        read -r inLine || eof=true
+#        shufArray[randInt]="${inLine}"
+#        numArray[i]=$(rand -M "${numCount}")
+#        if (( i = numCount )); then
+#          i=0
+#        else
+#          (( i++ ))
+#        fi
 #      done < /dev/stdin
 
       : #no-op for now.

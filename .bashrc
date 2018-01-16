@@ -787,10 +787,6 @@ if ! command -v shuf &>/dev/null; then
       return 1
     fi
 
-    # Default the command variable for when '-n' is not used
-    # I don't like using a nested function, but this is required for older bash versions
-    headOut() { cat -; }
-
     while getopts ":ei:hn:v" Flags; do
       case "${Flags}" in
         (e) shift "$(( OPTIND - 1 ))";
@@ -812,8 +808,7 @@ if ! command -v shuf &>/dev/null; then
         (i) [[ "$@" = *'-e'* ]] && printf '%s\n' "shuf: cannot combine -e and -i options"; return 1
             rand -m "${OPTARG%-*}" -M "${OPTARG##*-}" -N "${numCount:-${OPTARG##*-}}"
             return 0;;
-        (n)  local numCount="${OPTARG}";
-             headOut() { head -n "${numCount}"; }
+        (n)  local numCount="${OPTARG}"
              ;;
         (v)  printf '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
              return 0;;
@@ -839,15 +834,27 @@ if ! command -v shuf &>/dev/null; then
         printf -- '%s\n' "${shufArray[randInt]}"
       done
 
-    # Otherwise, if stdin is used, we use reservoir sampling
+    # Otherwise, if stdin is used, we use reservoir sampling, or is it knuth/fisher/yates?
     elif [[ ! -t 0 ]]; then
+#      numCount=1024 #k
+#      eof=
+#      mapfile -t numArray < <(rand -M "${numCount}" -N "${numCount}") 
+#
+#      while [[ -z "${eof}" ]]; do
+#        mapfile -t shufArray -n "${numCount}" # Fill the reservoir
+#        while (( i=0; i > "${#numArray[@]}"; i++ ))
+#          randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
+#          printf -- '%s\n' "${shufArray[randInt]}"
+#          # Read a line of input
+#          read -r inLine || eof=true
+#          shufArray[randInt]="${inLine}"
+#          numArray[i]=$(rand -M "${numCount}")
+#        done
+#      done < /dev/stdin
 
       : #no-op for now.
 
     fi    
-    
-    # Don't let headOut go global
-    unset headOut
   }
 fi
 

@@ -47,16 +47,12 @@ pathArray=(
 newPath=
 for dir in "${pathArray[@]}"; do
   if [[ -d "${dir}" ]]; then
-    if [[ -z "${newPath}" ]]; then
-      newPath="${dir}"
-    else
-      newPath="${newPath}:${dir}"
-    fi
+    newPath="${newPath}:${dir}"
   fi
 done
 
-# Now assign our freshly built newPath variable
-PATH="${newPath}"
+# Now assign our freshly built newPath variable, removing any leading colon
+PATH="${newPath#:}"
 
 # Finally, export the PATH
 export PATH

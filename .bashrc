@@ -508,6 +508,34 @@ flocate() {
   done
 }
 
+# This is based on one of the best urandom+bash random integer scripts IMHO
+# This is intended to be used by the shuf step-in function
+# https://unix.stackexchange.com/a/413890
+get_urand() {
+  local intCount rangeMin rangeMax range bytes t maxvalue mult hexrandom
+  intCount="${1:-1}"
+  rangeMin="${2:-1}"
+  rangeMax="${3:-32767}"
+  range=$(( rangeMax - rangeMin + 1 ))
+
+  bytes=0
+  t="${range}"
+  while (( t > 0 )); do
+    (( t=t>>8, bytes++ ))
+  done
+
+  maxvalue=$((1<<(bytes*8)))
+  mult=$((maxvalue/range - 1))
+
+  while (( i++ < intCount )); do
+    while :; do
+      hexrandom=$(dd if=/dev/urandom bs=1 count=${bytes} 2>/dev/null | xxd -p)
+      (( 16#$hexrandom < range * mult )) && break
+    done
+    printf '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
+  done
+}
+
 # Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
 histrank() { 
   HISTTIMEFORMAT="%y/%m/%d %T " history | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' | sort | uniq -c | sort -nk1 | tail -n "${1:-$(tput lines)}"
@@ -770,52 +798,56 @@ if ! command -v seq &>/dev/null; then
 fi
 
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
+# Check commit history for a range of alternative methods - ruby, perl, python etc
 if ! command -v shuf &>/dev/null; then
   shuf() {
-    local OPTIND
+    local OPTIND numCount randInt randSource
 
     # Handle the input, checking that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
       printf '%s\n' "Usage:  shuf string|file" ""
       printf '\t%s\n'  "Write a random permutation of the input lines to standard output." "" \
-        "With no FILE, or when FILE is -, read standard input." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'shuf'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf '%s\n' "[ERROR] shuf: Please select either piping in or declaring a filename to shuffle, not both."
+      printf '%s\n' "shuf: Please select either piping in or declaring a filename to shuffle, not both."
       return 1
     fi
 
-    # Check that we have the prerequisite 'rand' command
-    if ! command -v rand &>/dev/null; then
-      printf '%s\n' "[ERROR] shuf: The command 'rand' is required but was not found."
-      return 1
-    fi
-
-    while getopts ":ei:hn:v" Flags; do
-      case "${Flags}" in
-        (e) shift "$(( OPTIND - 1 ))";
-            [[ "$@" = *'-i'* ]] && printf '%s\n' "shuf: cannot combine -e and -i options"; return 1
-            shufArray=( $* )
-            for randInt in $(rand -M "${#shufArray[@]}" -N "${numCount:-${#shufArray[@]}}"); do
-              randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
-              printf -- '%s\n' "${shufArray[randInt]}"
-            done
-            return 0;;
+    while getopts ":e:i:hn:rv-:" optFlags; do
+      case "${optFlags}" in
+        # This long opts trick is not without its issues
+        (-) case "${OPTARG}" in
+              (random-source=*) randSource="${OPTARG#*=}";;
+              (*) if [[ "$OPTERR" = 1 ]] && [[ "${optFlags:0:1}" != ":" ]]; then
+                    printf '%s\n' "shuf: invalid option -- '-$OPTARG'." \
+                      "Try -h for usage or -v for version info." >&2
+                  fi
+                  return 1;;
+            esac ;;
+        (e) inputStrings=true
+            shufArray=( "${OPTARG}" )
+            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
+              shufArray+=($(eval "echo \${$OPTIND}"))
+              OPTIND=$((OPTIND + 1))
+            done;;
         (h)  printf '%s\n' "" "shuf - generate random permutations" \
                "" "Options:" \
                "  -e, echo.                Treat each ARG as an input line" \
                "  -h, help.                Print a summary of the options" \
                "  -i, input-range LO-HI.   Treat each number LO through HI as an input line" \
                "  -n, count.               Output at most n lines" \
+               "  -o, output FILE          This option is unsupported in this version, use '> FILE'" \
+               "  -r, repeat               Output lines can be repeated" \
                "  -v, version.             Print the version information" ""
              return 0;;
-        (i) [[ "$@" = *'-e'* ]] && printf '%s\n' "shuf: cannot combine -e and -i options"; return 1
-            rand -m "${OPTARG%-*}" -M "${OPTARG##*-}" -N "${numCount:-${OPTARG##*-}}"
-            return 0;;
-        (n)  local numCount="${OPTARG}"
-             ;;
+        (i) inputRange=true
+            nMin="${OPTARG%-*}"
+            nMax="${OPTARG##*-}"
+            ;;
+        (n) numCount="${OPTARG}";;
+        (r) shufRepeat=true;;
         (v)  printf '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
              return 0;;
         (\?)  printf '%s\n' "shuf: invalid option -- '-$OPTARG'." \
@@ -825,50 +857,103 @@ if ! command -v shuf &>/dev/null; then
              return 1;;
       esac
     done
+    shift "$(( OPTIND - 1 ))"
 
-    # If parameter is a file, suck it into an array, generate a permutated
-    # array of random numbers of equal size, and then output
-    # Check commit history for a range of alternative methods - ruby, perl, python etc
-    if [[ -f $1 ]]; then
-      # mapfile is bash-4, but I have a mapfile step-in function on the way too!
-      mapfile -t shufArray < "$1"
-      mapfile -t numArray < <(rand -M "${numCount:-${#shufArray[@]}}" -N "${numCount:-${#shufArray[@]}}")
+    # If numCount is blank, default it to our Reservoir Size
+    # This number was unscientifically chosen using "feels right" technology
+    numCount="${numCount:-1024}"    
 
-      # Now go through numArray and print the matching elements from shufArray
-      for randInt in "${numArray[@]}"; do
-        randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
+    # Handle -e and -i options.  They shouldn't be together because we can't
+    # understand their love.  -e is handled later on in the script
+    if [[ "${inputRange}" = "true" ]]&&[[ "${inputStrings}" == "true" ]]; then
+      printf '%s\n' "shuf: cannot combine -e and -i options"
+      return 1
+    # If an input range is provided, then simply call rand:
+    elif [[ "${inputRange}" = "true" ]]; then
+      if [[ "${shufRepeat}" = "true" ]]; then
+        rand -r -m "${nMin}" -M "${nMax}" -N "${numCount:-${nMax}}"
+      else
+        rand -m "${nMin}" -M "${nMax}" -N "${numCount:-${nMax}}"
+      fi
+      return 0
+    fi
+
+    # If randSource is set, and is a readable file, we map it to numArray
+    if [[ -r "${randSource}" ]]; then
+      mapfile -t numArray < <(while read -r line; do od -N 2 -A n -t uI <<< "${line}"; done < "${randSource}" | awk '{$1=$1+0};1')
+
+    # If it's a character device e.g. /dev/{,u}random, we handle it this way
+    # Note: This might allow repeats, in the reservoir sampling scenario
+    # it's not really feasible for us to track every line of output
+    # so we try for the best uniformity and hope for the best.
+    elif [[ -c "${randSource}" ]]; then
+      mapfile -t numArray < <(get_urand "${numCount}" 1 "${numCount}")
+
+    # If we're here but randSource IS set, then fail
+    elif [[ -n "${randSource}" ]]; then
+      printf '%s\n' "shuf: ${randSource}: No such file or directory, or permission denied."
+      return 1
+
+    # Otherwise, check that we have 'rand' command
+    else
+      if ! command -v rand &>/dev/null; then
+        printf '%s\n' "shuf: The command 'rand' is required but was not found."
+        return 1
+      elif [[ "${shufRepeat}" = "true" ]]; then
+        mapfile -t numArray < <(rand -r -M "${numCount}" -N "${numCount}")
+      else
+        mapfile -t numArray < <(rand -M "${numCount}" -N "${numCount}")
+      fi
+    fi
+
+    # Okay, this is going to look weird but I'll argue it's a clever use of cat
+    # Normally you'd do something like '< "${1:-/dev/stdin}"' but in this mixed
+    # use case of 'mapfile' + subsequent 'while read', that gives a bit of a 
+    # challenge i.e. how to handle reading $1 in two distinct chunks.
+    # This solves that challenge while not affecting stdin
+    cat "${1:--}" | {
+      # If -e is in use, then shufArray is ready to be processed, if not
+      # then suck in sufficient elements to satisfy numCount (i.e. our reservoir size)
+      if [[ ! "${inputStrings}" = true ]]; then
+        mapfile -t shufArray -n "${numCount}"
+      fi
+
+      # In case of -e or stdin, check the level of the reservoir, if it's less
+      # than numCount, then we have to select numArray elements within range
+      if (( ${#shufArray[@]} < numCount )); then
+        mapfile -t numArray < <(awk -v x="${#shufArray[@]}" '$1 <= x{print ($1 + 0)}')
+        # Then we can simply go through numArray and print the matching elements from shufArray
+        # This is essentially the Satollo variant of the Fisher-Yates shuffle
+        for randInt in "${numArray[@]}"; do
+          randInt=$(( randInt - 1 )) 
+          printf -- '%s\n' "${shufArray[randInt]}"
+        done
+        return "$?"
+      fi
+
+      # If the reservoir is full, though, then we keep reading
+      while read -r inLine; do
+        # Select a new random number within our range
+        if [[ -c "${randSource}" ]]; then
+          randInt=$(get_urand 1 1 "${#shufArray[@]}")
+        else
+          randInt=$(rand -M "${#shufArray[@]}")
+        fi
+
+        # Use that number to print a random element from shufArray
         printf -- '%s\n' "${shufArray[randInt]}"
+
+        # update the above reservoir element with the new line
+        shufArray[randInt]="${inLine}"
       done
 
-    # Otherwise, if stdin is used, we use reservoir sampling
-    # This is really knuth/fisher/yates + a stream rather than true reservoir sampling...
-    elif [[ ! -t 0 ]]; then
-#      numCount=1024 #k
-#      eof=
-#      i=0
-#      mapfile -t numArray < <(rand -M "${numCount}" -N "${numCount}") 
-#      mapfile -t shufArray -n "${numCount}" # Fill the reservoir
-#      while [[ -z "${eof}" ]]; do
-#        randInt="${numArray[i]}"
-#        printf -- '%s\n' "${shufArray[randInt]}"
-#        # Read a line of input
-#        read -r inLine || eof=true
-#        shufArray[randInt]="${inLine}"
-#        numArray[i]=$(rand -M "${numCount}")
-#        if (( i = numCount )); then
-#          i=0
-#        else
-#          (( i++ ))
-#        fi
-#      done < /dev/stdin
-        # Now empty what's left
-#      for randInt in "${numArray[@]}"; do
-#        randInt=$(( randInt - 1 )) # Adjust for arrays being 0th'd
-#        printf -- '%s\n' "${shufArray[randInt]}"
-#      done    
-      : #no-op for now.
-
-    fi    
+      # Reading the stream may be complete, but the reservoir isn't empty
+      # We have numArray already built and sitting idle, so let's use it
+      for randInt in "${numArray[@]}"; do
+        randInt=$(( randInt - 1 )) 
+        printf -- '%s\n' "${shufArray[randInt]}"
+      done
+    }
   }
 fi
 

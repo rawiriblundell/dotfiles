@@ -803,18 +803,6 @@ if ! command -v shuf &>/dev/null; then
   shuf() {
     local OPTIND numCount randInt randSource
 
-    # Handle the input, checking that stdin or $1 isn't empty
-    if [[ -t 0 ]] && [[ -z $1 ]]; then
-      printf '%s\n' "Usage:  shuf string|file" ""
-      printf '\t%s\n'  "Write a random permutation of the input lines to standard output." "" \
-        "Note: This is a bash function to provide the basic functionality of the command 'shuf'"
-      return 0
-    # Disallow both piping in strings and declaring strings
-    elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
-      printf '%s\n' "shuf: Please select either piping in or declaring a filename to shuffle, not both."
-      return 1
-    fi
-
     while getopts ":e:i:hn:rv-:" optFlags; do
       case "${optFlags}" in
         # This long opts trick is not without its issues
@@ -859,9 +847,17 @@ if ! command -v shuf &>/dev/null; then
     done
     shift "$(( OPTIND - 1 ))"
 
-    # If numCount is blank, default it to our Reservoir Size
-    # This number was unscientifically chosen using "feels right" technology
-    numCount="${numCount:-1024}"    
+    # Handle the input, checking that stdin or $1 isn't empty
+    if [[ -t 0 ]] && [[ -z $1 ]]; then
+      printf '%s\n' "Usage:  shuf string|file" ""
+      printf '\t%s\n'  "Write a random permutation of the input lines to standard output." "" \
+        "Note: This is a bash function to provide the basic functionality of the command 'shuf'"
+      return 0
+    # Disallow both piping in strings and declaring strings
+    elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+      printf '%s\n' "shuf: Please select either piping in or declaring a filename to shuffle, not both."
+      return 1
+    fi
 
     # Handle -e and -i options.  They shouldn't be together because we can't
     # understand their love.  -e is handled later on in the script
@@ -876,7 +872,20 @@ if ! command -v shuf &>/dev/null; then
         rand -m "${nMin}" -M "${nMax}" -N "${numCount:-${nMax}}"
       fi
       return 0
+    # If -e is in use, then we need to set numCount so that the array of
+    # random integers can be generated to an appropriate size
+    elif [[ "${inputStrings}" = true ]]; then
+      if (( numCount > ${#shufArray[@]} )); then
+        numCount="${#shufArray[@]}"
+      else
+        numCount="${numCount:-${#shufArray[@]}}"
+        eMax="${#shufArray[@]}"
+      fi
     fi
+
+    # If numCount is blank, default it to our Reservoir Size
+    # This number was unscientifically chosen using "feels right" technology
+    numCount="${numCount:-1024}" 
 
     # If randSource is set, and is a readable file, we map it to numArray
     if [[ -r "${randSource}" ]]; then
@@ -887,7 +896,7 @@ if ! command -v shuf &>/dev/null; then
     # it's not really feasible for us to track every line of output
     # so we try for the best uniformity and hope for the best.
     elif [[ -c "${randSource}" ]]; then
-      mapfile -t numArray < <(get_urand "${numCount}" 1 "${numCount}")
+      mapfile -t numArray < <(get_urand "${numCount}" 1 "${eMax:-$numCount}")
 
     # If we're here but randSource IS set, then fail
     elif [[ -n "${randSource}" ]]; then
@@ -900,60 +909,57 @@ if ! command -v shuf &>/dev/null; then
         printf '%s\n' "shuf: The command 'rand' is required but was not found."
         return 1
       elif [[ "${shufRepeat}" = "true" ]]; then
-        mapfile -t numArray < <(rand -r -M "${numCount}" -N "${numCount}")
+        mapfile -t numArray < <(rand -r -M "${eMax:-$numCount}" -N "${numCount}")
       else
-        mapfile -t numArray < <(rand -M "${numCount}" -N "${numCount}")
+        mapfile -t numArray < <(rand -M "${eMax:-$numCount}" -N "${numCount}")
       fi
     fi
 
-    # Okay, this is going to look weird but I'll argue it's a clever use of cat
-    # Normally you'd do something like '< "${1:-/dev/stdin}"' but in this mixed
-    # use case of 'mapfile' + subsequent 'while read', that gives a bit of a 
-    # challenge i.e. how to handle reading $1 in two distinct chunks.
-    # This solves that challenge while not affecting stdin
-    cat "${1:--}" | {
-      # If -e is in use, then shufArray is ready to be processed, if not
-      # then suck in sufficient elements to satisfy numCount (i.e. our reservoir size)
-      if [[ ! "${inputStrings}" = true ]]; then
-        mapfile -t shufArray -n "${numCount}"
-      fi
-
-      # In case of -e or stdin, check the level of the reservoir, if it's less
-      # than numCount, then we have to select numArray elements within range
-      if (( ${#shufArray[@]} < numCount )); then
-        mapfile -t numArray < <(awk -v x="${#shufArray[@]}" '$1 <= x{print ($1 + 0)}')
-        # Then we can simply go through numArray and print the matching elements from shufArray
-        # This is essentially the Satollo variant of the Fisher-Yates shuffle
-        for randInt in "${numArray[@]}"; do
-          randInt=$(( randInt - 1 )) 
-          printf -- '%s\n' "${shufArray[randInt]}"
-        done
-        return "$?"
-      fi
-
-      # If the reservoir is full, though, then we keep reading
-      while read -r inLine; do
-        # Select a new random number within our range
-        if [[ -c "${randSource}" ]]; then
-          randInt=$(get_urand 1 1 "${#shufArray[@]}")
-        else
-          randInt=$(rand -M "${#shufArray[@]}")
-        fi
-
-        # Use that number to print a random element from shufArray
-        printf -- '%s\n' "${shufArray[randInt]}"
-
-        # update the above reservoir element with the new line
-        shufArray[randInt]="${inLine}"
-      done
-
-      # Reading the stream may be complete, but the reservoir isn't empty
-      # We have numArray already built and sitting idle, so let's use it
+    # If -e is in use, then shufArray and numArray should be ready to go
+    if [[ "${inputStrings}" = true ]]; then
       for randInt in "${numArray[@]}"; do
         randInt=$(( randInt - 1 )) 
         printf -- '%s\n' "${shufArray[randInt]}"
       done
-    }
+      return 0
+    fi
+
+    # Finally we get to the reservoir sampling
+    i=0
+    while read -r; do
+      while (( ${#shufArray[@]} < numCount )) && [[ -n "${REPLY}" ]]; do
+        shufArray+=( "${REPLY}" )
+        read -r
+      done
+
+      # If the size of shufArray is less than our reservoir, then stdin
+      # has likely stopped feeding us input.  So we can simply process as before
+      if (( ${#shufArray[@]} < numCount )); then
+        # Filter out numArray so that it's a random subset < numCount
+        numArray=( $(printf '%u\n' "${numArray[@]}" | awk -v x="${#shufArray[@]}" '$1 <= x{print ($1 + 0)}') )
+        #declare -p numArray
+        for randInt in "${numArray[@]}"; do
+          randInt=$(( randInt - 1 )) 
+          printf -- '%s\n' "${shufArray[randInt]}"
+        done
+        exit "$?"
+      fi        
+
+      # Otherwise, the reservoir is full and it's time to go to work
+      # We select a random integer from numArray, use that to print a random
+      # element in shufArray, then replace that with the next input line
+      randInt="${numArray[i]}"
+      printf -- '%s\n' "${shufArray[randInt]}"
+      shufArray[randInt]="${REPLY}"
+      (( i++ ))
+    done < "${1:-/dev/stdin}"
+
+    # Reading the stream may be complete, but the reservoir isn't empty
+    # We have numArray already built and sitting idle, so let's use it
+    for randInt in "${numArray[@]}"; do
+      (( randInt-- ))
+      printf -- '%s\n' "${shufArray[randInt]}"
+    done
   }
 fi
 

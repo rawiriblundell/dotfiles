@@ -414,29 +414,32 @@ die() {
 }
 
 # Calculate how many seconds since epoch
-epoch() {
-  if command -v perl >/dev/null 2>&1; then
-    perl -e "print time"
-  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = SunOS ]]; then
-    truss date 2>&1 | grep ^time | awk -F"= " '{print $2}'
-  elif command -v truss >/dev/null 2>&1 && [[ $(uname) = FreeBSD ]]; then
-    truss date 2>&1 | grep ^gettimeofday | cut -d "{" -f2 | cut -d "." -f1
-  elif date +%s >/dev/null 2>&1; then
+# We use a subshell for this rather than a group to contain the shopt call
+epoch() (
+  # This grep test is required: some versions of 'date' return a literal '+%s'
+  if date +%s | grep "^[0-9].*$" >/dev/null 2>&1; then
     date +%s
   # Portable workaround based on http://www.etalabs.net/sh_tricks.html
-  # We take extra steps to try to prevent accidental octal interpretation
+  # extglob and "${var##+(0)}" strips leading 0's, preventing octal math
+  # This seems terse, but the vars are the same as their 'date' formats
   else
-    local secsVar minsVar hourVar dayVar yrOffset yearVar
-    secsVar=$(TZ=GMT0 date +%S)
-    minsVar=$(TZ=GMT0 date +%M)
-    hourVar=$(TZ=GMT0 date +%H)
-    dayVar=$(TZ=GMT0 date +%j | sed 's/^0*//')
-    yrOffset=$(( $(TZ=GMT0 date +%Y) - 1600 ))
-    yearVar=$(( (yrOffset * 365 + yrOffset / 4 - yrOffset / 100 + yrOffset / 400 + dayVar - 135140) * 86400 ))
+    local y j h m s yo
+    # 'ksh' has extglob by default, if we're in 'bash', set it.
+    if [ -n "${BASH_VERSION}" ]; then shopt -s extglob; fi
 
-    printf '%s\n' "$(( yearVar + (${hourVar#0} * 3600) + (${minsVar#0} * 60) + ${secsVar#0} ))"
+    # We use 'set --' to portably grab each element of 'date''s output 
+    # shellcheck disable=SC2046
+    set -- $(date -u '+%Y %j %H %M %S')
+    # Now assign to their vars while stripping any leading zeros
+    y="$1"; j="${2##+(0)}"; h="${3##+(0)}"; m="${4##+(0)}"; s="${5##+(0)}"
+
+    # yo = year offset
+    yo=$(( y - 1600 ))
+    y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + j - 135140) * 86400 ))
+
+    printf '%s\n' "$(( y + (h * 3600) + (m * 60) + s ))"
   fi
-}
+)
 
 # Calculate how many days since epoch
 epochdays() {

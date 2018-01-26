@@ -414,32 +414,28 @@ die() {
 }
 
 # Calculate how many seconds since epoch
-# We use a subshell for this rather than a group to contain the shopt call
-epoch() (
+epoch() {
   # This grep test is required: some versions of 'date' return a literal '+%s'
   if date +%s | grep "^[0-9].*$" >/dev/null 2>&1; then
     date +%s
   # Portable workaround based on http://www.etalabs.net/sh_tricks.html
-  # extglob and "${var##+(0)}" strips leading 0's, preventing octal math
+  # We strip leading 0's in order to prevent unwanted octal math
   # This seems terse, but the vars are the same as their 'date' formats
   else
     local y j h m s yo
-    # 'ksh' has extglob by default, if we're in 'bash', set it.
-    if [ -n "${BASH_VERSION}" ]; then shopt -s extglob; fi
-
-    # We use 'set --' to portably grab each element of 'date''s output 
-    # shellcheck disable=SC2046
-    set -- $(date -u '+%Y %j %H %M %S')
-    # Now assign to their vars while stripping any leading zeros
-    y="$1"; j="${2##+(0)}"; h="${3##+(0)}"; m="${4##+(0)}"; s="${5##+(0)}"
+    # POSIX portable method to grab what we need from 'date'
+	# Note this indentation is hard-tabbed
+	IFS=: read -r y j h m s <<-EOF
+	$(date -u +%Y:%j:%H:%M:%S)
+	EOF
 
     # yo = year offset
     yo=$(( y - 1600 ))
-    y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + j - 135140) * 86400 ))
+    y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + $(( 10#$j )) - 135140) * 86400 ))
 
-    printf '%s\n' "$(( y + (h * 3600) + (m * 60) + s ))"
+    printf -- '%s\n' "$(( y + ($(( 10#$h )) * 3600) + ($(( 10#$m )) * 60) + $(( 10#$s )) ))"
   fi
-)
+}
 
 # Calculate how many days since epoch
 epochdays() {

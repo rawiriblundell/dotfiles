@@ -683,6 +683,29 @@ quickserve() {
   python -m "SimpleHTTPServer" "$port"
 }
 
+# Get a number of random integers using $RANDOM with debiased modulo
+randInt() {
+  local nCount nMax nMin randThres i
+  nCount="${1:-1}"
+  nMin="${2:-1}"
+  nMax="${3:-$reservoirSize}"
+  nMod=$(( nMax - nMin + 1 ))
+  if (( nMod == 0 )); then return 3; fi
+  # De-bias the modulo as best as possible
+  randThres=$(( -(32768 - nMod) % nMod ))
+  if (( randThres < 0 )); then
+    (( randThres = randThres * -1 ))
+  fi
+  i=0
+  while (( i < nCount )); do
+    xInt="${RANDOM}"
+    if (( xInt > ${randThres:-0} )); then
+      printf -- '%d\n' "$(( xInt % nMod + nMin ))"
+      (( i++ ))
+    fi
+  done
+}
+
 # Check if 'rev' is available, if not, enable a stop-gap function
 if ! command -v rev &>/dev/null; then
   rev() {

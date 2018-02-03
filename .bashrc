@@ -688,7 +688,7 @@ randInt() {
   local nCount nMax nMin randThres i
   nCount="${1:-1}"
   nMin="${2:-1}"
-  nMax="${3:-$reservoirSize}"
+  nMax="${3:-32767}"
   nMod=$(( nMax - nMin + 1 ))
   if (( nMod == 0 )); then return 3; fi
   # De-bias the modulo as best as possible

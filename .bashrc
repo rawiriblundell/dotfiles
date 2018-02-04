@@ -1334,49 +1334,51 @@ whoowns() {
 ################################################################################
 # genpasswd password generator
 ################################################################################
-
-# Password generator function for when pwgen or apg aren't available
+# Password generator function for when 'pwgen' or 'apg' aren't available
+# Koremutake mode inspired by:
+# https:#raw.githubusercontent.com/lpar/kpwgen/master/kpwgen.go
+# http://shorl.com/koremutake.php
 genpasswd() {
-  # Declare OPTIND as local for safety
-  local OPTIND
+  # localise variables for safety
+  local OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper pwdSpecial pwdSpecialChars pwdSyllables t
 
   # Default the vars
-  PwdChars=10
-  PwdNum=1
-  PwdSet="[:alnum:]"
-  PwdCols=cat
-  PwdKrypt="false"
-  PwdKryptMode=1
-  KryptMethod=
-  ReqSet=
-  PwdCheck="false"
-  SpecialChar="false"
-  InputChars=(\! \@ \# \$ \% \^ \( \) \_ \+ \? \> \< \~)
+  pwdChars=10
+  pwdDigit="false"
+  pwdNum=1
+  pwdSet="[:alnum:]"
+  pwdKoremutake="false"
+  pwdUpper="false"
+  pwdSpecial="false"
+  pwdSpecialChars=(\! \@ \# \$ \% \^ \( \) \_ \+ \? \> \< \~)
 
-  while getopts ":Cc:Dhk:Ln:SsUY" Flags; do
+  # Filtered koremutake syllables
+  # http:#shorl.com/koremutake.php
+  pwdSyllables=( ba be bi bo bu by da de di 'do' du dy fe 'fi' fo fu fy ga ge \
+    gi go gu gy ha he hi ho hu hy ja je ji jo ju jy ka ke ko ku ky la le li \
+    lo lu ly ma me mi mo mu my na ne ni no nu ny pa pe pi po pu py ra re ri \
+    ro ru ry sa se si so su sy ta te ti to tu ty va ve vi vo vu vy bra bre \
+    bri bro bru bry dra dre dri dro dru dry fra fre fri fro fru fry gra gre \
+    gri gro gru gry pra pre pri pro pru pry sta ste sti sto stu sty tra tre \
+    er ed 'in' ex al en an ad or at ca ap el ci an et it ob of af au cy im op \
+    co up ing con ter com per ble der cal man est 'for' mer col ful get low \
+    son tle day pen pre ten tor ver ber can ple fer gen den mag sub sur men \
+    min out tal but cit cle cov dif ern eve hap ket nal sup ted tem tin tro
+  )
+
+  while getopts ":c:DhKn:SsUY" Flags; do
     case "${Flags}" in
-      (C)  if command -v column &>/dev/null; then
-             PwdCols=column
-           else
-             printf '%s\n' "[ERROR] genpasswd: '-C' requires the 'column' command which was not found."
-             return 1
-           fi
-           ;;
-      (c)  PwdChars="${OPTARG}";;
-      (D)  ReqSet="${ReqSet}[0-9]+"
-           PwdCheck="true";;
+      (c)  pwdChars="${OPTARG}";;
+      (D)  pwdDigit="true";;
       (h)  printf '%s\n' "" "genpasswd - a poor sysadmin's pwgen" \
              "" "Usage: genpasswd [options]" "" \
              "Optional arguments:" \
-             "-C [Attempt to output into columns (Default:off)]" \
-             "-c [Number of characters. Minimum is 4. (Default:${PwdChars})]" \
+             "-c [Number of characters. Minimum is 4. (Default:${pwdChars})]" \
              "-D [Require at least one digit (Default:off)]" \
              "-h [Help]" \
-             "-k [Krypt, generates a hashed password for tools like 'newusers', 'usermod -p' and 'chpasswd -e'." \
-             "    Crypt method can be set using '-k 1' (MD5, default), '-k 5' (SHA256) or '-k 6' (SHA512)" \
-             "    Any other arguments fed to '-k' will default to MD5.  (Default:off)]" \
-             "-L [Require at least one lowercase character (Default:off)]" \
-             "-n [Number of passwords (Default:${PwdNum})]" \
+             "-K [Koremutake mode.  Uses syllables rather than characters, meaning more phonetical pwds." \
+             "    Note: In this mode, character counts = syllable count and different defaults are used." \
+             "-n [Number of passwords (Default:${pwdNum})]" \
              "-s [Strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
              "-S [Stronger mode, complete mix of characters (Default:off)]" \
              "-U [Require at least one uppercase character (Default:off)]" \
@@ -1384,25 +1386,16 @@ genpasswd() {
              "" "Note1: Broken Pipe errors, (older bash versions) can be ignored" \
              "Note2: If you get umlauts, cyrillic etc, export LC_ALL= to something like en_US.UTF-8"
            return 0;;
-      (k)  PwdKrypt="true"
-           PwdKryptMode="${OPTARG}";;
-      (L)  ReqSet="${ReqSet}[a-z]+"
-           PwdCheck="true";;
-      (n)  PwdNum="${OPTARG}";;
+      (K)  pwdKoremutake="true";;
+      (n)  pwdNum="${OPTARG}";;
       # Attempted to randomise special chars using 7 random chars from [:punct:] but reliably
       # got "reverse collating sequence order" errors.  Seeded 9 special chars manually instead.
-      (s)  PwdSet="[:alnum:]#$&+/<}^%@";;
-      (S)  PwdSet="[:graph:]";;
-      (U)  ReqSet="${ReqSet}[A-Z]+"
-           PwdCheck="true";;
-      # If a special character is required, we feed in more special chars than in -s
-      # This improves performance a bit by better guaranteeing seeding and matching
-      (Y)  #ReqSet="${ReqSet}[#$&\+/<}^%?@!]+"
-           SpecialChar="true"
-           PwdCheck="true";;
+      (s)  pwdSet="[:alnum:]#$&+/<}^%@";;
+      (S)  pwdSet="[:graph:]";;
+      (U)  pwdUpper="true";;
+      (Y)  pwdSpecial="true";;
       (\?)  printf '%s\n' "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
             return 1;;
-      
       (:)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
            return 1;;
     esac
@@ -1410,84 +1403,70 @@ genpasswd() {
 
   # We need to check that the character length is more than 4 to protect against
   # infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
-  if [[ "${PwdChars}" -lt 4 ]]; then
-    printf '%s\n' "[ERROR] genpasswd: Password length must be greater than four characters."
+  if (( pwdChars < 4 )); then
+    printf '%s\n' "[ERROR] genpasswd: Password length must be greater than four characters." >&2
     return 1
   fi
 
-  # Now generate the password(s)
-  # Despite best efforts with the PwdSet's, spaces still crept in, so there's a cursory tr -d ' ' to kill those
-
-  # If these two are false, there's no point doing further checks.  We just slam through
-  # the absolute simplest bit of code in this function.  This is here for performance reasons.
-  if [[ "${PwdKrypt}" = "false" && "${PwdCheck}" = "false" ]]; then
-    tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n "${PwdNum}" | "${PwdCols}" 2> /dev/null
-    return 0
-  fi
-
-  # Let's start with checking for the Krypt option
-  if [[ "${PwdKrypt}" = "true" ]]; then
-    # Let's make sure we get the right number of passwords
-    n=0
-    while [[ "${n}" -lt "${PwdNum}" ]]; do
-      # And let's get these variables figured out.  Needs to be inside the loop
-      # to correctly pickup other arg values and to rotate properly
-      Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1) 2> /dev/null
-      
-      # Now we ensure that Pwd matches any character requirements
-      if [[ "${PwdCheck}" = "true" ]]; then
-        while ! printf '%s\n' "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
+  if [[ "${pwdKoremutake}" = "true" ]]; then
+    for (( i=0; i<pwdNum; i++ )); do
+      read -r -a tmpArray <<< $(
+        for int in $(randInt "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
+          printf '%s\n' "${pwdSyllables[int]}"
         done
+      )
+      read -r t u v <<< $(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) )
+      #pwdLower is effectively guaranteed, so we skip it and focus on the others
+      if [[ "${pwdUpper}" = "true" ]]; then
+        tmpArray[t]=$(capitalise "${tmpArray[t]}")
       fi
-
-      # If -Y is set, we need to mix in a special character
-      if [[ "${SpecialChar}" = "true" ]]; then
-        PwdSeed="${InputChars[*]:$((RANDOM % ${#InputChars[@]})):1}"
-        SeedLoc=$((RANDOM % ${#Pwd}))
-        Pwd=$(printf '%s\n' "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/")
+      if [[ "${pwdDigit}" = "true" ]]; then
+        while (( u == t )); do
+          u="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+        done
+        tmpArray[u]="$(randInt 1 0 9)"
       fi
-
-      # Feed the generated password to the cryptpasswd function
-      cryptpasswd "${Pwd}" "${PwdKryptMode}"
-      
-      # And we tick the counter up by one increment
-      ((n = n + 1))
+      if [[ "${pwdSpecial}" = "true" ]]; then
+        while (( v == t )); do
+          v="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+        done
+        randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) )
+        tmpArray[v]="${pwdSpecialChars[randSpecial]}"
+      fi
+      printf '%s\n' "${tmpArray[@]}" | paste -sd '' -
     done
-    return 0
-  fi
-  
-  # Otherwise, let's just do plain old passwords.  This is considerably more straightforward
-  # First, if the character check variable is true, then we go through that process
-  if [[ "${PwdCheck}" = "true" ]]; then
-      n=0
-      while [[ "${n}" -lt "${PwdNum}" ]]; do
-        Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
-        # Now we run through a loop that will grep out generated passwords that match
-        # the required character classes.  For portability, we shunt the lot to /dev/null
-        # Because Solaris egrep doesn't behave with -q or -s as it should.
-        while ! printf '%s\n' "${Pwd}" | egrep "${ReqSet}" &> /dev/null; do
-          Pwd=$(tr -dc "${PwdSet}" < /dev/urandom | tr -d ' ' | fold -w "${PwdChars}" | head -n 1 2> /dev/null)
-        done
-        # For each matched password, print it out, iterate and loop again.
-        # But first we need to check if -Y is set, and if so, force in a random special character
-        if [[ "${SpecialChar}" = "true" ]]; then
-          # Select a random character from the array by selecting a random number
-          # based on the array length, then selecting the appropriate element
-          PwdSeed="${InputChars[*]:$((RANDOM % ${#InputChars[@]})):1}"
-          # Choose a random location within the max password length in which to insert it
-          SeedLoc=$((RANDOM % ${#Pwd}))
-          # Print out the password with one less character, 
-          # then use sed to insert the special character into the preselected place
-          printf '%s\n' "${Pwd:0:$(( ${#Pwd} - 1 ))}" | sed "s/^\(.\{$SeedLoc\}\)/\1${PwdSeed}/"
-        # If -Y isn't set, just print it out.  Easy!
-        else
-          printf '%s\n' "${Pwd}"
+  else
+    for (( i=0; i<pwdNum; i++ )); do
+      read -r -a tmpArray <<< $(tr -dc "${pwdSet}" < /dev/urandom | tr -d ' ' | fold -w 1 | head -n "${pwdChars}")
+      read -r t u v <<< $(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) )
+      #pwdLower is effectively guaranteed, so we skip it and focus on the others
+      if [[ "${pwdUpper}" = "true" ]]; then
+        if ! printf '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
+          tmpArray[randArray[t]]=$(capitalise "${tmpArray[randArray[t]]}")
         fi
-      ((n = n + 1))
-      done | "${PwdCols}" 2>/dev/null
+      fi
+      if [[ "${pwdDigit}" = "true" ]]; then
+        while (( u == t )); do
+          u="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+        done
+        if ! printf '%s\n' "tmpArray[@]}" | grep "[0-9]" >/dev/null 2>&1; then
+          tmpArray[u]="$(randInt 1 0 9)"
+        fi
+      fi
+      # Because special characters aren't sucked up from /dev/urandom,
+      # we have no reason to test for them, just swap one in
+      if [[ "${pwdSpecial}" = "true" ]]; then
+        while (( v == t )); do
+          v="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+        done
+        randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) ) 
+        tmpArray[v]="${pwdSpecialChars[randSpecial]}"
+      fi
+      printf '%s\n' "${tmpArray[@]}" | paste -sd '' -
+    done
   fi
-}
+} 
+
 ################################################################################
 
 # A separate password encryption tool, so that you can encrypt passwords of your own choice

@@ -647,10 +647,10 @@ printline() {
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    ''|*[!0-9]*)  printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
+    (''|*[!0-9]*)  printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
                     "Run 'printline' with no arguments for usage.";
                   return 1 ;;
-    *)            local lineNo="$((10#$1))" ;;
+    (*)            local lineNo="$((10#$1))" ;;
   esac
 
   # Next, if $2 is set, check that we can actually read it
@@ -724,11 +724,11 @@ if ! command -v rev &>/dev/null; then
 
     # If parameter is a file, or stdin in used, action that first
     if [[ -f $1 ]]||[[ ! -t 0 ]]; then
-      while read -r Line; do
-        len=${#Line}
+      while read -r; do
+        len=${#REPLY}
         rev=
         for((i=len-1;i>=0;i--)); do
-          rev="$rev${Line:$i:1}"
+          rev="$rev${REPLY:$i:1}"
         done
         printf '%s\n' "${rev}"
       done < "${1:-/dev/stdin}"
@@ -756,7 +756,7 @@ repeat() {
   shift
 
   # Run the command in a while loop repeatNum times
-  while [ $(( repeatNum -= 1 )) -ge 0 ]; do
+  for (( i=0; i<repeatNum; i++ )); do
     "$@"
   done
 }

@@ -12,6 +12,7 @@
 
 # Source global definitions
 if [[ -f /etc/bashrc ]]; then
+  # shellcheck disable=SC1091
   . /etc/bashrc
 fi
 
@@ -21,12 +22,14 @@ fi
 # Aliases
 # Some people use a different file for aliases
 if [[ -f "${HOME}/.bash_aliases" ]]; then
+  # shellcheck source=/dev/null
   . "${HOME}/.bash_aliases"
 fi
 
 # Functions
 # Some people use a different file for functions
 if [[ -f "${HOME}/.bash_functions" ]]; then
+  # shellcheck source=/dev/null
   . "${HOME}/.bash_functions"
 fi
 
@@ -141,8 +144,10 @@ stty ixoff -ixon
 # sources /etc/bash.bashrc).
 if ! shopt -oq posix; then
   if [ -f /usr/share/bash-completion/bash_completion ]; then
+    # shellcheck disable=SC1091
     . /usr/share/bash-completion/bash_completion
   elif [ -f /etc/bash_completion ]; then
+    # shellcheck disable=SC1091
     . /etc/bash_completion
   fi
 fi
@@ -157,7 +162,7 @@ fi
 
 # SSH auto-completion based on ~/.ssh/known_hosts.
 if [[ -e ~/.ssh/known_hosts ]]; then
-  complete -o "default" -W "$(cut -f 1 -d ' ' ~/.ssh/known_hosts | sed -e s/,.*//g | uniq | grep -v "\[" | tr ' ' '\n')" scp sftp ssh
+  complete -o "default" -W "$(awk -F "," '{print $1}' ~/.ssh/known_hosts | sed -e 's/ .*//g' | awk '!x[$0]++')" scp sftp ssh
 fi
 
 ################################################################################
@@ -194,7 +199,11 @@ fi
 
 # Enable color support of ls and also add handy aliases
 if [[ -x /usr/bin/dircolors ]]; then
-  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  if [[ -r ~/.dircolors ]]; then
+    eval "$(dircolors -b ~/.dircolors)"
+  else
+    eval "$(dircolors -b)"
+  fi
 fi
 
 # It looks like blindly asserting the following upsets certain 
@@ -270,7 +279,7 @@ capitalise() {
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z $1 ]]; then
     printf '%s\n' "Usage:  capitalise string" ""
-    printf "\t%s\n" "Capitalises the first character of STRING and/or its elements."
+    printf '\t%s\n' "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
   elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
@@ -302,6 +311,7 @@ capitalise() {
           # If inString is an integer, skip to the next element
           isinteger "${inString}" && continue
           # Split off the first character and capitalise it
+	  # shellcheck disable=SC2119
           inWord=$(echo "${inString:0:1}" | toupper)
           # Print out the uppercase var and the rest of the element
           outWord="${inWord}${inString:1}"
@@ -319,6 +329,7 @@ capitalise() {
       printf '%s ' "${@^}" | trim
     else    
       for inString in "$@"; do
+        # shellcheck disable=SC2119
         inWord=$(echo "${inString:0:1}" | toupper)
         outWord="$inWord${inString:1}"
         printf "%s " "${outWord}"
@@ -355,7 +366,7 @@ checkyaml() {
   # Check that $1 is defined...
   if [[ -z $1 ]]; then
     printf '%s\n' "Usage:  checkyaml file" ""
-    printf "\t%s\n"  "Check the YAML syntax in FILE"
+    printf '\t%s\n'  "Check the YAML syntax in FILE"
     return 1
   fi
   
@@ -439,7 +450,7 @@ epoch() {
 
 # Calculate how many days since epoch
 epochdays() {
-  printf '%s\n' "$(( epoch / 86400 ))"
+  printf '%s\n' "$(( $(epoch) / 86400 ))"
 }
 
 # Function to extract common compressed file types
@@ -449,9 +460,9 @@ extract() {
     printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
  else
     if [ -f "$1" ] ; then
-      #local nameInLowerCase=$(awk '{print tolower($0)}' <<< "$1")
-      local nameInLowerCase=$(tolower "$1")
-      case "$nameInLowerCase" in
+      local nameInLowerCase
+      nameInLowerCase=$(tolower "$1")
+      case "${nameInLowerCase}" in
         (*.tar.bz2)   tar xvjf ./"$1"    ;;
         (*.tar.gz)    tar xvzf ./"$1"    ;;
         (*.tar.xz)    tar xvJf ./"$1"    ;;
@@ -567,6 +578,7 @@ hr() {
 # Requires: bytestohuman function
 llh() {
   # Print out the total line
+  # shellcheck disable=SC2012
   ls -l | head -n 1
 
   # Read each line of 'ls -l', excluding the total line
@@ -1038,7 +1050,7 @@ throttle() {
   # Check that stdin isn't empty
   if [[ -t 0 ]]; then
     printf '%s\n' "Usage:  pipe | to | throttle [n]" ""
-    printf "\t%s\n"  "Increment line by line through the output of other commands" "" \
+    printf '\t%s\n'  "Increment line by line through the output of other commands" "" \
       "Delay between each increment can be defined.  Default is 1 second."
     return 0
   fi
@@ -1066,7 +1078,7 @@ if ! command -v timeout &>/dev/null; then
     # $# should be at least 1, if not, print a usage message
     if (($# == 0 )); then
       printf '%s\n' "Usage:  timeout DURATION COMMAND" ""
-      printf "\t%s\n" "Start COMMAND, and kill it if still running after DURATION." "" \
+      printf '\t%s\n' "Start COMMAND, and kill it if still running after DURATION." "" \
         "DURATION is an integer with an optional  suffix:  's'  for" \
         "seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'timeout'"
@@ -1346,6 +1358,7 @@ genpasswd() {
   pwdKoremutake="false"
   pwdUpper="false"
   pwdSpecial="false"
+  # shellcheck disable=SC1001
   pwdSpecialChars=(\! \@ \# \$ \% \^ \( \) \_ \+ \? \> \< \~)
 
   # Filtered koremutake syllables
@@ -1438,7 +1451,7 @@ genpasswd() {
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
         if ! printf '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
-          tmpArray[randArray[t]]=$(capitalise "${tmpArray[randArray[t]]}")
+          tmpArray[t]=$(capitalise "${tmpArray[t]}")
         fi
       fi
       if [[ "${pwdDigit}" = "true" ]]; then
@@ -1866,13 +1879,16 @@ fi
 # Throw it all together, starting with checking if we're root
 # Previously this tried to failover to a tput based alternative but it didn't work well on Solaris...
 if [[ -w / ]]; then
+  # shellcheck disable=SC1117
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
 # Otherwise show the usual prompt
 else
+  # shellcheck disable=SC1117
   export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
 fi
 
 # Alias the root PS1 into sudo for edge cases
+# shellcheck disable=SC1117
 alias sudo="PS1='\\[${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 
 # Useful for debugging

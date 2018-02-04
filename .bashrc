@@ -1348,7 +1348,8 @@ whoowns() {
 # http://shorl.com/koremutake.php
 genpasswd() {
   # localise variables for safety
-  local OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper pwdSpecial pwdSpecialChars pwdSyllables t
+  local OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper \
+    pwdSpecial pwdSpecialChars pwdSyllables n t u v tmpArray
 
   # Default the vars
   pwdChars=10
@@ -1419,12 +1420,12 @@ genpasswd() {
 
   if [[ "${pwdKoremutake}" = "true" ]]; then
     for (( i=0; i<pwdNum; i++ )); do
-      read -r -a tmpArray <<< $(
-        for int in $(randInt "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
-          printf '%s\n' "${pwdSyllables[int]}"
-        done
-      )
-      read -r t u v <<< $(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) )
+      n=0
+      for int in $(randInt "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
+        tmpArray[n]=$(printf '%s\n' "${pwdSyllables[int]}")
+        (( n++ ))
+      done
+      read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
         tmpArray[t]=$(capitalise "${tmpArray[t]}")
@@ -1442,12 +1443,16 @@ genpasswd() {
         randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) )
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
-      printf '%s\n' "${tmpArray[@]}" | paste -sd '' -
+      printf '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
     done
   else
     for (( i=0; i<pwdNum; i++ )); do
-      read -r -a tmpArray <<< $(tr -dc "${pwdSet}" < /dev/urandom | tr -d ' ' | fold -w 1 | head -n "${pwdChars}")
-      read -r t u v <<< $(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) )
+      n=0
+      while read -r; do
+        tmpArray[n]="${REPLY}"
+        (( n++ ))
+      done < <(tr -dc "${pwdSet}" < /dev/urandom | tr -d ' ' | fold -w 1 | head -n "${pwdChars}")
+      read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
         if ! printf '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
@@ -1471,7 +1476,7 @@ genpasswd() {
         randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) ) 
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
-      printf '%s\n' "${tmpArray[@]}" | paste -sd '' -
+      printf '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
     done
   fi
 } 

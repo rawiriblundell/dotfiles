@@ -745,7 +745,7 @@ if ! command -v rev &>/dev/null; then
         printf '%s\n' "${rev}"
       done < "${1:-/dev/stdin}"
     # Else, if parameter exists, action that
-    elif [[ ! -z "$@" ]]; then
+    elif [[ ! -z "$*" ]]; then
       Line=$*
       rev=
       len=${#Line}
@@ -805,7 +805,7 @@ alias sanitise='sanitize'
 if ! command -v seq &>/dev/null; then
   seq() {
     # If no parameters are given, print out usage
-    if [[ -z "$@" ]]; then
+    if [[ -z "$*" ]]; then
       printf '%s\n' "Usage: seq x [y]"
       return 0
     fi

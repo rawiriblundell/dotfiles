@@ -651,7 +651,7 @@ printline() {
   # If $1 is empty, print a usage message
   if [[ -z $1 ]]; then
     printf '%s\n' "Usage:  printline n [file]" ""
-    printf "\t%s\n" "Print the Nth line of FILE." "" \
+    printf '\t%s\n' "Print the Nth line of FILE." "" \
       "With no FILE or when FILE is -, read standard input instead."
     return 0
   fi
@@ -724,7 +724,7 @@ if ! command -v rev &>/dev/null; then
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
       printf '%s\n' "Usage:  rev string|file" ""
-      printf "\t%s\n"  "Reverse the order of characters in STRING or FILE." "" \
+      printf '\t%s\n'  "Reverse the order of characters in STRING or FILE." "" \
         "With no STRING or FILE, read standard input instead." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
       return 0

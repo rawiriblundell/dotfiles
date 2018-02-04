@@ -582,19 +582,19 @@ llh() {
   ls -l | head -n 1
 
   # Read each line of 'ls -l', excluding the total line
-  ls -l | grep -v "total" | while read -r line; do
+  ls -l | grep -v "total" | while read -r; do
     # Get the size of the file
-    size=$(echo "${line}" | awk '{print $5}')
+    size=$(echo "${REPLY}" | awk '{print $5}')
     
     # Convert it to human readable
     newSize=$(bytestohuman ${size} no 1024)
     
     # Grab the filename from the $9th field onwards
     # This caters for files with spaces
-    fileName=$(echo "${line}" | awk '{print substr($0, index($0,$9))}')
+    fileName=$(echo "${REPLY}" | awk '{print substr($0, index($0,$9))}')
     
     # Echo the line into awk, format it nicely and insert our substitutions
-    echo "${line}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
+    echo "${REPLY}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
   done
 }
 

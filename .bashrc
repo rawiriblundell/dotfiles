@@ -1044,22 +1044,18 @@ throttle() {
   fi
 
   # Default the sleep time to 1 second
-  if [[ -z $1 ]]; then
-    Sleep=1
-  else
-    Sleep="$1"
-    # We do another check for portability
-    # (GNU sleep can handle fractional seconds, non-GNU cannot)
-    if ! sleep "${Sleep}" &>/dev/null; then
-      printf '%s\n' "[INFO] throttle: That time increment is not supported, defaulting to 1s"
-      Sleep=1
-    fi
+  sleepTime="${1:-1}"
+  # We do another check for portability
+  # (GNU sleep can handle fractional seconds, non-GNU cannot)
+  if ! sleep "${sleepTime}" &>/dev/null; then
+    printf '%s\n' "[INFO] throttle: That time increment is not supported, defaulting to 1s"
+    sleepTime=1
   fi
 
   # Now we output line by line with a sleep in the middle
-  while read -r Line; do
-    printf '%s\n' "${Line}"
-    sleep "${Sleep}"
+  while read -r; do
+    printf '%s\n' "${REPLY}"
+    sleep "${sleepTime}"
   done
 }
 

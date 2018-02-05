@@ -240,6 +240,17 @@ fi
 
 ################################################################################
 # Functions
+# Function to kill the parents of interruptable zombies, will not touch init
+boomstick() {
+  for ppid in $(ps -A -ostat,ppid | grep -e '^[Zz]' | awk '{print $2}' | sort | uniq); do
+    [[ -z "${ppid}" ]] && return 0
+    if (( ppid == 1 )); then
+      printf '%s\n' "PPID is '1', I won't kill that, Ash!"
+    else
+      kill -HUP "${ppid}"
+    fi
+  done
+}
 
 # Bytes to Human Readable conversion function from http://unix.stackexchange.com/a/98790
 # Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]

@@ -1563,7 +1563,6 @@ genphrase() {
     case "${Flags}" in
       (h)  printf '%s\n' "" "genphrase - a basic passphrase generator" \
              "" "Optional Arguments:" \
-             "-C [attempt to output into columns (Default:off)]" \
              "-h [help]" \
              "-n [number of passphrases to generate (Default:${phraseNum})]" \
              "-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \

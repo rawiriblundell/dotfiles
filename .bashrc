@@ -124,9 +124,11 @@ shopt -s histappend
 HISTSIZE=5000
 HISTFILESIZE=5000
 
-# Standardise the title header
+# Standardise the terminal window title header
+# reference: http://www.faqs.org/docs/Linux-mini/Xterm-Title.html#s3
 settitle() {
-  printf "\033]0;${HOSTNAME%%.*}:${PWD}\a"
+  # shellcheck disable=SC2059,SC1117
+  printf "\033]0;${HOSTNAME%%.*}:${PWD}\007"
   # This might also need to be expressed as
   #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
   # I possibly need to test and figure out a way to auto-switch between these two
@@ -225,11 +227,15 @@ else
 fi
 
 # Check whether 'ls' supports human readable ( -h )
-ls -h /dev/null 2> /dev/null 1>&2 && H='-h'
-
-alias l.='ls -lAdF ${H} .*'    # list only hidden things
-alias la='ls -lAF ${H}'        # list all
-alias ll='ls -alF ${H}'        # list long
+if ls -h /dev/null >/dev/null 2>&1; then
+  alias l.='ls -lAdFh .*'    # list only hidden things
+  alias la='ls -lAFh'        # list all
+  alias ll='ls -alFh'        # list long
+else
+  alias l.='ls -lAdF .*'    # list only hidden things
+  alias la='ls -lAF'        # list all
+  alias ll='ls -alF'        # list long
+fi
 
 # When EDITOR == vim ; alias vi to vim
 [[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
@@ -240,8 +246,10 @@ fi
 
 ################################################################################
 # Functions
-# Function to kill the parents of interruptable zombies, will not touch init
+
+# Function to kill the parents of interruptable zombies, will not touch pid 1
 boomstick() {
+  # shellcheck disable=SC2009
   for ppid in $(ps -A -ostat,ppid | grep -e '^[Zz]' | awk '{print $2}' | sort | uniq); do
     [[ -z "${ppid}" ]] && return 0
     if (( ppid == 1 )); then
@@ -253,11 +261,14 @@ boomstick() {
 }
 
 # Bytes to Human Readable conversion function from http://unix.stackexchange.com/a/98790
-# Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]
 bytestohuman() {
   # converts a byte count to a human readable format in IEC binary notation (base-1024),
   # rounded to two decimal places for anything larger than a byte. 
   # switchable to padded format and base-1000 if desired.
+  if [[ "$1" = "-h" ]]; then
+    printf '%s\n' "Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]"
+    return 0
+  fi
   local L_BYTES="${1:-0}"
   local L_PAD="${2:-no}"
   local L_BASE="${3:-1024}"
@@ -299,30 +310,30 @@ capitalise() {
   fi
 
   # If parameter is a file, or stdin is used, action that first
-  if [[ -f $1 ]]||[[ ! -t 0 ]]; then
+  if [[ -r $1 ]]||[[ ! -t 0 ]]; then
     # We require an exit condition for 'read', this covers the edge case
     # where a line is read that does not have a newline
     eof=
     while [[ -z "${eof}" ]]; do
       # Read each line of input
-      read -r inLine || eof=true
+      read -r || eof=true
       # If the line is blank, then print a blank line and continue
-      if [[ -z "${inLine}" ]]; then
+      if [[ -z "${REPLY}" ]]; then
         printf '%s\n' ""
         continue
       fi
       # If we're using bash4, stop mucking about
       if (( BASH_VERSINFO == 4 )); then
-        inLine=( ${inLine} )
+        read -r -a inLine <<< "${REPLY}"
         printf '%s ' "${inLine[@]^}" | trim
       # Otherwise, take the more exhaustive approach
       else
         # Split each line element for processing
-        for inString in ${inLine}; do
+        for inString in ${REPLY}; do
           # If inString is an integer, skip to the next element
           isinteger "${inString}" && continue
           # Split off the first character and capitalise it
-	  # shellcheck disable=SC2119
+          # shellcheck disable=SC2119
           inWord=$(echo "${inString:0:1}" | toupper)
           # Print out the uppercase var and the rest of the element
           outWord="${inWord}${inString:1}"
@@ -367,9 +378,7 @@ center() {
 
 # Check YAML syntax
 checkyaml() {
-  local textGreen
-  local textRed
-  local textRst
+  local textGreen textRed textRst
   textGreen=$(tput setaf 2)
   textRed=$(tput setaf 1)
   textRst=$(tput sgr0)
@@ -392,7 +401,7 @@ checkyaml() {
 
   # If we can see the internet, let's use it!
   if ! wget -T 1 http://yamllint.com/ &>/dev/null; then
-    curl --data-urlencode yaml'@'"${file:-/dev/stdin}" -d utf8='%E2%9C%93' -d commit=Go  http://yamllint.com/ --trace-ascii out -G 2>&1 | egrep 'div.*background-color'
+    curl --data-urlencode yaml'@'"${file:-/dev/stdin}" -d utf8='%E2%9C%93' -d commit=Go  http://yamllint.com/ --trace-ascii out -G 2>&1 | grep -E 'div.*background-color'
 
   # Check the YAML contents, if there's no error, print out a message saying so
   elif python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
@@ -427,36 +436,29 @@ compress() {
 # Optional error handling function
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {
-  local format="$1"
-  shift
   tput setaf 1
-  printf >&2 "$format\n" "$@"
+  printf '%s\n' "$@" >&2
   tput sgr0
   return 1
 }
 
 # Calculate how many seconds since epoch
+# Portable version based on http://www.etalabs.net/sh_tricks.html
+# We strip leading 0's in order to prevent unwanted octal math
+# This seems terse, but the vars are the same as their 'date' formats
 epoch() {
-  # This grep test is required: some versions of 'date' return a literal '+%s'
-  if date +%s | grep "^[0-9].*$" >/dev/null 2>&1; then
-    date +%s
-  # Portable workaround based on http://www.etalabs.net/sh_tricks.html
-  # We strip leading 0's in order to prevent unwanted octal math
-  # This seems terse, but the vars are the same as their 'date' formats
-  else
-    local y j h m s yo
-    # POSIX portable method to grab what we need from 'date'
+  local y j h m s yo
+  # POSIX portable method to grab what we need from 'date'
 	# Note this indentation is hard-tabbed
 	IFS=: read -r y j h m s <<-EOF
 	$(date -u +%Y:%j:%H:%M:%S)
 	EOF
 
-    # yo = year offset
-    yo=$(( y - 1600 ))
-    y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + $(( 10#$j )) - 135140) * 86400 ))
+  # yo = year offset
+  yo=$(( y - 1600 ))
+  y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + $(( 10#$j )) - 135140) * 86400 ))
 
-    printf -- '%s\n' "$(( y + ($(( 10#$h )) * 3600) + ($(( 10#$m )) * 60) + $(( 10#$s )) ))"
-  fi
+  printf -- '%s\n' "$(( y + ($(( 10#$h )) * 3600) + ($(( 10#$m )) * 60) + $(( 10#$s )) ))"
 }
 
 # Calculate how many days since epoch
@@ -506,7 +508,7 @@ flocate() {
     printf '%s\n' "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
     return 1
   fi
-  if [[ $# -gt 1 ]]; then
+  if (( $# > 1 )); then
     display_divider=1
   else
     display_divider=0
@@ -514,52 +516,29 @@ flocate() {
 
   current_argument=0
   total_arguments=$#
-  while [[ "${current_argument}" -lt "${total_arguments}" ]]; do
+  while (( current_argument < total_arguments )); do
     current_file=$1
-    if [ "${display_divider}" = "1" ] ; then
+    if (( display_divider == 1 )); then
       printf '%s\n' "----------------------------------------" \
       "Matches for ${current_file}" \
       "----------------------------------------"
     fi
 
-    filename_re="^\(.*/\)*$( echo "${current_file}" | sed s%\\.%\\\\.%g )$"
+    filename_re="^\\(.*/\\)*${current_file//./\\.}$"
     locate -r "${filename_re}"
     shift
     (( current_argument = current_argument + 1 ))
   done
 }
 
-# This is based on one of the best urandom+bash random integer scripts IMHO
-# This is intended to be used by the shuf step-in function
-# https://unix.stackexchange.com/a/413890
-get_urand() {
-  local intCount rangeMin rangeMax range bytes t maxvalue mult hexrandom
-  intCount="${1:-1}"
-  rangeMin="${2:-1}"
-  rangeMax="${3:-32767}"
-  range=$(( rangeMax - rangeMin + 1 ))
-
-  bytes=0
-  t="${range}"
-  while (( t > 0 )); do
-    (( t=t>>8, bytes++ ))
-  done
-
-  maxvalue=$((1<<(bytes*8)))
-  mult=$((maxvalue/range - 1))
-
-  while (( i++ < intCount )); do
-    while :; do
-      hexrandom=$(dd if=/dev/urandom bs=1 count=${bytes} 2>/dev/null | xxd -p)
-      (( 16#$hexrandom < range * mult )) && break
-    done
-    printf '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
-  done
-}
-
 # Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
 histrank() { 
-  HISTTIMEFORMAT="%y/%m/%d %T " history | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' | sort | uniq -c | sort -nk1 | tail -n "${1:-$(tput lines)}"
+  HISTTIMEFORMAT="%y/%m/%d %T " history \
+    | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' \
+    | sort \
+    | uniq -c \
+    | sort -nk1 \
+    | tail -n "${1:-$(tput lines)}"
 }
 
 # Test if a given value is an integer
@@ -588,68 +567,34 @@ hr() {
 # whose version of 'ls' does not have the '-h' option
 # Requires: bytestohuman function
 llh() {
-  # Print out the total line
-  # shellcheck disable=SC2012
-  ls -l | head -n 1
+  # Check if the available 'ls' supports '-h', if so, use it
+  if ls -h /dev/null >/dev/null 2>&1; then
+    command ls -lh "$@"
+  # If it doesn't support '-h', we replicate it using
+  # a reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
+  # Requires: bytestohuman function
+  else
+    # Print out the total line
+    # shellcheck disable=SC2012
+    command ls -l | head -n 1
 
-  # Read each line of 'ls -l', excluding the total line
-  ls -l | grep -v "total" | while read -r; do
-    # Get the size of the file
-    size=$(echo "${REPLY}" | awk '{print $5}')
-    
-    # Convert it to human readable
-    newSize=$(bytestohuman ${size} no 1024)
-    
-    # Grab the filename from the $9th field onwards
-    # This caters for files with spaces
-    fileName=$(echo "${REPLY}" | awk '{print substr($0, index($0,$9))}')
-    
-    # Echo the line into awk, format it nicely and insert our substitutions
-    echo "${REPLY}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
-  done
-}
-
-# Enable X-Windows for cygwin, finds and assigns an available display env variable.
-# To use, issue 'myx', and then 'ssh -X [host] "/some/path/to/gui-application" &'
-
-# First we check if we're on Solaris, because Solaris doesn't like "uname -o"
-if [[ "$(uname)" != "SunOS" ]]; then
-  if [[ "$(uname -o)" = "Cygwin" ]]; then
-    myx() {
-      a=/tmp/.X11-unix/X
-      #for ((i=351;i<500;i++)) ; do #breaks older versions of bash, hence the next while loop
-      i=351
-      while [[ "${i}" -lt 500 ]]; do
-        b=$a$i
-        if [[ ! -S $b ]] ; then
-          c=$i
-          break
-        fi
-      i++
-      done
-      export DISPLAY=:$c
-      echo export DISPLAY=:$c
-      X :$c -multiwindow >& /dev/null &
-      xterm -fn 9x15bold -bg black -fg orange -sb &
-    }
+    # Read each line of 'ls -l', excluding the total line
+    # shellcheck disable=SC2010
+    while read -r; do
+      # Get the size of the file
+      size=$(echo "${REPLY}" | awk '{print $5}')
+      
+      # Convert it to human readable
+      newSize=$(bytestohuman "${size}" no 1024)
+      
+      # Grab the filename from the $9th field onwards
+      # This caters for files with spaces
+      fileName=$(echo "${REPLY}" | awk '{print substr($0, index($0,$9))}')
+      
+      # Echo the line into awk, format it nicely and insert our substitutions
+      echo "${REPLY}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
+    done < <(command ls -l | grep -v "total")
   fi
-fi
-
-# Provide a faster-than-scp file transfer function
-# From http://intermediatesql.com/linux/scrap-the-scp-how-to-copy-data-fast-using-pigz-and-nc/
-ncp() {
-  FileFull=$1
-  RemoteHost=$2
-
-  FileDir=$(dirname "${FileFull}")
-  FileName=$(basename "${FileFull}")
-  LocalHost=$(hostname)
-
-  ZipTool=pigz
-  NCPort=8888
-
-  tar -cf - -C "${FileDir} ${FileName}" | pv -s "$(du -sb "${FileFull}" | awk '{s += $1} END {printf "%d", s}')" | "${ZipTool}" | nc -l "${NCPort}" &
-  ssh "${RemoteHost}" "nc ${LocalHost} ${NCPort} | ${ZipTool} -d | tar xf - -C ${FileDir}"
 }
 
 # Backup a file with the extension '.old'
@@ -670,10 +615,10 @@ printline() {
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    (''|*[!0-9]*)  printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
+    (''|*[!0-9]*) printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
                     "Run 'printline' with no arguments for usage.";
                   return 1 ;;
-    (*)            local lineNo="$((10#$1))" ;;
+    (*)           local lineNo="$((10#$1))" ;;
   esac
 
   # Next, if $2 is set, check that we can actually read it
@@ -861,8 +806,9 @@ if ! command -v shuf &>/dev/null; then
             esac ;;
         (e) inputStrings=true
             shufArray=( "${OPTARG}" )
-            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
-              shufArray+=($(eval "echo \${$OPTIND}"))
+            # shellcheck disable=SC2143
+            until [[ $(grep "^-.*" <<< "${OPTIND}" >/dev/null 2>&1) ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
+              shufArray+=( "$(eval "echo \${$OPTIND}")" )
               OPTIND=$((OPTIND + 1))
             done;;
         (h)  printf '%s\n' "" "shuf - generate random permutations" \
@@ -981,6 +927,7 @@ if ! command -v shuf &>/dev/null; then
       # has likely stopped feeding us input.  So we can simply process as before
       if (( ${#shufArray[@]} < numCount )); then
         # Filter out numArray so that it's a random subset < numCount
+        # shellcheck disable=SC2207
         numArray=( $(printf '%u\n' "${numArray[@]}" | awk -v x="${#shufArray[@]}" '$1 <= x{print ($1 + 0)}') )
         #declare -p numArray
         for randInt in "${numArray[@]}"; do
@@ -1153,6 +1100,7 @@ if ! command -v timeout &>/dev/null; then
 fi
 
 # Functions to quickly upper or lowercase some input
+# shellcheck disable=SC2120
 tolower() {
   if command -v awk >/dev/null 2>&1; then
     awk '{print tolower($0)}'
@@ -1164,6 +1112,7 @@ tolower() {
   fi < "${1:-/dev/stdin}"
 }
 
+# shellcheck disable=SC2120
 toupper() {
   if command -v awk >/dev/null 2>&1; then
     awk '{print toupper($0)}'
@@ -1248,55 +1197,81 @@ up() {
   fi
 }
 
+# This is based on one of the best urandom+bash random integer scripts IMHO
+# This is intended to be used by the shuf step-in function
+# https://unix.stackexchange.com/a/413890
+urandInt() {
+  local intCount rangeMin rangeMax range bytes t maxvalue mult hexrandom
+  intCount="${1:-1}"
+  rangeMin="${2:-1}"
+  rangeMax="${3:-32767}"
+  range=$(( rangeMax - rangeMin + 1 ))
+
+  bytes=0
+  t="${range}"
+  while (( t > 0 )); do
+    (( t=t>>8, bytes++ ))
+  done
+
+  maxvalue=$((1<<(bytes*8)))
+  mult=$((maxvalue/range - 1))
+
+  while (( i++ < intCount )); do
+    while :; do
+      hexrandom=$(dd if=/dev/urandom bs=1 count=${bytes} 2>/dev/null | xxd -p)
+      (( 16#$hexrandom < range * mult )) && break
+    done
+    printf '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
+  done
+}
+
 # Check if 'watch' is available, if not, enable a stop-gap function
 if ! command -v watch &>/dev/null; then
   watch() {
-  # Set the default values for Sleep, Title and Command
-  Sleep=2
-  Title=true
-  Command=
-  local OPTIND
+    local OPTIND colWidth titleHead sleepTime dateNow
 
-  while getopts ":hn:vt" Flags; do
-    case "${Flags}" in
-      (h)  printf '%s\n' "Usage:" " watch [-hntv] <command>" "" \
-             "Options:" \
-             "  -h, help.      Print a summary of the options" \
-             "  -n, interval.  Seconds to wait between updates" \
-             "  -v, version.   Print the version number" \
-             "  -t, no title.  Turns off showing the header"
-           return 0;;
-      (n)  Sleep="${OPTARG}";;
-      (v)  printf '%s\n' "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
-           return 0;;
-      (t)  Title=false;;
-      (\?)  printf '%s\n' "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
-            return 1;;
-      (:)  printf '%s\n' "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-           return 1;;
-    esac
-  done
+    while getopts ":hn:vt" optFlags; do
+      case "${optFlags}" in
+        (h)  printf '%s\n' "Usage:" " watch [-hntv] <command>" "" \
+              "Options:" \
+              "  -h, help.      Print a summary of the options" \
+              "  -n, interval.  Seconds to wait between updates" \
+              "  -v, version.   Print the version number" \
+              "  -t, no title.  Turns off showing the header"
+            return 0;;
+        (n)  sleepTime="${OPTARG}";;
+        (v)  printf '%s\n' "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
+             return 0;;
+        (t)  titleHead=false;;
+        (\?)  printf '%s\n' "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
+              return 1;;
+        (:)  printf '%s\n' "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+             return 1;;
+      esac
+    done
+    shift $(( OPTIND -1 ))
 
-  shift $(( OPTIND -1 ))
-  Command=$*
+    # Set the default values for Title and Command
+    sleepTime="${sleepTime:-2}"
+    titleHead="${titleHead:-true}"
 
-  if [[ -z "${Command}" ]]; then
-    printf '%s\n' "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
-    return 1
-  fi
-
-  while true; do
-    clear
-    if [[ "${Title}" = "true" ]]; then
-      Date=$(date)
-      let Col=$(tput cols)-${#Date}
-      printf "%s%${Col}s" "Every ${Sleep}s: ${Command}" "${Date}"
-      tput sgr0
-      printf '%s\n' "" ""
+    if [[ -z "$*" ]]; then
+      printf '%s\n' "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
+      return 1
     fi
-    eval "${Command}"
-    sleep "${Sleep}"
-  done
+
+    while true; do
+      clear
+      if [[ "${titleHead}" = "true" ]]; then
+        dateNow=$(date)
+        (( colWidth = $(tput cols) - ${#dateNow} ))
+        printf "%s%${colWidth}s" "Every ${sleepTime}s: $*" "${dateNow}"
+        tput sgr0
+        printf '%s\n' "" ""
+      fi
+      eval "$*"
+      sleep "${sleepTime}"
+    done
   }
 fi
 
@@ -1310,15 +1285,6 @@ weather() {
 
   # If no arg is given, default to Wellington NZ
   curl -m 10 "http://wttr.in/${*:-Wellington}" 2>/dev/null || printf '%s\n' "[ERROR] weather: Could not connect to weather service."
-}
-
-# Enable piping to Windows Clipboard from with PuTTY
-# Uses modified PuTTY from http://ericmason.net/2010/04/putty-ssh-windows-clipboard-integration/
-wclip() {
-  echo -ne '\e''[5i'
-  cat "$*"
-  echo -ne '\e''[4i'
-  echo "Copied to Windows clipboard" 1>&2
 }
 
 # Function to display a list of users and their memory and cpu usage
@@ -1346,6 +1312,7 @@ whoowns() {
     stat -f '%Su' "$1"
   # Otherwise, we failover to 'ls', which is not usually desireable
   else
+    # shellcheck disable=SC2012
     ls -ld "$1" | awk 'NR==1 {print $3}'
   fi
 }
@@ -1558,7 +1525,7 @@ genphrase() {
   # shuf:         printf '%s\n' "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
   # perl:         printf '%s\n' "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
   # sed:          printf "$s\n" "sed -n $((RANDOM%$(wc -l < ~/.pwords.dict)+1))p ~/.pwords.dict"
-  # python:       printf '%s\n' "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${PphraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
+  # python:       printf '%s\n' "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${phraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
   # oawk/nawk:    printf '%s\n' "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
   # gawk:         printf '%s\n' "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
   # sort -R:      printf '%s\n' "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
@@ -1571,7 +1538,7 @@ genphrase() {
     # Test if we can download our wordlist, otherwise use the standard 'words' file to generate something usable
     if ! wget -T 2 https://raw.githubusercontent.com/rawiriblundell/dotfiles/master/.pwords.dict -O ~/.pwords.dict &>/dev/null; then
       # Alternatively, we could just use grep -v "[[:punct:]]", but we err on the side of portability
-      grep -Eh '^.{3,9}$' /usr/{,share/}dict/words 2>/dev/null | grep -Ev "é|'|-|\.|/|&" > ~/.pwords.dict
+      grep -Eh '^.{3,9}$' /usr/{,share/}dict/words 2>/dev/null | grep -Ev "é|'|-|\\.|/|&" > ~/.pwords.dict
     fi
   fi
 
@@ -1583,39 +1550,31 @@ genphrase() {
   fi
 
   # localise our vars for safety
-  local OPTIND  PphraseWords PphraseNum PphraseCols PphraseSeed PphraseSeedDoc SeedWord totalWords
+  local OPTIND  phraseWords phraseNum phraseSeed phraseSeedDoc seedWord totalWords
 
   # Default the vars
-  PphraseWords=3
-  PphraseNum=1
-  PphraseCols=cat
-  PphraseSeed="False"
-  PphraseSeedDoc="False"
-  SeedWord=
+  phraseWords=3
+  phraseNum=1
+  phraseSeed="False"
+  phraseSeedDoc="False"
+  seedWord=
 
-  while getopts ":Chn:s:Sw:" Flags; do
+  while getopts ":hn:s:Sw:" Flags; do
     case "${Flags}" in
-      (C)  if command -v column &>/dev/null; then
-             PphraseCols=column
-           else
-             printf '%s\n' "[ERROR] genphrase: '-C' requires the 'column' command which was not found."
-             return 1
-           fi
-           ;;
       (h)  printf '%s\n' "" "genphrase - a basic passphrase generator" \
              "" "Optional Arguments:" \
              "-C [attempt to output into columns (Default:off)]" \
              "-h [help]" \
-             "-n [number of passphrases to generate (Default:${PphraseNum})]" \
+             "-n [number of passphrases to generate (Default:${phraseNum})]" \
              "-s [seed your own word.  Use 'genphrase -S' to read about this option.]" \
              "-S [explanation for the word seeding option: -s]" \
-             "-w [number of random words to use (Default:${PphraseWords})]" ""
+             "-w [number of random words to use (Default:${phraseWords})]" ""
            return 0;;
-      (n)  PphraseNum="${OPTARG}";;
-      (s)  PphraseSeed="True"
-           SeedWord="[${OPTARG}]";;
-      (S)  PphraseSeedDoc="True";;
-      (w)  PphraseWords="${OPTARG}";;
+      (n)  phraseNum="${OPTARG}";;
+      (s)  phraseSeed="True"
+           seedWord="[${OPTARG}]";;
+      (S)  phraseSeedDoc="True";;
+      (w)  phraseWords="${OPTARG}";;
       (\?)  echo "ERROR: Invalid option: '-$OPTARG'.  Try 'genphrase -h' for usage." >&2
             return 1;;
       (:)  echo "Option '-$OPTARG' requires an argument. e.g. '-$OPTARG 10'" >&2
@@ -1624,7 +1583,7 @@ genphrase() {
   done
   
   # If -S is selected, print out the documentation for word seeding
-  if [[ "${PphraseSeedDoc}" = "True" ]]; then
+  if [[ "${phraseSeedDoc}" = "True" ]]; then
     printf '%s\n' \
     "======================================================================" \
     "genphrase and the -s option: Why you would want to seed your own word?" \
@@ -1662,13 +1621,13 @@ genphrase() {
   fi
   
   # Next test if a word is being seeded in
-  if [[ "${PphraseSeed}" = "True" ]]; then
+  if [[ "${phraseSeed}" = "True" ]]; then
     # If so, make space for the seed word
-    ((PphraseWords = PphraseWords - 1))
+    ((phraseWords = phraseWords - 1))
   fi
 
   # Calculate the total number of words we might process
-  totalWords=$(( PphraseWords * PphraseNum ))
+  totalWords=$(( phraseWords * phraseNum ))
   
   # Now generate the passphrase(s)
   # First we test to see if shuf is available.  This should now work with the
@@ -1679,24 +1638,25 @@ genphrase() {
     if (( BASH_VERSINFO == 4 )); then
       # Basically we're using shuf and awk to generate lines of random words
       # and assigning each line to an array element
-      mapfile -t wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${PphraseWords}" 'ORS=NR%w?FS:RS')
+      mapfile -t wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${phraseWords}" 'ORS=NR%w?FS:RS')
     # This older method should be ok for this particular usage,
     # but otherwise is not a direct replacement for mapfile
     # See: http://mywiki.wooledge.org/BashFAQ/005#Loading_lines_from_a_file_or_stream
     else
-      IFS=$'\n' read -d '' -r -a wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${PphraseWords}" 'ORS=NR%w?FS:RS')
+      IFS=$'\n' read -d '' -r -a wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${phraseWords}" 'ORS=NR%w?FS:RS')
     fi
 
     # Iterate through each line of the array
     for line in "${wordArray[@]}"; do
       # Convert the line to an array of its own and add any seed word
-      lineArray=( ${SeedWord} ${line} )
+      # shellcheck disable=SC2206
+      lineArray=( "${seedWord}" ${line} )
       if (( BASH_VERSINFO == 4 )); then
         shuf -e "${lineArray[@]^}"
       else
         shuf -e "${lineArray[@]}" | capitalise
       fi | paste -sd '\0' -
-    done | "${PphraseCols}"
+    done
     return 0 # Prevent subsequent run of bash
   
   # Otherwise, we switch to bash.  This is the fastest way I've found to perform this
@@ -1720,7 +1680,7 @@ genphrase() {
 
     # Setup the following vars for iterating through and slicing up 'numArray'
     loWord=0
-    hiWord=$(( PphraseWords - 1 ))
+    hiWord=$(( phraseWords - 1 ))
 
     # Now start working our way through both arrays
     while (( hiWord <= totalWords )); do
@@ -1728,8 +1688,8 @@ genphrase() {
       {
         # We print out a random number with each word, this allows us to sort
         # all of the output, which randomises the location of any seed word
-        printf '%s\n' "${RANDOM} ${SeedWord}"
-        for randInt in "${numArray[@]:loWord:PphraseWords}"; do
+        printf '%s\n' "${RANDOM} ${seedWord}"
+        for randInt in "${numArray[@]:loWord:phraseWords}"; do
           if (( BASH_VERSINFO == 4 )); then
             printf '%s\n' "${RANDOM} ${dictArray[randInt]^}"
           else
@@ -1739,9 +1699,10 @@ genphrase() {
       # Pass the grouped output for some cleanup
       } | sort | awk '{print $2}' | paste -sd '\0' -
       # Iterate our boundary vars up and loop again until completion
+      # shellcheck disable=SC2034
       loWord=$(( hiWord + 1 ))
-      hiWord=$(( hiWord + PphraseWords ))
-    done | "${PphraseCols}"
+      hiWord=$(( hiWord + phraseWords ))
+    done
   fi
 }
 
@@ -1904,7 +1865,7 @@ else
 fi
 
 # Alias the root PS1 into sudo for edge cases
-# shellcheck disable=SC1117
+# shellcheck disable=SC1117,SC2139
 alias sudo="PS1='\\[${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
 
 # Useful for debugging

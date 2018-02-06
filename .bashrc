@@ -310,6 +310,7 @@ capitalise() {
   fi
 
   # If parameter is a file, or stdin is used, action that first
+  # shellcheck disable=SC2119
   if [[ -r $1 ]]||[[ ! -t 0 ]]; then
     # We require an exit condition for 'read', this covers the edge case
     # where a line is read that does not have a newline
@@ -333,7 +334,6 @@ capitalise() {
           # If inString is an integer, skip to the next element
           isinteger "${inString}" && continue
           # Split off the first character and capitalise it
-          # shellcheck disable=SC2119
           inWord=$(echo "${inString:0:1}" | toupper)
           # Print out the uppercase var and the rest of the element
           outWord="${inWord}${inString:1}"
@@ -349,9 +349,8 @@ capitalise() {
   elif [[ -n "$*" ]]; then
     if (( BASH_VERSINFO == 4 )); then
       printf '%s ' "${@^}" | trim
-    else    
+    else
       for inString in "$@"; do
-        # shellcheck disable=SC2119
         inWord=$(echo "${inString:0:1}" | toupper)
         outWord="$inWord${inString:1}"
         printf "%s " "${outWord}"
@@ -1175,8 +1174,13 @@ touch() {
 }
 
 # A small function to trim whitespace either side of a (sub)string
+# shellcheck disable=SC2120
 trim() {
-  awk '{$1=$1};1'
+  if [[ -n "$1" ]]; then
+    awk '{$1=$1};1' <<< "${@}"
+  else
+    awk '{$1=$1};1'
+  fi
 }
 
 # Provide normal, no-options ssh for error checking

@@ -762,7 +762,8 @@ if ! command -v seq &>/dev/null; then
     local first
     # If no parameters are given, print out usage
     if [[ -z "$*" ]]; then
-      printf '%s\n' "Usage: seq LAST" \
+      printf '%s\n' "Usage:"
+      printf '\t%s\n'  "seq LAST" \
         "seq FIRST LAST" \
         "seq FIRST INCR LAST" \
         "Note: this is a step-in function, no args are supported."
@@ -773,10 +774,10 @@ if ! command -v seq &>/dev/null; then
     if [[ -z "$2" ]]; then
       eval "printf -- '%d\\n' {1..$1}"
     # Otherwise, we act accordingly depending on how many parameters we get
-    # This runs with a default increment of 1/-1
+    # This runs with a default increment of 1/-1 for two parameters
     elif [[ -z "$3" ]]; then
       eval "printf -- '%d\\n' {$1..$2}"
-    # and this allows the increment to be defined
+    # and with three parameters we use the second as our increment
     elif [[ -n "$3" ]]; then
       # First we test if the bash version is 4, if so, use native increment
       if (( "${BASH_VERSINFO[0]}" = "4" )); then

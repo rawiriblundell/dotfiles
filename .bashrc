@@ -759,29 +759,45 @@ alias sanitise='sanitize'
 # Check if 'seq' is available, if not, provide a basic replacement function
 if ! command -v seq &>/dev/null; then
   seq() {
+    local first
     # If no parameters are given, print out usage
     if [[ -z "$*" ]]; then
-      printf '%s\n' "Usage: seq x [y]"
+      printf '%s\n' "Usage: seq LAST" \
+        "seq FIRST LAST" \
+        "seq FIRST INCR LAST" \
+        "Note: this is a step-in function, no args are supported."
       return 0
     fi
     
     # If only one number is given, we assume 1..n
-    if [[ -z $2 ]]; then
-      for ((i=1; i<=$1; i++))
-        do printf '%s\n' "$i"
-      done
-      
-    # If two numbers are given in ascending order, we print ascending
-    elif [[ $1 -lt $2 ]]; then
-      for ((i=$1; i<=$2; i++))
-        do printf '%s\n' "$i"
-      done
-      
-    # Otherwise, we assume descending order
-    else
-      for ((i=$1; i>=$2; i--))
-        do printf '%s\n' "$i"
-      done
+    if [[ -z "$2" ]]; then
+      eval "printf -- '%d\\n' {1..$1}"
+    # Otherwise, we act accordingly depending on how many parameters we get
+    # This runs with a default increment of 1/-1
+    elif [[ -z "$3" ]]; then
+      eval "printf -- '%d\\n' {$1..$2}"
+    # and this allows the increment to be defined
+    elif [[ -n "$3" ]]; then
+      # First we test if the bash version is 4, if so, use native increment
+      if (( "${BASH_VERSINFO[0]}" = "4" )); then
+        eval "printf -- '%d\\n' {$1..$3..$2}"
+      # Otherwise, use the manual approach
+      else
+        first="$1"
+        # Simply iterate through in ascending order
+        if (( first < $3 )); then
+          while (( first <= $3 )); do
+            printf '%s\n' "${first}"
+            first=$(( first + $2 ))
+          done
+        # or... undocumented feature: descending order!
+        elif (( first > $3 )); then
+          while (( first >= $3 )); do
+            printf '%s\n' "${first}"
+            first=$(( first - $2 ))
+          done
+        fi
+      fi
     fi
   }
 fi

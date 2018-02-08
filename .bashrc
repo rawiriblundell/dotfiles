@@ -788,13 +788,13 @@ if ! command -v seq &>/dev/null; then
         # Simply iterate through in ascending order
         if (( first < $3 )); then
           while (( first <= $3 )); do
-            printf '%s\n' "${first}"
+            printf -- '%d\n' "${first}"
             first=$(( first + $2 ))
           done
         # or... undocumented feature: descending order!
         elif (( first > $3 )); then
           while (( first >= $3 )); do
-            printf '%s\n' "${first}"
+            printf -- '%d\n' "${first}"
             first=$(( first - $2 ))
           done
         fi

@@ -652,7 +652,7 @@ quickserve() {
 
 # Get a number of random integers using $RANDOM with debiased modulo
 randInt() {
-  local nCount nMax nMin randThres i
+  local nCount nMin nMax nMod randThres i xInt
   nCount="${1:-1}"
   nMin="${2:-1}"
   nMax="${3:-32767}"

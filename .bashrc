@@ -1386,7 +1386,7 @@ genpasswd() {
              "-D [Require at least one digit (Default:off)]" \
              "-h [Help]" \
              "-K [Koremutake mode.  Uses syllables rather than characters, meaning more phonetical pwds." \
-             "    Note: In this mode, character counts = syllable count and different defaults are used." \
+             "    Note: In this mode, character counts = syllable count and different defaults are used]" \
              "-n [Number of passwords (Default:${pwdNum})]" \
              "-s [Strong mode, seeds a limited amount of special characters into the mix (Default:off)]" \
              "-S [Stronger mode, complete mix of characters (Default:off)]" \

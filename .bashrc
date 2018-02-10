@@ -1205,7 +1205,7 @@ unssh() {
   /usr/bin/ssh "$@"
 }
 
-# Provide 'up', so instead of 'cd ../../../' you simply type 'up 3'
+# Provide 'up', so instead of e.g. 'cd ../../../' you simply type 'up 3'
 up() {
   if (( "$#" < 1 )); then
     cd ..
@@ -1219,7 +1219,7 @@ up() {
 }
 
 # This is based on one of the best urandom+bash random integer scripts IMHO
-# This is intended to be used by the shuf step-in function
+# FYI: randInt is significantly faster
 # https://unix.stackexchange.com/a/413890
 urandInt() {
   local intCount rangeMin rangeMax range bytes t maxvalue mult hexrandom

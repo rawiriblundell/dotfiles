@@ -447,11 +447,11 @@ die() {
 # This seems terse, but the vars are the same as their 'date' formats
 epoch() {
   local y j h m s yo
-  # POSIX portable method to grab what we need from 'date'
-	# Note this indentation is hard-tabbed
-	IFS=: read -r y j h m s <<-EOF
-	$(date -u +%Y:%j:%H:%M:%S)
-	EOF
+
+# POSIX portable way to assign all our vars
+IFS=: read -r y j h m s <<-EOF
+$(date -u +%Y:%j:%H:%M:%S)
+EOF
 
   # yo = year offset
   yo=$(( y - 1600 ))

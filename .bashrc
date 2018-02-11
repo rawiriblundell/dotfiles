@@ -816,11 +816,12 @@ if ! command -v shuf &>/dev/null; then
       return 1
     fi
 
-    while getopts ":e:i:hn:rv-:" optFlags; do
+    while getopts ":e:i:hn:rv:" optFlags; do
       case "${optFlags}" in
         (e) inputStrings=true
             shufArray=( "${OPTARG}" )
             until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
+              # shellcheck disable=SC2207
               shufArray+=($(eval "echo \${$OPTIND}"))
               OPTIND=$((OPTIND + 1))
             done;;
@@ -865,8 +866,8 @@ if ! command -v shuf &>/dev/null; then
     # If we're dealing with a file, feed that into file descriptor 6
     if [[ -r "$1" ]]; then
       # Size it up first and adjust nCount if necessary
-      if [[ -n "${nCount}" ]] && (( $(wc -l < $1) < nCount )); then
-        nCount=$(wc -l < $1)
+      if [[ -n "${nCount}" ]] && (( $(wc -l < "$1") < nCount )); then
+        nCount=$(wc -l < "$1")
       fi
       exec 6< "$1"
     # Cater for the -i option
@@ -939,12 +940,14 @@ if ! command -v shuf &>/dev/null; then
         if (( n < ${#shufArray[@]} )) && [[ -n "${shufArray[n]}" ]]; then
           printf -- '%s\n' "${shufArray[n]}"
           unset -- 'shufArray[n]'
+          # shellcheck disable=SC2206
           shufArray=( ${shufArray[@]} )
         fi
       done  
     } | headOut
-  exec 0<&6 6<&-
-}
+    exec 0<&6 6<&-
+  }
+fi
 
 # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
 solresize() {

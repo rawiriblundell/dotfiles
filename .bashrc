@@ -914,13 +914,16 @@ if ! command -v shuf &>/dev/null; then
 
     # Start capturing everything for headOut()
     {
+      # Turn off globbing for safety
+      set -f
+      
       # Suck up as much input as required or possible into the reservoir
       mapfile -u 6 -n "${nCount:-$reservoirSize}" -t shufArray
 
       # If there's more input, we start selecting random points in
       # the reservoir to evict and replace with incoming data
       i="${#shufArray[@]}"
-      while read -r -u 6; do
+      while IFS=$'\n' read -r -u 6; do
         n=$(randInt 1 1 "$i")
         (( n-- ))
         if (( n < ${#shufArray[@]} )); then
@@ -941,9 +944,10 @@ if ! command -v shuf &>/dev/null; then
           printf -- '%s\n' "${shufArray[n]}"
           unset -- 'shufArray[n]'
           # shellcheck disable=SC2206
-          shufArray=( ${shufArray[@]} )
+          shufArray=( "${shufArray[@]}" )
         fi
-      done  
+      done
+      set +f
     } | headOut
     exec 0<&6 6<&-
   }

@@ -413,6 +413,11 @@ checkyaml() {
   fi
 }
 
+# Close an open file descriptor
+closefd() {
+  eval "exec $1>&-" || return 1
+}
+
 # Indent code by four spaces, useful for posting in markdown
 codecat() {
   sed 's/^/    /' "$@"
@@ -599,6 +604,19 @@ llh() {
 # Backup a file with the extension '.old'
 old() { 
   cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}
+}
+
+# Open a file descriptor... needs a little more work
+openfd() {
+  local fd
+  fd="$(2:-$(testfd)}"
+  if [[ -r "$1" ]]; then
+    eval "exec $fd< $1"
+  elif [[ "$1" = "-" ]]; then
+    eval "exec $fd<&0"
+  else
+    return 1
+  fi
 }
 
 # A function to print a specific line from a file
@@ -1000,6 +1018,18 @@ if ! command -v tac &>/dev/null; then
     fi
   }
 fi
+
+# A terse function to get the next available file descriptor
+# from https://stackoverflow.com/a/41626332
+# This skips fd5 for historical reasons
+testfd() {
+  local fd max
+  fd="${1:-2}" max=$(ulimit -n)
+  (( fd == 5 )) && continue
+  while ((++fd < max)); do
+    ! true <&$fd && break
+  done 2>&- && echo $fd
+}
 
 # Throttle stdout
 throttle() {

@@ -365,14 +365,18 @@ capitalise() {
 # Print the given text in the center of the screen.
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
-  width=$(tput cols);
-  str="$*";
-  len=${#str};
-  [ "${len}" -ge "${width}" ] && echo "$str" && return;
-  for ((i = 0; i < $((((width - len)) / 2)); i++)); do
-    echo -n " ";
-  done;
-  echo "$str";
+  width="${COLUMNS:-$(tput cols)}"
+  if [[ -r "$1" ]]; then
+    pr -o "$(( width/2/2 )) -t < "$1"
+  else
+    str="$*";
+    len=${#str};
+    (( len >= width )) && echo "$str" && return;
+    for ((i = 0; i < $((((width - len)) / 2)); i++)); do
+      echo -n " ";
+    done;
+    echo "$str";
+  fi
 }
 
 # Check YAML syntax

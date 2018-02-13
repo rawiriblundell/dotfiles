@@ -1029,10 +1029,11 @@ fi
 testfd() {
   local fd max
   fd="${1:-2}" max=$(ulimit -n)
-  (( fd == 5 )) && continue
+  (( fd-- ))
   while ((++fd < max)); do
+    (( fd == 5 )) && continue
     ! true <&$fd && break
-  done 2>&- && echo $fd
+  done 2>&- && echo "$fd"
 }
 
 # Throttle stdout

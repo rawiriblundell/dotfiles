@@ -613,6 +613,7 @@ old() {
 # Open a file descriptor... needs a little more work
 openfd() {
   local fd
+  # shellcheck disable=SC2119
   fd="${2:-$(testfd)}"
   if [[ -r "$1" ]]; then
     eval "exec $fd< $1"
@@ -1028,6 +1029,7 @@ fi
 # This skips fd5 for historical reasons
 testfd() {
   local fd max
+  # shellcheck disable=SC2120
   fd="${1:-2}" max=$(ulimit -n)
   (( fd-- ))
   while ((++fd < max)); do

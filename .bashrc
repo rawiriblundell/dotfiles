@@ -367,7 +367,7 @@ capitalise() {
 center() {
   width="${COLUMNS:-$(tput cols)}"
   if [[ -r "$1" ]]; then
-    pr -o "$(( width/2/2 )) -t < "$1"
+    pr -o "$(( width/2/2 ))" -t < "$1"
   else
     str="$*";
     len=${#str};
@@ -613,7 +613,7 @@ old() {
 # Open a file descriptor... needs a little more work
 openfd() {
   local fd
-  fd="$(2:-$(testfd)}"
+  fd="${2:-$(testfd)}"
   if [[ -r "$1" ]]; then
     eval "exec $fd< $1"
   elif [[ "$1" = "-" ]]; then

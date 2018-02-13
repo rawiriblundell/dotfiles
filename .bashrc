@@ -195,6 +195,7 @@ fi
 # Aliases
 
 # If .curl-format exists, AND 'curl' is available, enable curl-trace alias
+# See: https://github.com/wickett/curl-trace
 if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
 fi

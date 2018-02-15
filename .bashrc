@@ -620,28 +620,24 @@ llh() {
 
 if ! command -v mapfile >/dev/null 2>&1; then
   # This is simply the appropriate section of 'help mapfile', edited, as a function:
-  mapfile-help() {
+  mapfilehelp() {
     # Hey, this exercise is for an array-capable shell, so let's use an array for this!
     # This gets around the mess of heredocs and tabbed indentation
 
     # shellcheck disable=SC2054,SC2102
     local mapfileHelpArray=(
-    "mapfile [-n count] [-O origin] [-s count] [-t] [-u fd] [array]"
-    "readarray [-n count] [-O origin] [-s count] [-t] [-u fd] [array]"
+    "mapfile [-t] [-u fd] [array]"
+    "readarray [-t] [-u fd] [array]"
     ""
     "      Read  lines  from the standard input into the indexed array variable ARRAY, or"
     "      from file descriptor FD if the -u option is supplied.  The variable MAPFILE"
     "      is the default ARRAY."
     ""
     "      Options:"
-    "        -n     Copy at most count lines.  If count is 0, all lines are copied."
-    "        -O     Begin assigning to array at index origin."
-    "               The default index is 0 in ksh/bash and 1 in zsh."
-    "        -s     Discard the first count lines read."
-    "        -t     Remove a trailing newline from each line read."
+    "        -t     Nothing.  This option is here only for drop-in compatibility"
+    "               'mapfile' behaviour without '-t' cannot be replicated, '-t' is almost"
+    "               always used, so we provide this dummy option for convenience"
     "        -u     Read lines from file descriptor FD instead of the standard input."
-    ""    
-    "      This version does not support '-C'/'-c'"
     ""
     "      If not supplied with an explicit origin, mapfile will clear array before assigning to it."
     ""
@@ -652,22 +648,19 @@ if ! command -v mapfile >/dev/null 2>&1; then
   }
 
   mapfile() {
-    local elementCount elementStart elementDiscard elementTotal
-    local fileDescr index MAPFILE MAPFILE2
+    local fileDescr index MAPFILE
     # Handle our various options
-    while getopts ":hn:O:s:tu:" flags; do
+    while getopts ":htu:" flags; do
       case "${flags}" in
-        (h) mapfile-help; return 0;;
-        (n) elementCount="${OPTARG}";;
-        (O) elementStart="${OPTARG}";;
-        (s) elementDiscard="${OPTARG}";;
+        (h) mapfilehelp; return 0;;
         (t) :;; #Only here for compatibility
         (u) fileDescr="${OPTARG}";;
-        (*) mapfile-help; return 1;;
+        (*) mapfilehelp; return 1;;
       esac
     done
     shift "$(( OPTIND - 1 ))"
 
+    # This test is currently unnecessary, but might be useful if -O is added
     # ksh and bash start indexing at 0, zsh and possibly others start at 1
     # Note: $SHELL is the parent shell
     # e.g. login to 'bash', then run 'zsh' and $SHELL will be '/bin/bash'
@@ -684,19 +677,16 @@ if ! command -v mapfile >/dev/null 2>&1; then
     set -f        # Turn off globbing
     set +H        # Prevent parsing of '!' via history substitution
 
-    {
-      # If we're discarding elements (-s), then fast forward through that
-      if [ -n "${elementDiscard}" ]; then
-        for ((i=0;i<elementDiscard;i++)); do
-          read -r
-        done
-      fi
-      # Next, we read line by line and assign each to the appropriate element
-      while read -d '' -r || (( index < ; do
-        eval "${1:-MAPFILE}[$index]=\"\${REPLY}\""
-        (( index++ ))
-      done 
-    } <&"${fileDescr:-0}"
+    # We try our known shells before going with a loop
+    if stringContains bash "$SHELL"; then
+      eval "read -d '' -r -a \"\${1:-MAPFILE}\""
+    elif stringContains ksh "$SHELL" || stringContains zsh "$SHELL"; then
+      eval "read -d '' -r -A \"\${1:-MAPFILE}\""
+    else
+      while read -r; do
+        eval "${1:-MAPFILE}+=( \"\${REPLY}\" )"
+      done
+    fi <&"${fileDescr:-0}"
 
     # Set IFS etc back to normal
     IFS="${oldIFS}"

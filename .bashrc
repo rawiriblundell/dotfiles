@@ -606,6 +606,107 @@ llh() {
   fi
 }
 
+# If 'mapfile' is not available, offer it as a step-in function
+# Written as an attempt at http://wiki.bash-hackers.org/commands/builtin/mapfile?s[]=mapfile#to_do
+#   "Create an implementation as a shell function that's portable between Ksh, Zsh, and Bash 
+#    (and possibly other bourne-like shells with array support)."
+
+# Potentially useful resources: 
+# http://cfajohnson.com/shell/arrays/
+# https://stackoverflow.com/a/32931403
+
+# Known issue: No traps!  This means IFS might be left altered if 
+# the function is cancelled or fails in some way
+
+if ! command -v mapfile >/dev/null 2>&1; then
+  # This is simply the appropriate section of 'help mapfile', edited, as a function:
+  mapfile-help() {
+    # Hey, this exercise is for an array-capable shell, so let's use an array for this!
+    # This gets around the mess of heredocs and tabbed indentation
+
+    # shellcheck disable=SC2054,SC2102
+    local mapfileHelpArray=(
+    "mapfile [-n count] [-O origin] [-s count] [-t] [-u fd] [array]"
+    "readarray [-n count] [-O origin] [-s count] [-t] [-u fd] [array]"
+    ""
+    "      Read  lines  from the standard input into the indexed array variable ARRAY, or"
+    "      from file descriptor FD if the -u option is supplied.  The variable MAPFILE"
+    "      is the default ARRAY."
+    ""
+    "      Options:"
+    "        -n     Copy at most count lines.  If count is 0, all lines are copied."
+    "        -O     Begin assigning to array at index origin."
+    "               The default index is 0 in ksh/bash and 1 in zsh."
+    "        -s     Discard the first count lines read."
+    "        -t     Remove a trailing newline from each line read."
+    "        -u     Read lines from file descriptor FD instead of the standard input."
+    ""    
+    "      This version does not support '-C'/'-c'"
+    ""
+    "      If not supplied with an explicit origin, mapfile will clear array before assigning to it."
+    ""
+    "      mapfile returns successfully unless an invalid option or option argument is supplied," 
+    "      ARRAY is invalid or unassignable, or if ARRAY is not an indexed array."
+    )
+    printf '%s\n' "${mapfileHelpArray[@]}"
+  }
+
+  mapfile() {
+    local elementCount elementStart elementDiscard elementTotal
+    local fileDescr index MAPFILE MAPFILE2
+    # Handle our various options
+    while getopts ":hn:O:s:tu:" flags; do
+      case "${flags}" in
+        (h) mapfile-help; return 0;;
+        (n) elementCount="${OPTARG}";;
+        (O) elementStart="${OPTARG}";;
+        (s) elementDiscard="${OPTARG}";;
+        (t) :;; #Only here for compatibility
+        (u) fileDescr="${OPTARG}";;
+        (*) mapfile-help; return 1;;
+      esac
+    done
+    shift "$(( OPTIND - 1 ))"
+
+    # ksh and bash start indexing at 0, zsh and possibly others start at 1
+    # Note: $SHELL is the parent shell
+    # e.g. login to 'bash', then run 'zsh' and $SHELL will be '/bin/bash'
+    if stringContains zsh "$SHELL"; then
+      index="${elementStart:-1}"
+      countIndex=0
+    else
+      index="${elementStart:-0}"
+      countIndex=1
+    fi
+
+    oldIFS="$IFS" # Capture IFS so that we can set it back
+    IFS=$'\n'     # Temporarily set IFS to newlines
+    set -f        # Turn off globbing
+    set +H        # Prevent parsing of '!' via history substitution
+
+    {
+      # If we're discarding elements (-s), then fast forward through that
+      if [ -n "${elementDiscard}" ]; then
+        for ((i=0;i<elementDiscard;i++)); do
+          read -r
+        done
+      fi
+      # Next, we read line by line and assign each to the appropriate element
+      while read -d '' -r || (( index < ; do
+        eval "${1:-MAPFILE}[$index]=\"\${REPLY}\""
+        (( index++ ))
+      done 
+    } <&"${fileDescr:-0}"
+
+    # Set IFS etc back to normal
+    IFS="${oldIFS}"
+    set +f
+    set -H
+  }
+  # And finally alias 'readarray'
+  alias readarray='mapfile'
+fi
+
 # Backup a file with the extension '.old'
 old() { 
   cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}
@@ -1010,6 +1111,15 @@ ssh-fingerprint() {
   fi
   ssh-keygen -l -f "${fingerprint}"
   rm -f "${fingerprint}"
+}
+
+# Test if a string contains a substring
+# Example: stringContains needle haystack
+stringContains() { 
+  case "$2" in 
+    (*$1*)  return 0 ;; 
+    (*)     return 1 ;; 
+  esac
 }
 
 # Provide a very simple 'tac' step-in function

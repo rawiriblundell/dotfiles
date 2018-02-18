@@ -626,14 +626,16 @@ if ! command -v mapfile >/dev/null 2>&1; then
 
     # shellcheck disable=SC2054,SC2102
     local mapfileHelpArray=(
-    "mapfile [-t] [-u fd] [array]"
-    "readarray [-t] [-u fd] [array]"
+    "mapfile [-n count] [-s count] [-t] [-u fd] [array]"
+    "readarray [-n count] [-s count] [-t] [-u fd] [array]"
     ""
     "      Read  lines  from the standard input into the indexed array variable ARRAY, or"
     "      from file descriptor FD if the -u option is supplied.  The variable MAPFILE"
     "      is the default ARRAY."
     ""
     "      Options:"
+    "        -n     Copy at most count lines.  If count is 0, all lines are copied."
+    "        -s     Discard the first count lines read."
     "        -t     Nothing.  This option is here only for drop-in compatibility"
     "               'mapfile' behaviour without '-t' cannot be replicated, '-t' is almost"
     "               always used, so we provide this dummy option for convenience"
@@ -648,45 +650,73 @@ if ! command -v mapfile >/dev/null 2>&1; then
   }
 
   mapfile() {
-    local fileDescr index MAPFILE
+    local elementCount elementDiscard fileDescr arrIndex readOpt MAPFILE
     # Handle our various options
-    while getopts ":htu:" flags; do
+    while getopts ":hn:s:tu:" flags; do
       case "${flags}" in
-        (h) mapfilehelp; return 0;;
+        (h) mapfile-help; return 0;;
+        (n) elementCount="${OPTARG}";;
+        (s) elementDiscard="${OPTARG}";;
         (t) :;; #Only here for compatibility
         (u) fileDescr="${OPTARG}";;
-        (*) mapfilehelp; return 1;;
+        (*) mapfile-help; return 1;;
       esac
     done
     shift "$(( OPTIND - 1 ))"
 
-    # This test is currently unnecessary, but might be useful if -O is added
-    # ksh and bash start indexing at 0, zsh and possibly others start at 1
-    # Note: $SHELL is the parent shell
-    # e.g. login to 'bash', then run 'zsh' and $SHELL will be '/bin/bash'
-    if stringContains zsh "$SHELL"; then
-      index="${elementStart:-1}"
-      countIndex=0
-    else
-      index="${elementStart:-0}"
-      countIndex=1
-    fi
+    # Note: $SHELL is not a reliable test, but in this case it should be ok
+    # e.g. from 'bash', run 'zsh'.  echo $SHELL = /bin/bash. i.e. parent proc.
+    # elementStart isn't used, it's here in case someone wants to add '-O'
+    case "$SHELL" in
+      (*ksh)    arrIndex="${elementStart:-0}"
+                readOpt="-A"
+                ;;
+      (*zsh)    arrIndex="${elementStart:-1}"
+                readOpt="-A"
+                ;;
+      (*bash|*) arrIndex="${elementStart:-0}"
+                readOpt="-a"
+                ;;
+    esac
 
     oldIFS="$IFS" # Capture IFS so that we can set it back
     IFS=$'\n'     # Temporarily set IFS to newlines
     set -f        # Turn off globbing
     set +H        # Prevent parsing of '!' via history substitution
 
-    # We try our known shells before going with a loop
-    if stringContains bash "$SHELL"; then
-      eval "read -d '' -r -a \"\${1:-MAPFILE}\""
-    elif stringContains ksh "$SHELL" || stringContains zsh "$SHELL"; then
-      eval "read -d '' -r -A \"\${1:-MAPFILE}\""
-    else
-      while read -r; do
-        eval "${1:-MAPFILE}+=( \"\${REPLY}\" )"
+    # If a linecount is set, we build the array element by element
+    if [ -n "${elementCount}" ] && (( elementCount > 0 )); then
+      # First, if we're discarding elements:
+      if [ -n "${elementDiscard}" ]; then
+        for ((i=0;i<elementDiscard;i++)); do
+          read -r
+          echo "${REPLY}" >/dev/null 2>&1
+        done
+      fi
+      # Next, read the input stream into MAPFILE
+      i="${arrIndex}"
+      while (( i < elementCount )); do
+        read -r
+        MAPFILE+=( "${REPLY}" )
+        (( i++ ))
       done
+    # Otherwise we just read the whole lot in
+    else
+      read -d '' -r "${readOpt}" MAPFILE
+
+      # If elementDiscard is declared, then we can quickly reindex like so:
+      if [ -n "${elementDiscard}" ]; then
+        MAPFILE=( "${MAPFILE[@]:$elementDiscard}" )
+      fi
     fi <&"${fileDescr:-0}"
+
+    # Finally, rename the array if required
+    # I would love to know a better way to handle this
+    if [ -n "$1" ]; then
+      for element in "${MAPFILE[@]}"; do
+        eval "$1+=( \"\${element}\" )"
+      done
+    fi
 
     # Set IFS etc back to normal
     IFS="${oldIFS}"

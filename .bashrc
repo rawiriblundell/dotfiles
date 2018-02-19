@@ -540,6 +540,13 @@ flocate() {
   done
 }
 
+# Because $SHELL is a bad thing to test against, we provide this function
+# This won't work for 'fish', which needs 'ps -p %self'
+# Good thing we don't care about 'fish'
+getShell() {
+  ps -p "$$" | tail -n 1 | awk '{print $NF}'
+}
+
 # Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
 histrank() { 
   HISTTIMEFORMAT="%y/%m/%d %T " history \
@@ -548,6 +555,11 @@ histrank() {
     | uniq -c \
     | sort -nk1 \
     | tail -n "${1:-$(tput lines)}"
+}
+
+# Write a horizontal line of characters
+hr() {
+  printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
 }
 
 # Test if a given value is an integer
@@ -565,11 +577,6 @@ if ! command -v let &>/dev/null; then
     return "$((!($1)))"
   }
 fi
-
-# Write a horizontal line of characters
-hr() {
-  printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
-}
 
 # A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
 # This provides human readable 'ls' output for systems

@@ -1260,28 +1260,66 @@ if ! command -v timeout &>/dev/null; then
 fi
 
 # Functions to quickly upper or lowercase some input
+# perl option: perl -e "while (<STDIN>) { print lc; }"
 # shellcheck disable=SC2120
 tolower() {
-  if command -v awk >/dev/null 2>&1; then
-    awk '{print tolower($0)}'
-  elif command -v tr >/dev/null 2>&1; then
-    tr '[:upper:]' '[:lower:]'
+  if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
+    if (( BASH_VERSINFO == 4 )); then
+      printf -- '%s ' "${*,,}" | paste -sd '\0' -
+    elif command -v awk >/dev/null 2>&1; then
+      printf -- '%s ' "$*" | awk '{print tolower($0)}'
+    elif command -v tr >/dev/null 2>&1; then
+      printf -- '%s ' "$*" | tr '[:upper:]' '[:lower:]'
+    else
+      printf '%s\n' "tolower - no available method found" >&2
+      return 1
+    fi
   else
-    printf '%s\n' "tolower - no available method found" >&2
-    return 1
-  fi < "${1:-/dev/stdin}"
+    if (( BASH_VERSINFO == 4 )); then
+      while read -r; do
+        printf '%s\n' "${REPLY,,}"
+      done
+      [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY,,}"
+    elif command -v awk >/dev/null 2>&1; then
+      awk '{print tolower($0)}'
+    elif command -v tr >/dev/null 2>&1; then
+      tr '[:upper:]' '[:lower:]'
+    else
+      printf '%s\n' "tolower - no available method found" >&2
+      return 1
+    fi < "${1:-/dev/stdin}"
+  fi
 }
 
+# perl option: perl -e "while (<STDIN>) { print uc; }"
 # shellcheck disable=SC2120
 toupper() {
-  if command -v awk >/dev/null 2>&1; then
-    awk '{print toupper($0)}'
-  elif command -v tr >/dev/null 2>&1; then
-    tr '[:lower:]' '[:upper:]'
+  if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
+    if (( BASH_VERSINFO == 4 )); then
+      printf -- '%s ' "${*^^}" | paste -sd '\0' -
+    elif command -v awk >/dev/null 2>&1; then
+      printf -- '%s ' "$*" | awk '{print toupper($0)}'
+    elif command -v tr >/dev/null 2>&1; then
+      printf -- '%s ' "$*" | tr '[:lower:]' '[:upper:]'
+    else
+      printf '%s\n' "toupper - no available method found" >&2
+      return 1
+    fi
   else
-    printf '%s\n' "toupper - no available method found" >&2
-    return 1
-  fi < "${1:-/dev/stdin}"
+    if (( BASH_VERSINFO == 4 )); then
+      while read -r; do
+        printf '%s\n' "${REPLY^^}"
+      done
+      [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY^^}"
+    elif command -v awk >/dev/null 2>&1; then
+      awk '{print toupper($0)}'
+    elif command -v tr >/dev/null 2>&1; then
+      tr '[:lower:]' '[:upper:]'
+    else
+      printf '%s\n' "toupper - no available method found" >&2
+      return 1
+    fi < "${1:-/dev/stdin}"
+  fi
 }
 
 # Add -p option to 'touch' to combine 'mkdir -p' and 'touch'

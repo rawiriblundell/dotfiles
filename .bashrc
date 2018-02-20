@@ -657,7 +657,7 @@ if ! command -v mapfile >/dev/null 2>&1; then
   }
 
   mapfile() {
-    local elementCount elementDiscard fileDescr arrIndex IFS
+    local elementCount elementDiscard fileDescr IFS
     unset MAPFILE
     # Handle our various options
     while getopts ":hn:s:tu:" flags; do
@@ -685,9 +685,9 @@ if ! command -v mapfile >/dev/null 2>&1; then
       done
       # Next, read the input stream into MAPFILE
       i=0
-      while (( i < elementCount )); do
-        read -r
-        [ -z "${REPLY}" ] && break
+      eof=
+      while (( i < elementCount )) && [ -z "${eof}" ]; do
+        read -r || eof=true
         MAPFILE+=( "${REPLY}" )
         (( i++ ))
       done

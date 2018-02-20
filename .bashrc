@@ -657,7 +657,8 @@ if ! command -v mapfile >/dev/null 2>&1; then
   }
 
   mapfile() {
-    local elementCount elementDiscard fileDescr arrIndex readOpt MAPFILE
+    local elementCount elementDiscard fileDescr arrIndex IFS
+    unset MAPFILE
     # Handle our various options
     while getopts ":hn:s:tu:" flags; do
       case "${flags}" in
@@ -671,22 +672,6 @@ if ! command -v mapfile >/dev/null 2>&1; then
     done
     shift "$(( OPTIND - 1 ))"
 
-    # Note: $SHELL is not a reliable test, but in this case it should be ok
-    # e.g. from 'bash', run 'zsh'.  echo $SHELL = /bin/bash. i.e. parent proc.
-    # elementStart isn't used, it's here in case someone wants to add '-O'
-    case "$SHELL" in
-      (*ksh)    arrIndex="${elementStart:-0}"
-                readOpt="-A"
-                ;;
-      (*zsh)    arrIndex="${elementStart:-1}"
-                readOpt="-A"
-                ;;
-      (*bash|*) arrIndex="${elementStart:-0}"
-                readOpt="-a"
-                ;;
-    esac
-
-    oldIFS="$IFS" # Capture IFS so that we can set it back
     IFS=$'\n'     # Temporarily set IFS to newlines
     set -f        # Turn off globbing
     set +H        # Prevent parsing of '!' via history substitution
@@ -694,22 +679,24 @@ if ! command -v mapfile >/dev/null 2>&1; then
     # If a linecount is set, we build the array element by element
     if [ -n "${elementCount}" ] && (( elementCount > 0 )); then
       # First, if we're discarding elements:
-      if [ -n "${elementDiscard}" ]; then
-        for ((i=0;i<elementDiscard;i++)); do
-          read -r
-          echo "${REPLY}" >/dev/null 2>&1
-        done
-      fi
+      for ((i=0;i<elementDiscard;i++)); do
+        read -r
+        echo "${REPLY}" >/dev/null 2>&1
+      done
       # Next, read the input stream into MAPFILE
-      i="${arrIndex}"
+      i=0
       while (( i < elementCount )); do
         read -r
+        [ -z "${REPLY}" ] && break
         MAPFILE+=( "${REPLY}" )
         (( i++ ))
       done
     # Otherwise we just read the whole lot in
     else
-      read -d '' -r "${readOpt}" MAPFILE
+      while IFS= read -r; do
+        MAPFILE+=( "${REPLY}" )
+      done
+      [[ "${REPLY}" ]] && MAPFILE+=( "${REPLY}" )
 
       # If elementDiscard is declared, then we can quickly reindex like so:
       if [ -n "${elementDiscard}" ]; then
@@ -720,13 +707,13 @@ if ! command -v mapfile >/dev/null 2>&1; then
     # Finally, rename the array if required
     # I would love to know a better way to handle this
     if [ -n "$1" ]; then
+      # shellcheck disable=SC2034
       for element in "${MAPFILE[@]}"; do
         eval "$1+=( \"\${element}\" )"
       done
     fi
 
-    # Set IFS etc back to normal
-    IFS="${oldIFS}"
+    # Set f and H back to normal
     set +f
     set -H
   }

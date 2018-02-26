@@ -544,7 +544,8 @@ flocate() {
 # This won't work for 'fish', which needs 'ps -p %self'
 # Good thing we don't care about 'fish'
 getShell() {
-  ps -p "$$" | tail -n 1 | awk '{print $NF}'
+  ps -o comm= -p $$
+  #ps -p "$$" | tail -n 1 | awk '{print $NF}'
 }
 
 # Sort history by most used commands, can optionally print n lines (e.g. histrank [n])

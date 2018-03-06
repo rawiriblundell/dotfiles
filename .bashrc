@@ -433,7 +433,7 @@ closefd() {
 
 # Indent code by four spaces, useful for posting in markdown
 codecat() {
-  sed 's/^/    /' "$@"
+  indent 4 "$1"
 }
 
 # Provide a function to compress common compressed Filetypes
@@ -569,6 +569,14 @@ histrank() {
 # Write a horizontal line of characters
 hr() {
   printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
+}
+
+# Function to indent text by n spaces (default: 2 spaces)
+indent() {
+  local identWidth
+  identWidth="${1:-2}"
+  identWidth=$(eval "printf '%.0s ' {1..$identWidth}")
+  sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
 }
 
 # Test if a given value is an integer

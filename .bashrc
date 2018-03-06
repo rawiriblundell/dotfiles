@@ -291,6 +291,14 @@ bytestohuman() {
   return $?
 }
 
+# Convert comma separated list to long format e.g. id user | tr "," "\n"
+# See also n2c() for the opposite behaviour
+c2n() {
+  while read -r; do 
+    printf -- '%s\n' "${REPLY}" | tr "," "\n"
+  done < "${1:-/dev/stdin}
+}
+
 # Capitalise words
 # This is a bash-portable way to do this.
 # To achieve with awk, use awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
@@ -721,6 +729,12 @@ if ! command -v mapfile >/dev/null 2>&1; then
   # And finally alias 'readarray'
   alias readarray='mapfile'
 fi
+
+# Convert multiple lines to comma separated format
+# See also c2n() for the opposite behaviour
+n2c() {
+  paste -sd ',' "${1:--}"
+}
 
 # Backup a file with the extension '.old'
 old() { 

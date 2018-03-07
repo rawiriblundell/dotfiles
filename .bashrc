@@ -630,6 +630,18 @@ llh() {
   fi
 }
 
+# Trim whitespace from the left hand side of an input
+# Requires: shopt -s extglob
+ltrim() {
+  if [[ -r "$1" ]]||[[ -z "$1" ]]; then
+    while read -r; do
+      printf -- '%s\n' "${REPLY##+([[:space:]])}"
+    done < "${1:-/dev/stdin}"
+  else
+    printf -- '%s\n' "${@##+([[:space:]])}"
+  fi
+}
+
 # If 'mapfile' is not available, offer it as a step-in function
 # Written as an attempt at http://wiki.bash-hackers.org/commands/builtin/mapfile?s[]=mapfile#to_do
 #   "Create an implementation as a shell function that's portable between Ksh, Zsh, and Bash 
@@ -909,6 +921,18 @@ rolesetup() {
   else
     mkdir -p "$1"/{defaults,files,handlers,meta,templates,tasks,vars}
     printf '%s\n' "---" > "$1"/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
+  fi
+}
+
+# Trim whitespace from the right hand side of an input
+# Requires: shopt -s extglob
+rtrim() {
+  if [[ -r "$1" ]]||[[ -z "$1" ]]; then
+    while read -r; do
+      printf -- '%s\n' "${REPLY%%+([[:space:]])}"
+    done < "${1:-/dev/stdin}"
+  else
+    printf -- '%s\n' "${@%%+([[:space:]])}"
   fi
 }
 
@@ -1399,7 +1423,7 @@ touch() {
 # shellcheck disable=SC2120
 trim() {
   if [[ -n "$1" ]]; then
-    awk '{$1=$1};1' <<< "${@}"
+    printf -- '%s\n' "${@}" | awk '{$1=$1};1'
   else
     awk '{$1=$1};1'
   fi

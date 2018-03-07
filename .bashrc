@@ -138,6 +138,9 @@ settitle() {
 stty ixany
 stty ixoff -ixon
 
+# Enable extended globbing
+shopt -s extglob
+
 ################################################################################
 # Programmable Completion (Tab Completion)
 

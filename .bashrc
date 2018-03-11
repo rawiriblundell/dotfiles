@@ -299,7 +299,7 @@ bytestohuman() {
 c2n() {
   while read -r; do 
     printf -- '%s\n' "${REPLY}" | tr "," "\n"
-  done < "${1:-/dev/stdin}
+  done < "${1:-/dev/stdin}"
 }
 
 # Capitalise words

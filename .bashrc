@@ -757,7 +757,7 @@ fi
 # Replicates the absolute basic functionality of a real 'members' command
 if ! command -v members >/dev/null 2>&1; then
   members() {
-    [ $(getent group "${1?No Group Supplied}" | cut -d ":" -f4-) ] \
+    [ "$(getent group "${1?No Group Supplied}" | cut -d ":" -f4-)" ] \
       && getent group "$1" | cut -d ":" -f4-
   }
 fi

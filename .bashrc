@@ -635,6 +635,8 @@ llh() {
 
 # Trim whitespace from the left hand side of an input
 # Requires: shopt -s extglob
+# awk alternative (portability unknown/untested):
+# awk '{ sub(/^[ \t]+/, ""); print }'
 ltrim() {
   if [[ -r "$1" ]]||[[ -z "$1" ]]; then
     while read -r; do
@@ -938,6 +940,8 @@ rolesetup() {
 
 # Trim whitespace from the right hand side of an input
 # Requires: shopt -s extglob
+# awk alternative (portability unknown/untested):
+# awk '{ sub(/[ \t]+$/, ""); print }'
 rtrim() {
   if [[ -r "$1" ]]||[[ -z "$1" ]]; then
     while read -r; do

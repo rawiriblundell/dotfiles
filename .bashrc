@@ -251,6 +251,11 @@ fi
 ################################################################################
 # Functions
 
+# Because you never know what crazy systems are out there
+if ! command -v apropos >/dev/null 2>&1; then
+  apropos() { man -k "$*"; }
+fi
+
 # Function to kill the parents of interruptable zombies, will not touch pid 1
 boomstick() {
   # shellcheck disable=SC2009

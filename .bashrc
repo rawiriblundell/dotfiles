@@ -95,12 +95,12 @@ fi
 # Set the PROMPT_COMMAND
 # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
 if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
-  PROMPT_COMMAND=settitle
+  PROMPT_COMMAND="settitle; set-ps1"
 # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
 elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
   # After each command, append to the history file and reread it
   # This attempts to keep history sync'd across multiple sessions
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle"
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; set-ps1"
 fi
 export PROMPT_COMMAND
 
@@ -318,7 +318,7 @@ bytestohuman() {
 # See also n2c() for the opposite behaviour
 c2n() {
   while read -r; do 
-    printf -- '%s\n' "${REPLY}" | tr "," "\n"
+    printf -- '%s\n' "${REPLY}" | tr "," "\\n"
   done < "${1:-/dev/stdin}"
 }
 
@@ -357,8 +357,10 @@ capitalise() {
       fi
       # If we're using bash4, stop mucking about
       if (( BASH_VERSINFO == 4 )); then
-        read -r -a inLine <<< "${REPLY}"
-        printf '%s ' "${inLine[@]^}" | trim
+        #read -r -a inLine <<< "${REPLY}" # upsets Solaris grr
+        for inString in ${REPLY}; do
+          printf '%s ' "${inString^}" | trim
+        done
       # Otherwise, take the more exhaustive approach
       else
         # Split each line element for processing
@@ -447,11 +449,6 @@ checkyaml() {
     printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
     python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}"
   fi
-}
-
-# Close an open file descriptor
-closefd() {
-  eval "exec $1>&-" || return 1
 }
 
 # Indent code by four spaces, useful for posting in markdown
@@ -795,20 +792,6 @@ old() {
   cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}
 }
 
-# Open a file descriptor... needs a little more work
-openfd() {
-  local fd
-  # shellcheck disable=SC2119
-  fd="${2:-$(testfd)}"
-  if [[ -r "$1" ]]; then
-    eval "exec $fd< $1"
-  elif [[ "$1" = "-" ]]; then
-    eval "exec $fd<&0"
-  else
-    return 1
-  fi
-}
-
 # A function to print a specific line from a file
 printline() {
   # If $1 is empty, print a usage message
@@ -1042,7 +1025,7 @@ if ! command -v shuf &>/dev/null; then
       case "${optFlags}" in
         (e) inputStrings=true
             shufArray=( "${OPTARG}" )
-            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
+            until [[ $(eval "echo \${$OPTIND:0:1}") = "-" ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
               # shellcheck disable=SC2207
               shufArray+=($(eval "echo \${$OPTIND}"))
               OPTIND=$((OPTIND + 1))
@@ -1177,9 +1160,11 @@ fi
 
 # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
 solresize() {
-  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+  if (( "${COLUMNS:-$(tput cols)}" > 160 )); then
     stty columns "${1:-160}"
   fi
+  # Resize the PS1 while we're here
+  setps1
 }
 
 # Silence ssh motd's etc using "-q"
@@ -1231,20 +1216,6 @@ if ! command -v tac &>/dev/null; then
     fi
   }
 fi
-
-# A terse function to get the next available file descriptor
-# from https://stackoverflow.com/a/41626332
-# This skips fd5 for historical reasons
-testfd() {
-  local fd max
-  # shellcheck disable=SC2120
-  fd="${1:-2}" max=$(ulimit -n)
-  (( fd-- ))
-  while ((++fd < max)); do
-    (( fd == 5 )) && continue
-    ! true <&$fd && break
-  done 2>&- && echo "$fd"
-}
 
 # Throttle stdout
 throttle() {
@@ -2087,49 +2058,27 @@ pwcheck () {
 
 ################################################################################
 # Standardise the Command Prompt
-# First, let's map some colours, uncomment to use:
-#txtblk='\e[0;30m\]' # Black - Regular
-#txtred='\e[0;31m\]' # Red
-txtgrn='\e[0;32m\]' # Green
-#txtylw='\e[0;33m\]' # Yellow
-#txtblu='\e[0;34m\]' # Blue
-#txtpur='\e[0;35m\]' # Purple
-#txtcyn='\e[0;36m\]' # Cyan
-#txtwht='\e[0;37m\]' # White
-#bldblk='\e[1;30m\]' # Black - Bold
-bldred='\e[1;31m\]' # Red
-#bldgrn='\e[1;32m\]' # Green
-bldylw='\e[1;33m\]' # Yellow
-#bldblu='\e[1;34m\]' # Blue
-#bldpur='\e[1;35m\]' # Purple
-#bldcyn='\e[1;36m\]' # Cyan
-#bldwht='\e[1;37m\]' # White
-#unkblk='\e[4;30m\]' # Black - Underline
-#undred='\e[4;31m\]' # Red
-#undgrn='\e[4;32m\]' # Green
-#undylw='\e[4;33m\]' # Yellow
-#undblu='\e[4;34m\]' # Blue
-#undpur='\e[4;35m\]' # Purple
-#undcyn='\e[4;36m\]' # Cyan
-#undwht='\e[4;37m\]' # White
-#bakblk='\e[40m\]'   # Black - Background
-#bakred='\e[41m\]'   # Red
-#bakgrn='\e[42m\]'   # Green
-#bakylw='\e[43m\]'   # Yellow
-#bakblu='\e[44m\]'   # Blue
-#bakpur='\e[45m\]'   # Purple
-#bakcyn='\e[46m\]'   # Cyan
-#bakwht='\e[47m\]'   # White
-txtrst='\e[0m\]'    # Text Reset
-
 # NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount
 # and get confused about where the prompt starts.  All sorts of line wrapping weirdness and prompt overwrites
-# will then occur.  This is why all of the variables have '\]' enclosing them.  Don't mess with that.
+# will then occur.  This is why all of the escape codes have '\]' enclosing them.  Don't mess with that.
+# The double backslash at the start also helps with this behaviour.
 # 
 # Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
 # Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
-
-# The double backslash at the start also helps with this behaviour.
+#
+# First, let's map some colours, uncomment to use:
+txtBld=$(tput bold)
+txtDim=$(tput dim)
+txtRev=$(tput rev)
+txtBlk=$(tput setaf 0) # '\e[0;30m\]' # Black - Regular
+txtRed=$(tput setaf 1) # '\e[0;31m\]' # Red
+txtGrn=$(tput setaf 2) # '\e[0;32m\]' # Green
+txtYlw=$(tput setaf 3) # '\e[0;33m\]' # Yellow
+txtBlu=$(tput setaf 4) # '\e[0;34m\]' # Blue
+txtPur=$(tput setaf 5) # '\e[0;35m\]' # Purple/Magenta
+txtCyn=$(tput setaf 6) # '\e[0;36m\]' # Cyan
+txtWht=$(tput setaf 7) # '\e[0;37m\]' # White
+txtRst=$(tput sgr0)    # '\e[0m\]'    # Text Reset
 
 # Try to find out if we're authenticating locally or remotely
 if grep "^${USER}:" /etc/passwd &>/dev/null; then
@@ -2138,20 +2087,30 @@ else
   auth="AD"
 fi
 
-# Throw it all together, starting with checking if we're root
-# Previously this tried to failover to a tput based alternative but it didn't work well on Solaris...
-if [[ -w / ]]; then
-  # shellcheck disable=SC1117
-  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ "
-# Otherwise show the usual prompt
-else
-  # shellcheck disable=SC1117
-  export PS1="\\[${bldred}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtgrn}[\u@\h\[${txtrst} \W\[${txtgrn}]\[${txtrst}$ "
-fi
+set-ps1() {
+  # Throw it all together, starting with checking if we're root
+  # If columns exceeds 80, use the long form, otherwise the short form
+  if [[ -w / ]]; then
+    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+      # shellcheck disable=SC1117
+      export PS1="\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ "
+    else
+      export PS1="\\[${txtBld}${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ "
+    fi
+  # Otherwise show the usual prompt
+  else
+    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+      # shellcheck disable=SC1117
+      export PS1="\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtRst}${txtGrn}[\u@\h\[${txtRst} \W\[${txtGrn}]\[${txtRst}$ "
+    else
+      export PS1="\\[${txtGrn}[\u@\h\[${txtRst} \W\[${txtGrn}]\[${txtRst}$ "
+    fi
+  fi
 
-# Alias the root PS1 into sudo for edge cases
-# shellcheck disable=SC1117,SC2139
-alias sudo="PS1='\\[${bldred}[\$(date +%y%m%d/%H:%M)][$auth]\[${bldylw}[\u@\h\[${txtrst} \W\[${bldylw}]\[${txtrst}$ ' sudo"
+  # Alias the root PS1 into sudo for edge cases
+  # shellcheck disable=SC1117,SC2139
+  alias sudo="PS1='\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][$auth]\[${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ ' sudo"
+}
 
 # Useful for debugging
 export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '

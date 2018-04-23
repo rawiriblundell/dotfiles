@@ -2067,18 +2067,18 @@ pwcheck () {
 # Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
 #
 # First, let's map some colours, uncomment to use:
-txtBld=$(tput bold)
-txtDim=$(tput dim)
-txtRev=$(tput rev)
-txtBlk=$(tput setaf 0) # '\e[0;30m\]' # Black - Regular
-txtRed=$(tput setaf 1) # '\e[0;31m\]' # Red
-txtGrn=$(tput setaf 2) # '\e[0;32m\]' # Green
-txtYlw=$(tput setaf 3) # '\e[0;33m\]' # Yellow
-txtBlu=$(tput setaf 4) # '\e[0;34m\]' # Blue
-txtPur=$(tput setaf 5) # '\e[0;35m\]' # Purple/Magenta
-txtCyn=$(tput setaf 6) # '\e[0;36m\]' # Cyan
-txtWht=$(tput setaf 7) # '\e[0;37m\]' # White
-txtRst=$(tput sgr0)    # '\e[0m\]'    # Text Reset
+case $(uname) in
+  (FreeBSD)   ps1Red='\e[1;31m\]' # Bold Red
+              ps1Grn='\e[0;32m\]' # Normal Green
+              ps1Ylw='\e[1;33m\]' # Bold Yellow
+              ps1Rst='\e[0m\]'
+              ;;
+  (*)         ps1Red="\[$(tput bold)$(tput setaf 1)\]"
+              ps1Grn="\[$(tput setaf 2)\]"
+              ps1Ylw="\[$(tput bold)$(tput setaf 3)\]"
+              ps1Rst="\[$(tput sgr0)\]"
+              ;;
+esac
 
 # Try to find out if we're authenticating locally or remotely
 if grep "^${USER}:" /etc/passwd &>/dev/null; then
@@ -2088,28 +2088,47 @@ else
 fi
 
 set-ps1() {
-  # Throw it all together, starting with checking if we're root
+  # Throw it all together, first we check if our unset flag is set
+  if [[ "${PS1_UNSET}" = "True" ]]; then
+    export PS1="${ps1Grn}>${ps1Rst}$ "
+    return 0
+  fi
+  
+  # Otherwise, it's business as usual.  Starting with checking if we're root
   # If columns exceeds 80, use the long form, otherwise the short form
   if [[ -w / ]]; then
     if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
       # shellcheck disable=SC1117
-      export PS1="\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ "
+      export PS1="\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ "
     else
-      export PS1="\\[${txtBld}${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ "
+      # shellcheck disable=SC1117
+      export PS1="\\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ "
     fi
   # Otherwise show the usual prompt
   else
     if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
       # shellcheck disable=SC1117
-      export PS1="\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][${auth}]\[${txtRst}${txtGrn}[\u@\h\[${txtRst} \W\[${txtGrn}]\[${txtRst}$ "
+      export PS1="\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Rst}${ps1Grn}[\u@\h\[${ps1Rst} \W\[${ps1Grn}]\[${ps1Rst}$ "
     else
-      export PS1="\\[${txtGrn}[\u@\h\[${txtRst} \W\[${txtGrn}]\[${txtRst}$ "
+      # shellcheck disable=SC1117
+      export PS1="\\[${ps1Grn}[\u@\h\[${ps1Rst} \W\[${ps1Grn}]\[${ps1Rst}$ "
     fi
   fi
 
   # Alias the root PS1 into sudo for edge cases
   # shellcheck disable=SC1117,SC2139
-  alias sudo="PS1='\\[${txtBld}${txtRed}[\$(date +%y%m%d/%H:%M)][$auth]\[${txtYlw}[\u@\h\[${txtRst} \W\[${txtBld}${txtYlw}]\[${txtRst}$ ' sudo"
+  alias sudo="PS1='\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ ' sudo"
+}
+
+unset-ps1() {
+  if [[ "$1" = "-y" ]]; then
+    export PS1_UNSET=True
+  elif [[ "$1" = "-n" ]]; then
+    export PS1_UNSET=False
+  else
+    printf -- '%s\n' "Usage: 'unset-ps1 [-y(es)/-n(o)]"
+    return 1
+  fi
 }
 
 # Useful for debugging

@@ -95,12 +95,12 @@ fi
 # Set the PROMPT_COMMAND
 # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
 if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
-  PROMPT_COMMAND="settitle; set-ps1"
+  PROMPT_COMMAND="settitle; setprompt"
 # Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
 elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
   # After each command, append to the history file and reread it
   # This attempts to keep history sync'd across multiple sessions
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; set-ps1"
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
 fi
 export PROMPT_COMMAND
 
@@ -2058,9 +2058,10 @@ pwcheck () {
 
 ################################################################################
 # Standardise the Command Prompt
-# NOTE for customisation: Any non-printing escape characters must be enclosed, otherwise bash will miscount
-# and get confused about where the prompt starts.  All sorts of line wrapping weirdness and prompt overwrites
-# will then occur.  This is why all of the escape codes have '\]' enclosing them.  Don't mess with that.
+# NOTE for customisation: Any non-printing escape characters must be enclosed, 
+# otherwise bash will miscount and get confused about where the prompt starts.  
+# All sorts of line wrapping weirdness and prompt overwrites will then occur.  
+# This is why all the escape codes have '\]' enclosing them.  Don't mess with that.
 # The double backslash at the start also helps with this behaviour.
 # 
 # Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
@@ -2073,9 +2074,9 @@ case $(uname) in
               ps1Ylw='\e[1;33m\]' # Bold Yellow
               ps1Rst='\e[0m\]'
               ;;
-  (*)         ps1Red="\[$(tput bold)$(tput setaf 1)\]"
+  (*)         ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
               ps1Grn="\[$(tput setaf 2)\]"
-              ps1Ylw="\[$(tput bold)$(tput setaf 3)\]"
+              ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
               ps1Rst="\[$(tput sgr0)\]"
               ;;
 esac
@@ -2087,11 +2088,22 @@ else
   auth="AD"
 fi
 
-set-ps1() {
+setprompt() {
+  # Handle limited options for this function
+  if [[ "$1" = "-h" ]]; then
+    printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
+    return 0
+  elif [[ "$1" = "-f" ]]; then
+    export PS1_UNSET=False
+  elif [[ "$1" = "-m" ]]; then
+    export PS1_UNSET=True
+  fi
+
   # Throw it all together, first we check if our unset flag is set
+  # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
     export PS1="${ps1Grn}>${ps1Rst}$ "
-    return 0
+    return 0  # Stop further processing
   fi
   
   # Otherwise, it's business as usual.  Starting with checking if we're root
@@ -2099,36 +2111,25 @@ set-ps1() {
   if [[ -w / ]]; then
     if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
       # shellcheck disable=SC1117
-      export PS1="\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ "
+      export PS1="${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ "
     else
       # shellcheck disable=SC1117
-      export PS1="\\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ "
+      export PS1="${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ "
     fi
   # Otherwise show the usual prompt
   else
     if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
       # shellcheck disable=SC1117
-      export PS1="\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Rst}${ps1Grn}[\u@\h\[${ps1Rst} \W\[${ps1Grn}]\[${ps1Rst}$ "
+      export PS1="${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
     else
       # shellcheck disable=SC1117
-      export PS1="\\[${ps1Grn}[\u@\h\[${ps1Rst} \W\[${ps1Grn}]\[${ps1Rst}$ "
+      export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
     fi
   fi
 
   # Alias the root PS1 into sudo for edge cases
   # shellcheck disable=SC1117,SC2139
   alias sudo="PS1='\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ ' sudo"
-}
-
-unset-ps1() {
-  if [[ "$1" = "-y" ]]; then
-    export PS1_UNSET=True
-  elif [[ "$1" = "-n" ]]; then
-    export PS1_UNSET=False
-  else
-    printf -- '%s\n' "Usage: 'unset-ps1 [-y(es)/-n(o)]"
-    return 1
-  fi
 }
 
 # Useful for debugging

@@ -174,7 +174,22 @@ fi
 # OS specific tweaks
 
 if [[ "$(uname)" = "SunOS" ]]; then
+  # Call solresize() whenever a window is resized
   trap solresize SIGWINCH
+  
+  # Try to figure out a terminfo entry with colour, failing downwards
+  # 'xterm' does not support colour at all, so is provided for safety
+  for termType in xterm-256color xterm-color xtermc dtterm xterm; do
+    # Set TERM to the currently selected type
+    export TERM="${termType}"
+    # Test if 'tput' is upset, if so, move to the next option
+    if tput colors 2>&1 | grep "unknown terminal" >/dev/null 2>&1; then
+      continue
+    # If 'tput' is not upset, then we've got a working type, so move on!
+    else
+      break
+    fi
+  done
 
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff

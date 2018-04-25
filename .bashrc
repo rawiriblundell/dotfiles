@@ -1163,8 +1163,6 @@ solresize() {
   if (( "${COLUMNS:-$(tput cols)}" > 160 )); then
     stty columns "${1:-160}"
   fi
-  # Resize the PS1 while we're here
-  setps1
 }
 
 # Silence ssh motd's etc using "-q"

@@ -2079,6 +2079,15 @@ case $(uname) in
               ;;
 esac
 
+# Unicode u2588 \ UTF8 0xe2 0x96 0x88 - Solid Block
+block100="\xe2\x96\x88"
+block75="\xe2\x96\x93" # u2593\0xe2 0x96 0x93 Dark shade 75%
+block50="\xe2\x96\x92" # u2592\0xe2 0x96 0x92 Half shade 50%
+block25="\xe2\x96\x91" # u2591\0xe2 0x96 0x91 Light shade 25%
+
+blockAsc="$(printf '%b\n' "${block25}${block50}${block75}")"
+blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
+
 # Try to find out if we're authenticating locally or remotely
 if grep "^${USER}:" /etc/passwd &>/dev/null; then
   auth="LCL"

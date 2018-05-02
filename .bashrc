@@ -177,20 +177,6 @@ if [[ "$(uname)" = "SunOS" ]]; then
   # Call solresize() whenever a window is resized
   trap solresize SIGWINCH
   
-  # Try to figure out a terminfo entry with colour, failing downwards
-  # 'xterm' does not support colour at all, so is provided for safety
-  for termType in xterm-256color xterm-color xtermc dtterm xterm; do
-    # Set TERM to the currently selected type
-    export TERM="${termType}"
-    # Test if 'tput' is upset, if so, move to the next option
-    if tput colors 2>&1 | grep "unknown terminal" >/dev/null 2>&1; then
-      continue
-    # If 'tput' is not upset, then we've got a working type, so move on!
-    else
-      break
-    fi
-  done
-
 elif [[ "$(uname)" = "Linux" ]]; then
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU
@@ -2065,18 +2051,47 @@ pwcheck () {
 # Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
 # Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
 #
-# First, let's map some colours, uncomment to use:
+# First, figure out $TERM, failing downwards
+# 'xterm' does not support colour at all on Solaris, so is provided for safety
+for termType in xterm-256color xterm-color xtermc dtterm xterm; do
+  # Set TERM to the currently selected type
+  export TERM="${termType}"
+  # Test if 'tput' is upset, if so, move to the next option
+  if tput colors 2>&1 | grep "unknown terminal" >/dev/null 2>&1; then
+    continue
+  # If 'tput' is not upset, then we've got a working type, so move on!
+  else
+    break
+  fi
+done
+  
+# Next, we map some colours:
 case $(uname) in
-  (FreeBSD)   ps1Red='\e[1;31m\]' # Bold Red
-              ps1Grn='\e[0;32m\]' # Normal Green
-              ps1Ylw='\e[1;33m\]' # Bold Yellow
-              ps1Rst='\e[0m\]'
-              ;;
-  (*)         ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
-              ps1Grn="\[$(tput setaf 2)\]"
-              ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
-              ps1Rst="\[$(tput sgr0)\]"
-              ;;
+  (FreeBSD)   
+    ps1Red='\e[1;31m\]' # Bold Red
+    ps1Grn='\e[0;32m\]' # Normal Green
+    ps1Ylw='\e[1;33m\]' # Bold Yellow
+    ps1Cyn='\e[1;36m\]' # Bold Cyan
+    ps1Rst='\e[0m\]'
+  ;;
+  (*)
+    case "${TERM}" in
+      (xterm-256color)
+        ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"
+        ps1Grn="\[$(tput setaf 10)\]"
+        ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"
+        ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
+        ps1Rst="\[$(tput sgr0)\]"
+      ;;
+      (*)
+        ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
+        ps1Grn="\[$(tput setaf 2)\]"
+        ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
+        ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
+        ps1Rst="\[$(tput sgr0)\]"
+      ;;
+    esac
+  ;;
 esac
 
 # Unicode u2588 \ UTF8 0xe2 0x96 0x88 - Solid Block
@@ -2113,30 +2128,20 @@ setprompt() {
     return 0  # Stop further processing
   fi
   
-  # Otherwise, it's business as usual.  Starting with checking if we're root
-  # If columns exceeds 80, use the long form, otherwise the short form
-  if [[ -w / ]]; then
-    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-      # shellcheck disable=SC1117
-      export PS1="${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ "
-    else
-      # shellcheck disable=SC1117
-      export PS1="${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ "
-    fi
-  # Otherwise show the usual prompt
+  # Otherwise, it's business as usual. If columns exceeds 80, 
+  # use the long form, otherwise the short form
+  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+    # shellcheck disable=SC1117
+    export PS1="${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
+    # Alias the root PS1 into sudo
+    # shellcheck disable=SC1117,SC2139
+    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ ' sudo"
   else
-    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-      # shellcheck disable=SC1117
-      export PS1="${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-    else
-      # shellcheck disable=SC1117
-      export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-    fi
+    # shellcheck disable=SC1117
+    export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
+    # shellcheck disable=SC1117,SC2139
+    alias sudo="PS1='${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ ' sudo"
   fi
-
-  # Alias the root PS1 into sudo for edge cases
-  # shellcheck disable=SC1117,SC2139
-  alias sudo="PS1='\\[${ps1Red}[\$(date +%y%m%d/%H:%M)][${auth}]\[${ps1Ylw}[\u@\h\[${ps1Rst} \W\[${ps1Ylw}]\[${ps1Rst}$ ' sudo"
 }
 
 # Useful for debugging

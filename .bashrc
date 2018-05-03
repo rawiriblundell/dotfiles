@@ -2124,7 +2124,7 @@ setprompt() {
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
-    export PS1="${ps1Grn}>${ps1Rst}$ "
+    export PS1="${ps1Grn}${blockDwn}${ps1Rst}$ "
     return 0  # Stop further processing
   fi
   
@@ -2132,15 +2132,15 @@ setprompt() {
   # use the long form, otherwise the short form
   if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
     # shellcheck disable=SC1117
-    export PS1="${ps1Red}${blockDwn}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
+    export PS1="${ps1Grn}${blockDwn}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ "
     # Alias the root PS1 into sudo
     # shellcheck disable=SC1117,SC2139
-    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ ' sudo"
+    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
   else
     # shellcheck disable=SC1117
     export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
     # shellcheck disable=SC1117,SC2139
-    alias sudo="PS1='${ps1Ylw}[\u@\h${ps1Rst} \W${ps1Ylw}]${ps1Rst}$ ' sudo"
+    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
   fi
 }
 

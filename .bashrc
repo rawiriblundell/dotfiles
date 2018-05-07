@@ -2135,19 +2135,30 @@ setprompt() {
     return 0  # Stop further processing
   fi
   
-  # Otherwise, it's business as usual. If columns exceeds 80, 
-  # use the long form, otherwise the short form
-  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-    # shellcheck disable=SC1117
-    export PS1="${ps1Red}${blockDwn}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-    # Alias the root PS1 into sudo
-    # shellcheck disable=SC1117,SC2139
-    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
+  # Otherwise, it's business as usual.  Starting with checking if we're root
+  # If columns exceeds 80, use the long form, otherwise the short form
+  if [[ -w / ]]; then
+    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+      # shellcheck disable=SC1117
+      export PS1="${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ "
+    else
+      # shellcheck disable=SC1117
+      export PS1="${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ "
+    fi
+  # Otherwise show the usual prompt
   else
-    # shellcheck disable=SC1117
-    export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-    # shellcheck disable=SC1117,SC2139
-    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
+    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+      # shellcheck disable=SC1117
+      export PS1="${ps1Red}${blockDwn}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
+      # Alias the root PS1 into sudo
+      # shellcheck disable=SC1117,SC2139
+      alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
+    else
+      # shellcheck disable=SC1117
+      export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
+      # shellcheck disable=SC1117,SC2139
+      alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
+    fi
   fi
 }
 

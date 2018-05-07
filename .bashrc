@@ -2128,37 +2128,32 @@ setprompt() {
     export PS1_UNSET=True
   fi
 
+  # Let's setup our primary and secondary colours
+  if [[ -w / ]]; then
+    ps1Pri="${ps1Red}"
+    ps1Sec="${ps1Red}"
+    ps1Block="${blockAsc}"
+  else
+    ps1Pri="${ps1Red}"
+    ps1Sec="${ps1Grn}"
+    ps1Block="${blockDwn}"
+  fi
+
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
-    export PS1="${ps1Red}${blockDwn}${ps1Rst}$ "
+    export PS1="${ps1Pri}${ps1Block}${ps1Rst}$ "
     return 0  # Stop further processing
   fi
   
-  # Otherwise, it's business as usual.  Starting with checking if we're root
+  # Otherwise, it's business as usual.  We test how many columns we have.
   # If columns exceeds 80, use the long form, otherwise the short form
-  if [[ -w / ]]; then
-    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-      # shellcheck disable=SC1117
-      export PS1="${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ "
-    else
-      # shellcheck disable=SC1117
-      export PS1="${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ "
-    fi
-  # Otherwise show the usual prompt
+  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+    # shellcheck disable=SC1117
+    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
   else
-    if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-      # shellcheck disable=SC1117
-      export PS1="${ps1Red}${blockDwn}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-      # Alias the root PS1 into sudo
-      # shellcheck disable=SC1117,SC2139
-      alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
-    else
-      # shellcheck disable=SC1117
-      export PS1="${ps1Grn}[\u@\h${ps1Rst} \W${ps1Grn}]${ps1Rst}$ "
-      # shellcheck disable=SC1117,SC2139
-      alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}$ ' sudo"
-    fi
+    # shellcheck disable=SC1117
+    export PS1="${ps1Pri}[\u@\h${ps1Rst} \W${ps1Pri}]${ps1Rst}$ "
   fi
 }
 

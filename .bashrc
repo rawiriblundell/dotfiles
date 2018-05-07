@@ -2153,7 +2153,7 @@ setprompt() {
     export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
   else
     # shellcheck disable=SC1117
-    export PS1="${ps1Pri}[\u@\h${ps1Rst} \W${ps1Pri}]${ps1Rst}$ "
+    export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
   fi
 }
 

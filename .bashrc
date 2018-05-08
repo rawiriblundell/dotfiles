@@ -2146,8 +2146,8 @@ setprompt() {
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 0
     ;;
-    (-f)                    export PS1_UNSET=False ;;
-    (-m)                    export PS1_UNSET=True
+    (-f)                    export PS1_UNSET=False;;
+    (-m)                    export PS1_UNSET=True;;
     (b|B|black|Black)       ps1Pri="${ps1Blk}";;
     (r|R|red|Red)           ps1Pri="${ps1Red}";;
     (g|G|green|Green)       ps1Pri="${ps1Grn}";;
@@ -2156,7 +2156,7 @@ setprompt() {
     (m|M|magenta|Magenta)   ps1Pri="${ps1Mag}";;
     (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
-    (*)
+    (\?)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1
     ;;
@@ -2171,7 +2171,7 @@ setprompt() {
     (m|M|magenta|Magenta)   ps1Sec="${ps1Mag}";;
     (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
-    (*)
+    (\?)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1
     ;;   

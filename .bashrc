@@ -2074,27 +2074,39 @@ done
   
 # Next, we map some colours:
 case $(uname) in
-  (FreeBSD)   
+  (FreeBSD)
+    ps1Blk='\e[0;30m\]' # Black
     ps1Red='\e[1;31m\]' # Bold Red
     ps1Grn='\e[0;32m\]' # Normal Green
     ps1Ylw='\e[1;33m\]' # Bold Yellow
+    ps1Blu='\e[2;34m\]' # Dim Blue
+    ps1Mag='\e[1;35m\]' # Bold Magenta
     ps1Cyn='\e[1;36m\]' # Bold Cyan
+    ps1Wte='\e[1;97m\]' # Bold White
     ps1Rst='\e[0m\]'
   ;;
   (*)
     case "${TERM}" in
       (xterm-256color)
+        ps1Blk="\[$(tput setaf 0)\]"
         ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"
         ps1Grn="\[$(tput setaf 10)\]"
         ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"
+        ps1Blu="\[$(tput dim)\]\[$(tput setaf 12)\]"
+        ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
+        ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
       (*)
+        ps1Blk="\[$(tput setaf 0)\]"
         ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
         ps1Grn="\[$(tput setaf 2)\]"
         ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
+        ps1Blu="\[$(tput dim)\]\[$(tput setaf 4)\]"
+        ps1Mag="\[$(tput bold)\]\[$(tput setaf 5)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
+        ps1Wte="\[$(tput bold)\]\[$(tput setaf 7)\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
     esac

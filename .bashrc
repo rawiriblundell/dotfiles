@@ -2130,17 +2130,7 @@ else
 fi
 
 setprompt() {
-  # Handle limited options for this function
-  if [[ "$1" = "-h" ]]; then
-    printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
-    return 0
-  elif [[ "$1" = "-f" ]]; then
-    export PS1_UNSET=False
-  elif [[ "$1" = "-m" ]]; then
-    export PS1_UNSET=True
-  fi
-
-  # Let's setup our primary and secondary colours
+  # Let's setup our default primary and secondary colours
   if [[ -w / ]]; then
     ps1Pri="${ps1Red}"
     ps1Sec="${ps1Red}"
@@ -2152,6 +2142,12 @@ setprompt() {
   fi
   
   case "$1" in
+    (-h)
+      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
+      return 0
+    ;;
+    (-f)                    export PS1_UNSET=False ;;
+    (-m)                    export PS1_UNSET=True
     (b|B|black|Black)       ps1Pri="${ps1Blk}";;
     (r|R|red|Red)           ps1Pri="${ps1Red}";;
     (g|G|green|Green)       ps1Pri="${ps1Grn}";;
@@ -2163,7 +2159,7 @@ setprompt() {
     (*)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1
-     ;;    
+    ;;
   esac
 
   case "$2" in
@@ -2178,7 +2174,7 @@ setprompt() {
     (*)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1
-     ;;   
+    ;;   
   esac
 
   # Throw it all together, first we check if our unset flag is set

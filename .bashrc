@@ -2150,6 +2150,36 @@ setprompt() {
     ps1Sec="${ps1Grn}"
     ps1Block="${blockDwn}"
   fi
+  
+  case "$1" in
+    (b|B|black|Black)       ps1Pri="${ps1Blk}";;
+    (r|R|red|Red)           ps1Pri="${ps1Red}";;
+    (g|G|green|Green)       ps1Pri="${ps1Grn}";;
+    (y|Y|yellow|Yellow)     ps1Pri="${ps1Ylw}";;
+    (bl|Bl|blue|Blue)       ps1Pri="${ps1Blu}";;
+    (m|M|magenta|Magenta)   ps1Pri="${ps1Mag}";;
+    (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
+    (w|W|white|White)       ps1Pri="${ps1Wte}";;
+    (*)
+      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
+      return 1
+     ;;    
+  esac
+
+  case "$2" in
+    (b|B|black|Black)       ps1Sec="${ps1Blk}";;
+    (r|R|red|Red)           ps1Sec="${ps1Red}";;
+    (g|G|green|Green)       ps1Sec="${ps1Grn}";;
+    (y|Y|yellow|Yellow)     ps1Sec="${ps1Ylw}";;
+    (bl|Bl|blue|Blue)       ps1Sec="${ps1Blu}";;
+    (m|M|magenta|Magenta)   ps1Sec="${ps1Mag}";;
+    (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
+    (w|W|white|White)       ps1Sec="${ps1Wte}";;
+    (*)
+      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
+      return 1
+     ;;   
+  esac
 
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again

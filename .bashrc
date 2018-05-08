@@ -2079,7 +2079,7 @@ case $(uname) in
     ps1Red='\e[1;31m\]' # Bold Red
     ps1Grn='\e[0;32m\]' # Normal Green
     ps1Ylw='\e[1;33m\]' # Bold Yellow
-    ps1Blu='\e[2;34m\]' # Dim Blue
+    ps1Blu='\e[0;34m\]' # Blue
     ps1Mag='\e[1;35m\]' # Bold Magenta
     ps1Cyn='\e[1;36m\]' # Bold Cyan
     ps1Wte='\e[1;97m\]' # Bold White
@@ -2092,7 +2092,7 @@ case $(uname) in
         ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"
         ps1Grn="\[$(tput setaf 10)\]"
         ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"
-        ps1Blu="\[$(tput dim)\]\[$(tput setaf 12)\]"
+        ps1Blu="\[$(tput setaf 32)\]"
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"
@@ -2103,7 +2103,7 @@ case $(uname) in
         ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
         ps1Grn="\[$(tput setaf 2)\]"
         ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
-        ps1Blu="\[$(tput dim)\]\[$(tput setaf 4)\]"
+        ps1Blu="\[$(tput setaf 4)\]"
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 5)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 7)\]"
@@ -2113,11 +2113,10 @@ case $(uname) in
   ;;
 esac
 
-# Unicode u2588 \ UTF8 0xe2 0x96 0x88 - Solid Block
-block100="\xe2\x96\x88"
-block75="\xe2\x96\x93" # u2593\0xe2 0x96 0x93 Dark shade 75%
-block50="\xe2\x96\x92" # u2592\0xe2 0x96 0x92 Half shade 50%
-block25="\xe2\x96\x91" # u2591\0xe2 0x96 0x91 Light shade 25%
+block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%
+block75="\xe2\x96\x93"   # u2593\0xe2 0x96 0x93 Dark shade 75%
+block50="\xe2\x96\x92"   # u2592\0xe2 0x96 0x92 Half shade 50%
+block25="\xe2\x96\x91"   # u2591\0xe2 0x96 0x91 Light shade 25%
 
 blockAsc="$(printf '%b\n' "${block25}${block50}${block75}")"
 blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
@@ -2130,14 +2129,12 @@ else
 fi
 
 setprompt() {
-  # Let's setup our default primary and secondary colours
+  # Let's setup some default primary and secondary colours
   if [[ -w / ]]; then
     ps1Pri="${ps1Red}"
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"
   else
-    ps1Pri="${ps1Red}"
-    ps1Sec="${ps1Grn}"
     ps1Block="${blockDwn}"
   fi
   
@@ -2148,6 +2145,10 @@ setprompt() {
     ;;
     (-f)                    export PS1_UNSET=False;;
     (-m)                    export PS1_UNSET=True;;
+    (-r)
+      ps1Pri="${ps1Red}"
+      ps1Sec="${ps1Grn}"      
+    ;;
     (b|B|black|Black)       ps1Pri="${ps1Blk}";;
     (r|R|red|Red)           ps1Pri="${ps1Red}";;
     (g|G|green|Green)       ps1Pri="${ps1Grn}";;
@@ -2177,6 +2178,10 @@ setprompt() {
     ;;   
   esac
 
+  # Default catch-all for non-root scenarios
+  [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
+  [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
+
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
@@ -2188,7 +2193,7 @@ setprompt() {
   # If columns exceeds 80, use the long form, otherwise the short form
   if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
     # shellcheck disable=SC1117
-    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
+    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
   else
     # shellcheck disable=SC1117
     export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "

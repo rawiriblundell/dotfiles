@@ -2075,15 +2075,15 @@ done
 # Next, we map some colours:
 case $(uname) in
   (FreeBSD)
-    ps1Blk='\e[0;30m\]' # Black
-    ps1Red='\e[1;31m\]' # Bold Red
-    ps1Grn='\e[0;32m\]' # Normal Green
-    ps1Ylw='\e[1;33m\]' # Bold Yellow
-    ps1Blu='\e[0;34m\]' # Blue
-    ps1Mag='\e[1;35m\]' # Bold Magenta
-    ps1Cyn='\e[1;36m\]' # Bold Cyan
-    ps1Wte='\e[1;97m\]' # Bold White
-    ps1Rst='\e[0m\]'
+    ps1Blk="\[\e[0;30m\]" # Black
+    ps1Red="\[\e[1;31m\]" # Bold Red
+    ps1Grn="\[\e[0;32m\]" # Normal Green
+    ps1Ylw="\[\e[1;33m\]" # Bold Yellow
+    ps1Blu="\[\e[0;34m\]" # Blue
+    ps1Mag="\[\e[1;35m\]" # Bold Magenta
+    ps1Cyn="\[\e[1;36m\]" # Bold Cyan
+    ps1Wte="\[\e[1;97m\]" # Bold White
+    ps1Rst="\[\e[0m\]"
   ;;
   (*)
     case "${TERM}" in

@@ -2075,15 +2075,16 @@ done
 # Next, we map some colours:
 case $(uname) in
   (FreeBSD)
-    ps1Blk="\[\e[0;30m\]" # Black
-    ps1Red="\[\e[1;31m\]" # Bold Red
-    ps1Grn="\[\e[0;32m\]" # Normal Green
-    ps1Ylw="\[\e[1;33m\]" # Bold Yellow
-    ps1Blu="\[\e[0;34m\]" # Blue
-    ps1Mag="\[\e[1;35m\]" # Bold Magenta
-    ps1Cyn="\[\e[1;36m\]" # Bold Cyan
-    ps1Wte="\[\e[1;97m\]" # Bold White
-    ps1Rst="\[\e[0m\]"
+    ps1Blk="\[\e[0;30m\]"        # Black
+    ps1Red="\[\e[1;31m\]"        # Bold Red
+    ps1Grn="\[\e[0;32m\]"        # Normal Green
+    ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
+    ps1Blu="\[\e[0;34m\]"        # Blue
+    ps1Mag="\[\e[1;35m\]"        # Bold Magenta
+    ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
+    ps1Wte="\[\e[1;97m\]"        # Bold White
+    ps1Ora="\[\e[38;5;202m\]"    # Orange (if available)
+    ps1Rst="\[\e[0m\]"           # Reset text to defaults
   ;;
   (*)
     case "${TERM}" in
@@ -2096,6 +2097,7 @@ case $(uname) in
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"
+        ps1Ora="\[$(tput setaf 202)\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
       (*)
@@ -2107,6 +2109,7 @@ case $(uname) in
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 5)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 7)\]"
+        ps1Ora="\[\e[38;5;202m\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
     esac
@@ -2157,6 +2160,7 @@ setprompt() {
     (m|M|magenta|Magenta)   ps1Pri="${ps1Mag}";;
     (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
+    (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
     (\?)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1
@@ -2172,6 +2176,7 @@ setprompt() {
     (m|M|magenta|Magenta)   ps1Sec="${ps1Mag}";;
     (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
+    (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
     (\?)
       printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
       return 1

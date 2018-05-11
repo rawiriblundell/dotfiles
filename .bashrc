@@ -2083,7 +2083,7 @@ case $(uname) in
     ps1Mag="\[\e[1;35m\]"        # Bold Magenta
     ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
     ps1Wte="\[\e[1;97m\]"        # Bold White
-    ps1Ora="\[\e[38;5;202m\]"    # Orange (if available)
+    ps1Ora="\[\e[38;5;214m\]"    # Orange (if available)
     ps1Rst="\[\e[0m\]"           # Reset text to defaults
   ;;
   (*)
@@ -2097,7 +2097,7 @@ case $(uname) in
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"
-        ps1Ora="\[$(tput setaf 202)\]"
+        ps1Ora="\[$(tput setaf 214)\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
       (*)
@@ -2109,7 +2109,7 @@ case $(uname) in
         ps1Mag="\[$(tput bold)\]\[$(tput setaf 5)\]"
         ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
         ps1Wte="\[$(tput bold)\]\[$(tput setaf 7)\]"
-        ps1Ora="\[\e[38;5;202m\]"
+        ps1Ora="\[\e[38;5;214m\]"
         ps1Rst="\[$(tput sgr0)\]"
       ;;
     esac
@@ -2161,10 +2161,8 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
-    (\?)
-      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
-      return 1
-    ;;
+    (rand)                  ps1Pri="\[\e[38;5;$((RANDOM%255))m\]";;
+    (*[0-9]*)               ps1Pri="\[\e[38;5;$1m\]";;
   esac
 
   case "$2" in
@@ -2177,10 +2175,8 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
-    (\?)
-      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
-      return 1
-    ;;   
+    (rand)                  ps1Sec="\[\e[38;5;$((RANDOM%255))m\]";;
+    (*[0-9]*)               ps1Sec="\[\e[38;5;$2m\]";;
   esac
 
   # Default catch-all for non-root scenarios

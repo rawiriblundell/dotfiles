@@ -2037,10 +2037,11 @@ pwcheck () {
 
 ################################################################################
 # Set the PROMPT_COMMAND
-# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.  Otherwise it will complain about 'history not found'
+# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.
+# Otherwise it will complain about 'history not found'
 if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
   PROMPT_COMMAND="settitle; setprompt"
-# Otherwise, for newer versions of bash (e.g. Solaris 10+), we treat it as per Linux
+# Otherwise, for newer versions of bash, we handle it differently
 elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
   # After each command, append to the history file and reread it
   # This attempts to keep history sync'd across multiple sessions
@@ -2059,8 +2060,9 @@ export PROMPT_COMMAND
 # Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
 #
 # First, figure out $TERM, failing downwards
+# This is generally a bad practice - you should be defining this within your terminal software
 # 'xterm' does not support colour at all on Solaris, so is provided for safety
-for termType in xterm-256color xterm-color xtermc dtterm xterm; do
+for termType in putty-256color xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
   # Set TERM to the currently selected type
   export TERM="${termType}"
   # Test if 'tput' is upset, if so, move to the next option
@@ -2072,55 +2074,25 @@ for termType in xterm-256color xterm-color xtermc dtterm xterm; do
   fi
 done
   
-# Next, we map some colours:
-case $(uname) in
-  (FreeBSD)
-    ps1Blk="\[\e[0;30m\]"        # Black
-    ps1Red="\[\e[1;31m\]"        # Bold Red
-    ps1Grn="\[\e[0;32m\]"        # Normal Green
-    ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
-    ps1Blu="\[\e[0;34m\]"        # Blue
-    ps1Mag="\[\e[1;35m\]"        # Bold Magenta
-    ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
-    ps1Wte="\[\e[1;97m\]"        # Bold White
-    ps1Ora="\[\e[38;5;214m\]"    # Orange (if available)
-    ps1Rst="\[\e[0m\]"           # Reset text to defaults
-  ;;
-  (*)
-    case "${TERM}" in
-      (xterm-256color)
-        ps1Blk="\[$(tput setaf 0)\]"
-        ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"
-        ps1Grn="\[$(tput setaf 10)\]"
-        ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"
-        ps1Blu="\[$(tput setaf 32)\]"
-        ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"
-        ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"
-        ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"
-        ps1Ora="\[$(tput setaf 214)\]"
-        ps1Rst="\[$(tput sgr0)\]"
-      ;;
-      (*)
-        ps1Blk="\[$(tput setaf 0)\]"
-        ps1Red="\[$(tput bold)\]\[$(tput setaf 1)\]"
-        ps1Grn="\[$(tput setaf 2)\]"
-        ps1Ylw="\[$(tput bold)\]\[$(tput setaf 3)\]"
-        ps1Blu="\[$(tput setaf 4)\]"
-        ps1Mag="\[$(tput bold)\]\[$(tput setaf 5)\]"
-        ps1Cyn="\[$(tput bold)\]\[$(tput setaf 6)\]"
-        ps1Wte="\[$(tput bold)\]\[$(tput setaf 7)\]"
-        ps1Ora="\[\e[38;5;214m\]"
-        ps1Rst="\[$(tput sgr0)\]"
-      ;;
-    esac
-  ;;
-esac
+# Next, we map some basic colours:
+ps1Blk="\[\e[0;30m\]"        # Black
+ps1Red="\[\e[1;31m\]"        # Bold Red
+ps1Grn="\[\e[0;32m\]"        # Normal Green
+ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
+ps1Blu="\[\e[0;34m\]"        # Blue
+ps1Mag="\[\e[1;35m\]"        # Bold Magenta
+ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
+ps1Wte="\[$(tput setaf 7)\]" # White, safe/portable method
+ps1Ora="\[\e[38;5;214m\]"    # Orange (if available)
+ps1Rst="\[\e[0m\]"           # Reset text to defaults
 
+# Map out some block characters
 block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%
 block75="\xe2\x96\x93"   # u2593\0xe2 0x96 0x93 Dark shade 75%
 block50="\xe2\x96\x92"   # u2592\0xe2 0x96 0x92 Half shade 50%
 block25="\xe2\x96\x91"   # u2591\0xe2 0x96 0x91 Light shade 25%
 
+# Put those block characters in ascending and descending triplets
 blockAsc="$(printf '%b\n' "${block25}${block50}${block75}")"
 blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
 
@@ -2130,6 +2102,32 @@ if grep "^${USER}:" /etc/passwd &>/dev/null; then
 else
   auth="AD"
 fi
+
+setprompt-help() {
+  printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
+  printf '\t%s\n' "Usage: setprompt [-hfmr|rand|colour code] [colour code]" ""
+  printf '\t%s\n' "Options:" \
+    "  -h    Help, usage information" \
+    "  -f    Full prompt" \
+    "  -m    Minimal prompt" \
+    "  -r    Restore prompt colours to defaults" \
+    "  rand  Select a random colour.  Can be used for 1st and 2nd colours" \
+    "        e.g. 'setprompt rand rand'" \
+    "" \
+    "The first and second parameters will accept human readable colour codes." \
+    "These are represented in short and full format e.g." \
+    "For 'blue', you can enter 'bl', 'Bl', 'blue' or 'Blue'." \
+    "This applies for Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange." \
+    "ANSI Numerical codes (0-255) can also be supplied e.g. 'setprompt 143 76'." \
+    "" \
+    "256 colours is assumed at all times.  If you find issues, run 'setprompt w w'." \
+    "This will set the prompt to white using a safe colour code." \
+    "" \
+    "'setprompt' will also detect the width of the invoking terminal window" \
+    "If less than 80 columns is detected, the prompt is automatically simplified." \
+    "This means that 'setprompt' has full, simplified and minimal output modes."
+  return 0
+}
 
 setprompt() {
   # Let's setup some default primary and secondary colours
@@ -2142,10 +2140,7 @@ setprompt() {
   fi
   
   case "$1" in
-    (-h)
-      printf -- '%s\n' "Usage: setprompt [-h(elp)|-f(ull)|-m(inimal prompt)]"
-      return 0
-    ;;
+    (-h)                    setprompt-help; return 0;;
     (-f)                    export PS1_UNSET=False;;
     (-m)                    export PS1_UNSET=True;;
     (-r)
@@ -2162,7 +2157,13 @@ setprompt() {
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
     (rand)                  ps1Pri="\[\e[38;5;$((RANDOM%255))m\]";;
-    (*[0-9]*)               ps1Pri="\[\e[38;5;$1m\]";;
+    (*[0-9]*)
+      if (( "${1//[^0-9]/}" > 255 )); then
+        setprompt-help; return 1
+      else
+        ps1Pri="\[\e[38;5;${1//[^0-9]/}m\]"
+      fi
+    ;;
   esac
 
   case "$2" in
@@ -2176,7 +2177,13 @@ setprompt() {
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
     (rand)                  ps1Sec="\[\e[38;5;$((RANDOM%255))m\]";;
-    (*[0-9]*)               ps1Sec="\[\e[38;5;$2m\]";;
+    (*[0-9]*)
+      if (( "${2//[^0-9]/}" > 255 )); then
+        setprompt-help; return 1
+      else
+        ps1Sec="\[\e[38;5;${2//[^0-9]/}m\]"
+      fi
+    ;;
   esac
 
   # Default catch-all for non-root scenarios

@@ -2066,7 +2066,7 @@ for termType in putty-256color xterm-256color xterm-color xtermc dtterm sun-colo
   # Set TERM to the currently selected type
   export TERM="${termType}"
   # Test if 'tput' is upset, if so, move to the next option
-  if tput colors 2>&1 | grep "unknown terminal" >/dev/null 2>&1; then
+  if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
     continue
   # If 'tput' is not upset, then we've got a working type, so move on!
   else

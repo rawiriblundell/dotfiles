@@ -151,10 +151,40 @@ fi
 # OS specific tweaks
 
 if [[ "$(uname)" = "SunOS" ]]; then
+  # 'xterm' does not support colour at all on Solaris, so we try for something else
+  for termType in xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
+    # Set TERM to the currently selected type
+    export TERM="${termType}"
+    # Test if 'tput' is upset, if so, move to the next option
+    if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
+      continue
+    # If 'tput' is not upset, then we've got a working type, so move on!
+    else
+      break
+    fi
+  done
+
   # Call solresize() whenever a window is resized
   trap solresize SIGWINCH
   
 elif [[ "$(uname)" = "Linux" ]]; then
+  # Often I connect using PuTTY, so we check that.  If it's the case, setup TERM.
+  # Otherwise, whatever is provided by the tty emulator (usually 'xterm') should be fine
+  if [[ ! "${TERM}" = "putty" || ! "${TERM}" = "putty-256color" ]]; then
+    # Send an enquiry character and see if we get anything back
+    # This is to test whether we're within PuTTY or not
+    get-answerback() {
+      stty raw min 0 time 5
+      printf '\005'
+      read -s
+      stty cooked
+      printf '%s\n' "${REPLY}"
+    }
+    if [[ "$(get-answerback)" = "PuTTY" ]]; then
+      export TERM=putty-256color
+    fi
+  fi
+
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU
   alias diff='diff -W $(( $(tput cols) - 2 ))'
@@ -171,6 +201,21 @@ elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "$TERM" = "xterm" ]]; then
   stty intr ^c
   stty erase ^?
 fi
+
+# First, figure out $TERM, failing downwards
+# This is generally a bad practice - you should be defining this within your terminal software
+# 'xterm' does not support colour at all on Solaris, so is provided for safety
+for termType in putty-256color xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
+  # Set TERM to the currently selected type
+  export TERM="${termType}"
+  # Test if 'tput' is upset, if so, move to the next option
+  if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
+    continue
+  # If 'tput' is not upset, then we've got a working type, so move on!
+  else
+    break
+  fi
+done
 
 ################################################################################
 # Aliases
@@ -542,7 +587,7 @@ flocate() {
 # Because $SHELL is a bad thing to test against, we provide this function
 # This won't work for 'fish', which needs 'ps -p %self'
 # Good thing we don't care about 'fish'
-getShell() {
+get-shell() {
   ps -o comm= -p $$
   #ps -p "$$" | tail -n 1 | awk '{print $NF}'
 }
@@ -2058,23 +2103,8 @@ export PROMPT_COMMAND
 # 
 # Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
 # Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
-#
-# First, figure out $TERM, failing downwards
-# This is generally a bad practice - you should be defining this within your terminal software
-# 'xterm' does not support colour at all on Solaris, so is provided for safety
-for termType in putty-256color xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
-  # Set TERM to the currently selected type
-  export TERM="${termType}"
-  # Test if 'tput' is upset, if so, move to the next option
-  if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
-    continue
-  # If 'tput' is not upset, then we've got a working type, so move on!
-  else
-    break
-  fi
-done
-  
-# Next, we map some basic colours:
+
+# First, we map some basic colours:
 ps1Blk="\[\e[0;30m\]"        # Black
 ps1Red="\[\e[1;31m\]"        # Bold Red
 ps1Grn="\[\e[0;32m\]"        # Normal Green

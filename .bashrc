@@ -170,7 +170,7 @@ if [[ "$(uname)" = "SunOS" ]]; then
 elif [[ "$(uname)" = "Linux" ]]; then
   # Often I connect using PuTTY, so we check that.  If it's the case, setup TERM.
   # Otherwise, whatever is provided by the tty emulator (usually 'xterm') should be fine
-  if [[ ! "${TERM}" = "putty" || ! "${TERM}" = "putty-256color" ]]; then
+  if [[ ! *"${TERM}"* = *"putty"* ]]; then
     # Send an enquiry character and see if we get anything back
     # This is to test whether we're within PuTTY or not
     get-answerback() {

@@ -2135,7 +2135,7 @@ fi
 
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
-  printf '\t%s\n' "Usage: setprompt [-hfmr|rand|colour code] [colour code]" ""
+  printf '\t%s\n' "Usage: setprompt [-hfmr|rand|colour code] [rand|colour code]" ""
   printf '\t%s\n' "Options:" \
     "  -h    Help, usage information" \
     "  -f    Full prompt" \

@@ -593,7 +593,7 @@ get-shell() {
 }
 
 # Small function to try and ensure setprompt etc behaves
-god() {
+godmode() {
   if [[ -z "$1" ]]; then
     # setprompt root
     case $(uname) in

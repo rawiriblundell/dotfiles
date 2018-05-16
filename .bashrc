@@ -2166,8 +2166,6 @@ setprompt() {
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"
   else
-    ps1Pri="${ps1Red}"
-    ps1Sec="${ps1Grn}"
     ps1Block="${blockDwn}"
   fi
  
@@ -2217,6 +2215,10 @@ setprompt() {
       fi
     ;;
   esac
+  
+  # Default catch-all for non-root scenarios
+  [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
+  [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
 
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again

@@ -2160,13 +2160,11 @@ setprompt-help() {
 }
 
 setprompt() {
-  # Let's setup some default primary and secondary colours
+  # Let's setup some default primary and secondary colours for root/sudo
   if [[ -w / ]]; then
     ps1Pri="${ps1Red}"
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"
-  else
-    ps1Block="${blockDwn}"
   fi
  
   case "$1" in
@@ -2194,6 +2192,7 @@ setprompt() {
         ps1Pri="\[\e[38;5;${1//[^0-9]/}m\]"
       fi
     ;;
+    (-|_)                   : #no-op ;;
   esac
 
   case "$2" in
@@ -2214,11 +2213,18 @@ setprompt() {
         ps1Sec="\[\e[38;5;${2//[^0-9]/}m\]"
       fi
     ;;
+    (-|_)                   : #no-op ;;
+  esac
+
+  case "$3" in
+    (a|A|asc|Asc)           ps1Block="${blockAsc}"
+    (d|D|dwn|Dwn)           ps1Block="${blockDwn}"
   esac
   
   # Default catch-all for non-root scenarios
   [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
   [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
+  [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"
 
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again

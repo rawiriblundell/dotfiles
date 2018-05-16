@@ -592,6 +592,19 @@ get-shell() {
   #ps -p "$$" | tail -n 1 | awk '{print $NF}'
 }
 
+# Small function to try and ensure setprompt etc behaves
+god() {
+  if [[ -z "$1" ]]; then
+    # setprompt root
+    case $(uname) in
+      (SunOS)   sudo bash;;
+      (Linux)   sudo -i;;
+    esac
+  else
+    sudo "$@"
+  fi
+}
+
 # Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
 histrank() { 
   HISTTIMEFORMAT="%y/%m/%d %T " history \
@@ -2165,6 +2178,7 @@ setprompt() {
     ps1Pri="${ps1Red}"
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"
+    ps1Char='#'
   fi
  
   case "$1" in
@@ -2217,20 +2231,21 @@ setprompt() {
   esac
 
   case "$3" in
-    (a|A|asc|Asc)           ps1Block="${blockAsc}"
-    (d|D|dwn|Dwn)           ps1Block="${blockDwn}"
+    (a|A|asc|Asc)           ps1Block="${blockAsc}";;
+    (d|D|dwn|Dwn)           ps1Block="${blockDwn}";;
   esac
   
   # Default catch-all for non-root scenarios
   [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
   [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
   [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"
+  [[ -z "${ps1Char}" ]] && ps1Char='$'
 
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
-    export PS1="${ps1Pri}${ps1Block}${ps1Rst}$ "
-    alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}# ' sudo"
+    export PS1="${ps1Pri}${ps1Block}${ps1Rst}${ps1Char} "
+    alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}${ps1Char} ' sudo"
     return 0  # Stop further processing
   fi
   
@@ -2238,12 +2253,12 @@ setprompt() {
   # If columns exceeds 80, use the long form, otherwise the short form
   if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
     # shellcheck disable=SC1117
-    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
-    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}# ' sudo"
+    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
   else
     # shellcheck disable=SC1117
-    export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
-    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}# ' sudo"
+    export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
   fi
 }
 

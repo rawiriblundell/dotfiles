@@ -592,7 +592,8 @@ get-shell() {
   #ps -p "$$" | tail -n 1 | awk '{print $NF}'
 }
 
-# Small function to try and ensure setprompt etc behaves
+# Small function to try and ensure setprompt etc behaves when escalating to root
+# I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {
   if [[ -z "$1" ]]; then
     # setprompt root

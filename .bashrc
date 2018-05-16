@@ -2166,9 +2166,11 @@ setprompt() {
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"
   else
+    ps1Pri="${ps1Red}"
+    ps1Sec="${ps1Grn}"
     ps1Block="${blockDwn}"
   fi
-  
+ 
   case "$1" in
     (-h)                    setprompt-help; return 0;;
     (-f)                    export PS1_UNSET=False;;
@@ -2216,14 +2218,11 @@ setprompt() {
     ;;
   esac
 
-  # Default catch-all for non-root scenarios
-  [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
-  [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
-
   # Throw it all together, first we check if our unset flag is set
   # If so, we switch to a minimal prompt until 'setprompt -f' is run again
   if [[ "${PS1_UNSET}" = "True" ]]; then
     export PS1="${ps1Pri}${ps1Block}${ps1Rst}$ "
+    alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}# ' sudo"
     return 0  # Stop further processing
   fi
   
@@ -2232,9 +2231,11 @@ setprompt() {
   if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
     # shellcheck disable=SC1117
     export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
+    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}# ' sudo"
   else
     # shellcheck disable=SC1117
     export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}$ "
+    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}# ' sudo"
   fi
 }
 

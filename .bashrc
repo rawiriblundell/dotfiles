@@ -814,10 +814,15 @@ printline() {
 # Start an HTTP server from a directory, optionally specifying the port
 quickserve() {
   local port="${1:-8000}"
-  sleep 1 && open "http://localhost:${port}/" &
-  # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
-  # And serve everything as UTF-8 (although not technically correct, this doesn.t break anything for binary files)
-  python -m "SimpleHTTPServer" "$port"
+  #sleep 1 && open "http://localhost:${port}/" &
+  (
+    cd "${2:-.}" || return 1
+    # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
+    # And serve everything as UTF-8 (although not technically correct, this doesn't break anything for binary files)
+    python -m "SimpleHTTPServer" "${port}"
+    #python3 -m http.server "${port}
+    #python -m $(python -c 'import sys; print("http.server" if sys.version_info[:2] > (2,7) else "SimpleHTTPServer")') "${port}
+  )
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo

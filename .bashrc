@@ -1870,7 +1870,7 @@ ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
 ps1Blu="\[\e[38;5;32m\]"     # Blue
 ps1Mag="\[\e[1;35m\]"        # Bold Magenta
 ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
-ps1Wte="\[\e[1;37m\]         # Bold White
+ps1Wte="\[\e[1;37m\]"        # Bold White
 ps1Ora="\[\e[38;5;214m\]"    # Orange
 ps1Rst="\[\e[0m\]"           # Reset text to defaults
 

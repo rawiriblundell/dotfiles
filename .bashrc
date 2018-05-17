@@ -1356,6 +1356,48 @@ toupper() {
   fi
 }
 
+# Overlay 'tput' so that non GNU behaves as much like GNU as possible
+# Inspired by 'bashlib' and 'liquidprompt'
+tput() {
+  ctput() { command tput "${@}" 2>/dev/null; }
+  case "${1}" in
+    (blink)         ctput blink || ctput mb;;
+    (bold)          ctput bold  || ctput md;;
+    (civis)         ctput civis || ctput vi;;
+    (cnorm)         ctput cnorm || ctput ve;;
+    (cols)          ctput cols  || ctput co;;
+    (dim)           ctput dim   || ctput mh;;
+    (ed)            ctput ed    || ctput cd;;
+    (el)            ctput el    || ctput ce;;
+    (el1)           ctput el1   || ctput cb;;
+    (lines)         ctput lines || ctput li;;
+    (ritm)          ctput ritm  || ctput ZR;;
+    (rmcup)         ctput rmcup || ctput te;;
+    (rmso)          ctput rmso  || ctput se;;
+    (rmul)          ctput rmul  || ctput ue;;
+    (setaf)
+      case $(uname) in
+        (FreeBSD)   ctput AF "${2}";;
+        (OpenBSD)   ctput AF "${2}" 0 0;;
+        (*)         ctput setaf "${2}";;
+      esac
+    ;;
+    (setab)
+      case $(uname) in
+        (FreeBSD)   ctput AB "${2}";;
+        (OpenBSD)   ctput AB "${2}" 0 0;;
+        (*)         ctput setab "${2}";;
+      esac
+    ;;
+    (sgr0)          ctput sgr0  || ctput me;;
+    (sitm)          ctput sitm  || ctput ZH;;
+    (smcup)         ctput smcup || ctput ti;;
+    (smso)          ctput smso  || ctput so;;
+    (smul)          ctput smul  || ctput us;;
+    (*)             ctput "${@}";;
+  esac
+}
+
 # A small function to trim whitespace either side of a (sub)string
 # shellcheck disable=SC2120
 trim() {

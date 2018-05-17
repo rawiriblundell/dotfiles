@@ -64,8 +64,8 @@ pathfind() {
   OLDIFS="$IFS"
   IFS=:
   for prog in $PATH; do
-    if [[ -x "$prog/$*" ]]; then
-      printf '%s\n' "$prog/$*"
+    if [[ -x "${prog}/$*" ]]; then
+      printf '%s\n' "${prog}/$*"
       IFS="$OLDIFS"
       return 0
     fi
@@ -92,31 +92,23 @@ if [[ ! -f /bin/bash ]]; then
 fi
 
 ################################################################################
-# Check the window size after each command and, if necessary,
-# Update the values of LINES and COLUMNS.
-# This attempts to correct line-wrapping-over-prompt issues when a window is resized
-shopt -s checkwinsize
+# Setup our desired shell options
+shopt -s checkwinsize cdspell extglob globstar histappend
 
 # Set the bash history timestamp format
 export HISTTIMEFORMAT="%F,%T "
 
-# don't put duplicate lines in the history. See bash(1) for more options
+# Don't put duplicate lines in the history. See bash(1) for more options
 # and ignore commands that start with a space
 HISTCONTROL=ignoredups:ignorespace
  
-# append to the history file instead of overwriting it
-shopt -s histappend
-
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+# For setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000
 HISTFILESIZE=5000
 
-# Disable ctrl+s (XOFF) in PuTTY
+# Disable ctrl+s (XOFF)
 stty ixany
 stty ixoff -ixon
-
-# Enable extended globbing
-shopt -s extglob
 
 ################################################################################
 # Programmable Completion (Tab Completion)
@@ -164,15 +156,24 @@ if [[ "$(uname)" = "SunOS" ]]; then
     fi
   done
 
-  # Call solresize() whenever a window is resized
-  trap solresize SIGWINCH
+  # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
+  vi() {
+    local origWidth
+    origWidth="${COLUMNS:-$(tput cols)}"
+    if (( origWidth > 160 )); then
+      stty columns 160
+    fi
+    command vi "$*"
+    stty columns "${origWidth}"
+  }
   
 elif [[ "$(uname)" = "Linux" ]]; then
   # Often I connect using PuTTY, so we check that.  If it's the case, setup TERM.
-  # Otherwise, whatever is provided by the tty emulator (usually 'xterm') should be fine
+  # Otherwise, whatever is the tty emulator supplies (usually 'xterm') should be fine
+  # This assumes PuTTY is setup to report itself as e.g. 'putty' or 'putty-256color'
   if [[ ! *"${TERM}"* = *"putty"* ]]; then
-    # Send an enquiry character and see if we get anything back
-    # This is to test whether we're within PuTTY or not
+    # Send an enquiry character to the tty emulator.  PuTTY should return "PuTTY"
+    # see: https://www.chiark.greenend.org.uk/~sgtatham/putty/faq.html#faq-puttyputty
     get-answerback() {
       stty raw min 0 time 5
       printf '\005'
@@ -180,6 +181,7 @@ elif [[ "$(uname)" = "Linux" ]]; then
       stty cooked
       printf '%s\n' "${REPLY}"
     }
+    # So if we're in PuTTY but not using a putty terminfo option, do so.
     if [[ "$(get-answerback)" = "PuTTY" ]]; then
       export TERM=putty-256color
     fi
@@ -197,25 +199,10 @@ elif [[ "$(uname)" = "Linux" ]]; then
   
 # I haven't used HP-UX in a while, but just to be sure
 # we fix the backspace quirk for xterm
-elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "$TERM" = "xterm" ]]; then
+elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "${TERM}" = "xterm" ]]; then
   stty intr ^c
   stty erase ^?
 fi
-
-# First, figure out $TERM, failing downwards
-# This is generally a bad practice - you should be defining this within your terminal software
-# 'xterm' does not support colour at all on Solaris, so is provided for safety
-for termType in putty-256color xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
-  # Set TERM to the currently selected type
-  export TERM="${termType}"
-  # Test if 'tput' is upset, if so, move to the next option
-  if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
-    continue
-  # If 'tput' is not upset, then we've got a working type, so move on!
-  else
-    break
-  fi
-done
 
 ################################################################################
 # Aliases
@@ -224,15 +211,6 @@ done
 # See: https://github.com/wickett/curl-trace
 if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
-fi
-
-# Enable color support of ls and also add handy aliases
-if [[ -x /usr/bin/dircolors ]]; then
-  if [[ -r ~/.dircolors ]]; then
-    eval "$(dircolors -b ~/.dircolors)"
-  else
-    eval "$(dircolors -b)"
-  fi
 fi
 
 # It looks like blindly asserting the following upsets certain 
@@ -278,6 +256,16 @@ GREP_COLORS='sl=49;39:cx=49;39:mt=49;31;1:fn=49;32:ln=49;33:bn=49;33:se=1;36'
 LS_COLORS='di=1;32:fi=0:ln=1;33;40:pi=1;33;40:so=1;33;40:bd=1;33;40:cd=1;33;40:or=5;33:mi=0:ex=1;31:*.rpm=1;31'
 
 export GREP_COLORS LS_COLORS
+
+# Check for dircolors and if found, process .dircolors
+# This sets up colours for 'ls' via LS_COLORS
+if [[ -z "${LS_COLORS}" ]] && pathfind dircolors &>/dev/null; then
+  if [[ -r ~/.dircolors ]]; then
+    eval "$(dircolors -b ~/.dircolors)"
+  else
+    eval "$(dircolors -b)"
+  fi
+fi
 
 ################################################################################
 # Functions
@@ -552,38 +540,6 @@ extract() {
   fi
 }
 
-# flocate function.  This gives a search function that blends find and locate
-# Will obviously only work where locate lives, so Solaris will mostly be out of luck
-# Usage: flocate searchterm1 searchterm2 searchterm[n]
-# Source: http://solarum.com/v.php?l=1149LV99
-flocate() {
-  if ! command -v locate &>/dev/null; then
-    printf '%s\n' "[ERROR]: 'flocate' depends on 'locate', which wasn't found."
-    return 1
-  fi
-  if (( $# > 1 )); then
-    display_divider=1
-  else
-    display_divider=0
-  fi
-
-  current_argument=0
-  total_arguments=$#
-  while (( current_argument < total_arguments )); do
-    current_file=$1
-    if (( display_divider == 1 )); then
-      printf '%s\n' "----------------------------------------" \
-      "Matches for ${current_file}" \
-      "----------------------------------------"
-    fi
-
-    filename_re="^\\(.*/\\)*${current_file//./\\.}$"
-    locate -r "${filename_re}"
-    shift
-    (( current_argument = current_argument + 1 ))
-  done
-}
-
 # Because $SHELL is a bad thing to test against, we provide this function
 # This won't work for 'fish', which needs 'ps -p %self'
 # Good thing we don't care about 'fish'
@@ -637,13 +593,6 @@ isinteger() {
     return 1
   fi
 }
-
-# Replicate 'let'.  Likely to not be needed in bash, mostly for my reference
-if ! command -v let &>/dev/null; then
-  let() {
-    return "$((!($1)))"
-  }
-fi
 
 # A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
 # This provides human readable 'ls' output for systems
@@ -1198,13 +1147,6 @@ if ! command -v shuf &>/dev/null; then
   }
 fi
 
-# Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
-solresize() {
-  if (( "${COLUMNS:-$(tput cols)}" > 160 )); then
-    stty columns "${1:-160}"
-  fi
-}
-
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
 # and automatically adds them to ~/.ssh/known_hosts
@@ -1414,56 +1356,6 @@ toupper() {
   fi
 }
 
-# Add -p option to 'touch' to combine 'mkdir -p' and 'touch'
-# The trick here is that we use 'command' to launch 'touch',
-# as it overrides the shell's lookup order.. essentially speaking.
-touch() {
-  # Check if '-p' is present.
-  # For bash3+ you could use 'if [[ "$@" =~ -p ]];'
-  if echo "$@" | grep "\\-p" >/dev/null 2>&1; then
-
-    # Transfer everything to a local array
-    local argArray=( "$@" )
-
-    # We need to remove '-p' no matter where it is in the array
-    # This means searching for it, unsetting it, and reindexing
-    # Newer bash versions could use "${!argArray[@]}" style handling
-    for (( index=0; index<"${#argArray[@]}"; index++ )); do
-      if [[ "${argArray[index]}" = "-p" ]]; then
-        unset -- argArray["${index}"]
-        argArray=( "${argArray[@]}" )
-      fi
-    done
-
-    # Next extract a list of directories to process
-    local dirArray=( "$(printf '%s\n' "${argArray[@]}" | grep "/$")" )
-    for file in $(printf '%s\n' "${argArray[@]}" | grep "/" | grep -v "/$"); do
-      dirArray+=( "$(dirname "${file}")" )
-    done
-
-    # As before, we sanitise the array to prevent issues
-    # In this case, 'mkdir -p "" '
-    for (( index=0; index<"${#dirArray[@]}"; index++ )); do
-      if [[ -z "${dirArray[index]}" ]]; then
-        unset -- dirArray["${index}"]
-        dirArray=( "${dirArray[@]}" )
-      fi
-    done   
-
-    # Okay, first, let's deal with the directories
-    if (( "${#dirArray[*]}" > 0 )); then
-      mkdir -p "${dirArray[@]}"
-    fi
-
-    # Now we can just run 'touch' with the sanitised array
-    command touch "${argArray[@]}"
-
-  # If '-p' isn't present, just use 'touch' as normal
-  else
-    command touch "$@"
-  fi
-}
-
 # A small function to trim whitespace either side of a (sub)string
 # shellcheck disable=SC2120
 trim() {
@@ -1519,56 +1411,6 @@ urandInt() {
     printf '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
   done
 }
-
-# Check if 'watch' is available, if not, enable a stop-gap function
-if ! command -v watch &>/dev/null; then
-  watch() {
-    local OPTIND colWidth titleHead sleepTime dateNow
-
-    while getopts ":hn:vt" optFlags; do
-      case "${optFlags}" in
-        (h)  printf '%s\n' "Usage:" " watch [-hntv] <command>" "" \
-              "Options:" \
-              "  -h, help.      Print a summary of the options" \
-              "  -n, interval.  Seconds to wait between updates" \
-              "  -v, version.   Print the version number" \
-              "  -t, no title.  Turns off showing the header"
-            return 0;;
-        (n)  sleepTime="${OPTARG}";;
-        (v)  printf '%s\n' "watch.  This is a bashrc function knockoff that steps in if the real watch is not found."
-             return 0;;
-        (t)  titleHead=false;;
-        (\?)  printf '%s\n' "ERROR: This version of watch does not support '-$OPTARG'.  Try -h for usage or -v for version info." >&2
-              return 1;;
-        (:)  printf '%s\n' "ERROR: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-             return 1;;
-      esac
-    done
-    shift $(( OPTIND -1 ))
-
-    # Set the default values for Title and Command
-    sleepTime="${sleepTime:-2}"
-    titleHead="${titleHead:-true}"
-
-    if [[ -z "$*" ]]; then
-      printf '%s\n' "ERROR: watch needs a command to watch.  Please try 'watch -h' for usage information."
-      return 1
-    fi
-
-    while true; do
-      clear
-      if [[ "${titleHead}" = "true" ]]; then
-        dateNow=$(date)
-        (( colWidth = $(tput cols) - ${#dateNow} ))
-        printf "%s%${colWidth}s" "Every ${sleepTime}s: $*" "${dateNow}"
-        tput sgr0
-        printf '%s\n' "" ""
-      fi
-      eval "$*"
-      sleep "${sleepTime}"
-    done
-  }
-fi
 
 # Get local weather and present it nicely
 weather() {
@@ -2000,100 +1842,6 @@ genphrase() {
   fi
 }
 
-# Password strength check function.  Can be fed a password most ways.
-# TO-DO: add a verbose output switch
-pwcheck () {
-  # Read password in, if it's blank, prompt the user
-  if [[ "${*}" = "" ]]; then
-    read -resp $'Please enter the password/phrase you would like checked:\n' PwdIn
-  else
-    # Otherwise, whatever is fed in is the password to check
-    PwdIn="${*}"
-  fi
-
-  # Check password, attempt with cracklib-check, failover to something a little more exhaustive
-  if [[ -f /usr/sbin/cracklib-check ]]; then
-    Method="cracklib-check"
-    Result="$(echo "${PwdIn}" | /usr/sbin/cracklib-check)"
-    Okay="$(awk -F': ' '{print $2}' <<<"${Result}")"
-  else  
-    # I think we have a common theme here.  Writing portable code sucks, but it keeps things interesting.
-    
-    Method="pwcheck"
-    # Force 3 of the following complexity categories:  Uppercase, Lowercase, Numeric, Symbols, No spaces, No dicts
-    # Start by giving a credential score to be subtracted from, then default the initial vars
-    CredCount=4
-    PWCheck="true"
-    ResultChar="[OK]: Character count"
-    ResultDigit="[OK]: Digit count"
-    ResultUpper="[OK]: UPPERCASE count"
-    ResultLower="[OK]: lowercase count"
-    ResultPunct="[OK]: Special character count"
-    ResultSpace="[OK]: No spaces found"
-    ResultDict="[OK]: Doesn't seem to match any dictionary words"
-
-    while [[ "${PWCheck}" = "true" ]]; do
-      # Start cycling through each complexity requirement
-      # We instantly fail for short passwords
-      if [[ "${#PwdIn}" -lt "8" ]]; then
-        printf '%s\n' "pwcheck: Password must have a minimum of 8 characters.  Further testing stopped.  (Score = 0)"
-        return 1
-      # And we instantly fail for passwords with spaces in them
-      elif [[ "${PwdIn}" == *[[:blank:]]* ]]; then
-        printf '%s\n' "pwcheck: Password cannot contain spaces.  Further testing stopped.  (Score = 0)"
-        return 1
-      fi
-      # Check against the dictionary
-      if grep -qh "${PwdIn}" /usr/{,share/}dict/words 2>/dev/null; then
-        ResultDict="${PwdIn}: Password cannot contain a dictionary word.  (Score = 0)"
-        CredCount=0 # Punish hard for dictionary words
-      fi
-      # Check for a digit
-      if [[ ! "${PwdIn}" == *[[:digit:]]* ]]; then
-        ResultDigit="[FAIL]: Password should contain at least one digit.  (Score -1)"
-        ((CredCount = CredCount - 1))
-      fi
-      # Check for UPPERCASE
-      if [[ ! "${PwdIn}" == *[[:upper:]]* ]]; then
-        ResultUpper="[FAIL]: Password should contain at least one uppercase letter.  (Score -1)"
-        ((CredCount = CredCount - 1))
-      fi
-      # Check for lowercase
-      if [[ ! "${PwdIn}" == *[[:lower:]]* ]]; then
-        ResultLower="[FAIL]: Password should contain at least one lowercase letter.  (Score -1)"
-        ((CredCount = CredCount - 1))
-      fi
-      # Check for special characters
-      if [[ ! "${PwdIn}" == *[[:punct:]]* ]]; then
-        ResultPunct="[FAIL]: Password should contain at least one special character.  (Score -1)"
-        ((CredCount = CredCount - 1))
-      fi
-      Result="$(printf '%s\n' "pwcheck: A score of 3 is required to pass testing, '${PwdIn}' scored ${CredCount}." \
-        "${ResultChar}" "${ResultSpace}" "${ResultDict}" "${ResultDigit}" "${ResultUpper}" "${ResultLower}" "${ResultPunct}")"
-      PWCheck="false" #Exit condition for the loop
-    done
-
-    # Now check password score, if it's less than three, then it fails
-    # Here is where we force the three complexity catergories
-    if [[ "${CredCount}" -lt "3" ]]; then
-      # Rejected password, set variables appropriately
-      Okay="NotOK"
-    # Otherwise, it's a valid password
-    else
-      Okay="OK"
-    fi
-  fi
-
-  # Output result
-  if [[ "${Okay}" == "OK" ]]; then
-    printf '%s\n' "pwcheck: The password/phrase passed my testing."
-    return 0
-  else
-    printf '%s\n' "pwcheck: The check failed for password '${PwdIn}' using the ${Method} test." "${Result}" "Please try again."
-    return 1
-  fi
-}
-
 ################################################################################
 # Set the PROMPT_COMMAND
 # If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.
@@ -2113,10 +1861,6 @@ export PROMPT_COMMAND
 # otherwise bash will miscount and get confused about where the prompt starts.  
 # All sorts of line wrapping weirdness and prompt overwrites will then occur.  
 # This is why all the escape codes have '\]' enclosing them.  Don't mess with that.
-# The double backslash at the start also helps with this behaviour.
-# 
-# Bad:    \\[\e[0m\e[1;31m[\$(date +%y%m%d/%H:%M)]\[\e[0m
-# Better:  \\[\e[0m\]\e[1;31m\][\$(date +%y%m%d/%H:%M)]\[\e[0m\]
 
 # First, we map some basic colours:
 ps1Blk="\[\e[0;30m\]"        # Black
@@ -2126,8 +1870,8 @@ ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
 ps1Blu="\[\e[38;5;32m\]"     # Blue
 ps1Mag="\[\e[1;35m\]"        # Bold Magenta
 ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
-ps1Wte="\[$(tput setaf 7)\]" # White, safe/portable method
-ps1Ora="\[\e[38;5;214m\]"    # Orange (if available)
+ps1Wte="\[\e[1;37m\]         # Bold White
+ps1Ora="\[\e[38;5;214m\]"    # Orange
 ps1Rst="\[\e[0m\]"           # Reset text to defaults
 
 # Map out some block characters
@@ -2251,7 +1995,7 @@ setprompt() {
   fi
   
   # Otherwise, it's business as usual.  We test how many columns we have.
-  # If columns exceeds 80, use the long form, otherwise the short form
+  # If columns exceeds 80, use the long form, otherwise use the short form
   if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
     # shellcheck disable=SC1117
     export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "

@@ -61,16 +61,16 @@ export PATH
 
 # A portable alternative to command -v/which/type
 pathfind() {
-  OLDIFS="$IFS"
+  OLDIFS="${IFS}"
   IFS=:
-  for prog in $PATH; do
+  for prog in ${PATH}; do
     if [[ -x "${prog}/$*" ]]; then
       printf '%s\n' "${prog}/$*"
-      IFS="$OLDIFS"
+      IFS="${OLDIFS}"
       return 0
     fi
   done
-  IFS="$OLDIFS"
+  IFS="${OLDIFS}"
   return 1
 }
 
@@ -94,8 +94,7 @@ fi
 ################################################################################
 # Setup our desired shell options
 shopt -s checkwinsize cdspell extglob histappend
-
-(( BASH_VERSINFO >= 4 )) && shops -s globstar
+(( BASH_VERSINFO >= 4 )) && shopt -s globstar
 
 # Set the bash history timestamp format
 export HISTTIMEFORMAT="%F,%T "

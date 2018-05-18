@@ -811,17 +811,46 @@ printline() {
   fi
 }
 
-# Start an HTTP server from a directory, optionally specifying the port
+# Start an HTTP server, optionally specifying the port and directory
+# Derived from (among others)
+# * https://gist.github.com/alxklo/8408169
+# * https://github.com/2001db8/simpleHTTPSserver.sh
+# * https://stackoverflow.com/a/46595749
+# See also: https://gist.github.com/willurd/5720255
+# shellcheck disable=SC2140
 quickserve() {
+  if [[ "${1}" = "-h" ]]; then
+    printf '%s\n' "Usage: quickserve [port(default: 8000)] [path(default: cwd)]"
+    return 0
+  fi
   local port="${1:-8000}"
-  #sleep 1 && open "http://localhost:${port}/" &
+  httpModule=$( \
+    python -c "import sys; \
+    print("http.server" if sys.version_info[:2] > (2,7) else "SimpleHTTPServer")"
+  ) 
+  trap 'kill -9 "${httpPid}"' SIGHUP SIGINT SIGTERM
   (
     cd "${2:-.}" || return 1
-    # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
-    # And serve everything as UTF-8 (although not technically correct, this doesn't break anything for binary files)
-    python -m "SimpleHTTPServer" "${port}"
-    #python3 -m http.server "${port}
-    #python -m $(python -c 'import sys; print("http.server" if sys.version_info[:2] > (2,7) else "SimpleHTTPServer")') "${port}
+    case "${httpModule}" in
+      (SimpleHTTPServer)
+        python -c "import sys,BaseHTTPServer,SimpleHTTPServer; \
+          sys.tracebacklimit=0; \
+          httpd = BaseHTTPServer.HTTPServer(('', ${port}), SimpleHTTPServer.SimpleHTTPRequestHandler); \
+          httpd.serve_forever()"
+        httpPid="$!"
+      ;;
+      (http.server)
+        python -c "import sys,http.server,http.server,ssl,signal; \
+          signal.signal(signal.SIGINT, lambda x,y: sys.exit(0)); \
+          httpd = http.server.HTTPServer(('', ${port}), http.server.SimpleHTTPRequestHandler) ; \
+          httpd.serve_forever()"
+        httpPid="$!"
+      ;;
+      (*)
+        printf -- '%s\n' "No suitable python module could be found"
+        return 1
+      ;;
+    esac
   )
 }
 

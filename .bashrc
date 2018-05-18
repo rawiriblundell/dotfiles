@@ -93,7 +93,9 @@ fi
 
 ################################################################################
 # Setup our desired shell options
-shopt -s checkwinsize cdspell extglob globstar histappend
+shopt -s checkwinsize cdspell extglob histappend
+
+(( BASH_VERSINFO >= 4 )) && shops -s globstar
 
 # Set the bash history timestamp format
 export HISTTIMEFORMAT="%F,%T "

@@ -1252,13 +1252,6 @@ throttle() {
   done
 }
 
-  # Now we output line by line with a sleep in the middle
-  while read -r; do
-    printf '%s\n' "${REPLY}"
-    sleep "${sleepTime}"
-  done
-}
-
 # Check if 'timeout' is available, if not, enable a stop-gap function
 if ! command -v timeout &>/dev/null; then
   timeout() {
@@ -1941,16 +1934,16 @@ export PROMPT_COMMAND
 # This is why all the escape codes have '\]' enclosing them.  Don't mess with that.
 
 # First, we map some basic colours:
-ps1Blk="\[\e[0;30m\]"        # Black
-ps1Red="\[\e[1;31m\]"        # Bold Red
-ps1Grn="\[\e[0;32m\]"        # Normal Green
-ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
-ps1Blu="\[\e[38;5;32m\]"     # Blue
-ps1Mag="\[\e[1;35m\]"        # Bold Magenta
-ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
-ps1Wte="\[\e[1;37m\]"        # Bold White
-ps1Ora="\[\e[38;5;214m\]"    # Orange
-ps1Rst="\[\e[0m\]"           # Reset text to defaults
+ps1Blk="\[$(tput setaf 0)\]"                    # Black - \[\e[0;30m\]
+ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"    # Bold Red - \[\e[1;31m\]
+ps1Grn="\[$(tput setaf 10)\]"                   # Normal Green - \[\e[0;32m\]
+ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"   # Bold Yellow - \[\e[1;33m\]
+ps1Blu="\[$(tput setaf 32)\]"                   # Blue - \[\e[38;5;32m\]
+ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"   # Bold Magenta - \[\e[1;35m\]
+ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"   # Bold Cyan - \[\e[1;36m\]
+ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"   # Bold White - \[\e[1;37m\]
+ps1Ora="\[$(tput setaf 202)\]"                  # Orange - \[\e[38;5;214m\]
+ps1Rst="\[$(tput sgr0)\]"                       # Reset text - \[\e[0m\]
 
 # Map out some block characters
 block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%

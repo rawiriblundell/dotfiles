@@ -12,27 +12,19 @@
 ################################################################################
 
 # Source global definitions
-if [[ -f /etc/bashrc ]]; then
-  # shellcheck disable=SC1091
-  . /etc/bashrc
-fi
+# shellcheck disable=SC1091
+[[ -f /etc/bashrc ]] && . /etc/bashrc
 
 # If not running interactively, don't do anything
 [[ "$-" != *i* ]] && return
 
-# Aliases
 # Some people use a different file for aliases
-if [[ -f "${HOME}/.bash_aliases" ]]; then
-  # shellcheck source=/dev/null
-  . "${HOME}/.bash_aliases"
-fi
+# shellcheck source=/dev/null
+[[ -f "${HOME}/.bash_aliases" ]] && . "${HOME}/.bash_aliases"
 
-# Functions
 # Some people use a different file for functions
-if [[ -f "${HOME}/.bash_functions" ]]; then
-  # shellcheck source=/dev/null
-  . "${HOME}/.bash_functions"
-fi
+# shellcheck source=/dev/null
+[[ -f "${HOME}/.bash_functions" ]] && . "${HOME}/.bash_functions"
 
 # Set umask for new files
 umask 027
@@ -49,9 +41,7 @@ pathArray=(
 # Iterate through the array and build the newPath variable using found paths
 newPath=
 for dir in "${pathArray[@]}"; do
-  if [[ -d "${dir}" ]]; then
-    newPath="${newPath}:${dir}"
-  fi
+  [[ -d "${dir}" ]] && newPath="${newPath}:${dir}"
 done
 
 # Now assign our freshly built newPath variable, removing any leading colon
@@ -60,7 +50,7 @@ PATH="${newPath#:}"
 # Finally, export the PATH
 export PATH
 
-# A portable alternative to command -v/which/type
+# A portable alternative to exists/which/type
 pathfind() {
   OLDIFS="${IFS}"
   IFS=:
@@ -74,6 +64,9 @@ pathfind() {
   IFS="${OLDIFS}"
   return 1
 }
+
+# Functionalise 'command -v' to allow 'if exists [command]' idiom
+exists() { command -v "${1}" &>/dev/null; }
 
 # Check if /usr/bin/sudo and /bin/bash exist
 # If not, try to find them and suggest a symlink
@@ -149,9 +142,7 @@ if [[ "$(uname)" = "SunOS" ]]; then
   vi() {
     local origWidth
     origWidth="${COLUMNS:-$(tput cols)}"
-    if (( origWidth > 160 )); then
-      stty columns 160
-    fi
+    (( origWidth > 160 )) && stty columns 160
     command vi "$*"
     stty columns "${origWidth}"
   }
@@ -163,9 +154,7 @@ elif [[ "$(uname)" = "Linux" ]]; then
   alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
  
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
-  if tty --quiet; then
-    stty erase '^?'
-  fi
+  tty --quiet && stty erase '^?'
   
 # I haven't used HP-UX in a while, but just to be sure
 # we fix the backspace quirk for xterm
@@ -179,7 +168,7 @@ fi
 
 # If .curl-format exists, AND 'curl' is available, enable curl-trace alias
 # See: https://github.com/wickett/curl-trace
-if [[ -f ~/.curl-format ]] && command -v curl &>/dev/null; then
+if [[ -f ~/.curl-format ]] && exists curl; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
 fi
 
@@ -214,10 +203,7 @@ fi
 
 # When EDITOR == vim ; alias vi to vim
 [[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
-
-if command -v vim &>/dev/null; then
-  alias vi='vim'
-fi
+exists vim && alias vi='vim'
 
 # Generated using https://dom111.github.io/grep-colors
 GREP_COLORS='sl=49;39:cx=49;39:mt=49;31;1:fn=49;32:ln=49;33:bn=49;33:se=1;36'
@@ -241,7 +227,7 @@ fi
 # Functions
 
 # Because you never know what crazy systems are out there
-if ! command -v apropos >/dev/null 2>&1; then
+if ! exists apropos >/dev/null 2>&1; then
   apropos() { man -k "$*"; }
 fi
 
@@ -626,7 +612,7 @@ ltrim() {
 # Known issue: No traps!  This means IFS might be left altered if 
 # the function is cancelled or fails in some way
 
-if ! command -v mapfile >/dev/null 2>&1; then
+if ! exists mapfile; then
   # This is simply the appropriate section of 'help mapfile', edited, as a function:
   mapfilehelp() {
     # Hey, this exercise is for an array-capable shell, so let's use an array for this!
@@ -724,7 +710,7 @@ fi
 
 # Function to list the members of a group.  
 # Replicates the absolute basic functionality of a real 'members' command
-if ! command -v members >/dev/null 2>&1; then
+if ! exists members; then
   members() {
     [[ "$(getent group "${1?No Group Supplied}" | cut -d ":" -f4-)" ]] \
       && getent group "$1" | cut -d ":" -f4-
@@ -773,7 +759,7 @@ printline() {
   fi
 
   # Finally after all that testing is done, we throw in a cursory test for 'sed'
-  if command -v sed &>/dev/null; then
+  if exists sed; then
     sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
@@ -907,7 +893,7 @@ randInt() {
 }
 
 # Check if 'rev' is available, if not, enable a stop-gap function
-if ! command -v rev &>/dev/null; then
+if ! exists rev; then
   rev() {
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z $1 ]]; then
@@ -1004,7 +990,7 @@ sanitize() {
 alias sanitise='sanitize'
 
 # Check if 'seq' is available, if not, provide a basic replacement function
-if ! command -v seq &>/dev/null; then
+if ! exists seq; then
   seq() {
     local first
     # If no parameters are given, print out usage
@@ -1063,7 +1049,7 @@ settitle() {
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Check commit history for a range of alternative methods - ruby, perl, python etc
 # Requires: randInt function
-if ! command -v shuf &>/dev/null; then
+if ! exists shuf; then
   shuf() {
     local OPTIND inputRange inputStrings nMin nMax nCount shufArray shufRepeat
 
@@ -1248,13 +1234,13 @@ stringContains() {
 }
 
 # Provide a very simple 'tac' step-in function
-if ! command -v tac &>/dev/null; then
+if ! exists tac; then
   tac() {
-    if command -v perl &>/dev/null; then
+    if exists perl; then
       perl -e 'print reverse<>' < "${1:-/dev/stdin}"
-    elif command -v awk &>/dev/null; then
+    elif exists awk; then
       awk '{line[NR]=$0} END {for (i=NR; i>=1; i--) print line[i]}' < "${1:-/dev/stdin}"
-    elif command -v sed &>/dev/null; then
+    elif exists sed; then
       sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
     fi
   }
@@ -1281,7 +1267,7 @@ throttle() {
 }
 
 # Check if 'timeout' is available, if not, enable a stop-gap function
-if ! command -v timeout &>/dev/null; then
+if ! exists timeout; then
   timeout() {
 
     # $# should be at least 1, if not, print a usage message
@@ -1326,7 +1312,7 @@ if ! command -v timeout &>/dev/null; then
 
     # If 'perl' is available, it has a few pretty good one-line options
     # see: http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time
-    if command -v perl &>/dev/null; then
+    if exists perl; then
       perl -e '$s = shift; $SIG{ALRM} = sub { kill INT => $p; exit 77 }; exec(@ARGV) unless $p = fork; alarm $s; waitpid $p, 0; exit ($? >> 8)' "${duration}" "$@"
       #perl -MPOSIX -e '$SIG{ALRM} = sub { kill(SIGTERM, -$$); }; alarm shift; $exit = system @ARGV; exit(WIFEXITED($exit) ? WEXITSTATUS($exit) : WTERMSIG($exit));' "$@"
 
@@ -1357,9 +1343,9 @@ tolower() {
   if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
     if (( BASH_VERSINFO == 4 )); then
       printf -- '%s ' "${*,,}" | paste -sd '\0' -
-    elif command -v awk >/dev/null 2>&1; then
+    elif exists awk; then
       printf -- '%s ' "$*" | awk '{print tolower($0)}'
-    elif command -v tr >/dev/null 2>&1; then
+    elif exists tr; then
       printf -- '%s ' "$*" | tr '[:upper:]' '[:lower:]'
     else
       printf '%s\n' "tolower - no available method found" >&2
@@ -1371,9 +1357,9 @@ tolower() {
         printf '%s\n' "${REPLY,,}"
       done
       [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY,,}"
-    elif command -v awk >/dev/null 2>&1; then
+    elif exists awk; then
       awk '{print tolower($0)}'
-    elif command -v tr >/dev/null 2>&1; then
+    elif exists tr; then
       tr '[:upper:]' '[:lower:]'
     else
       printf '%s\n' "tolower - no available method found" >&2
@@ -1388,9 +1374,9 @@ toupper() {
   if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
     if (( BASH_VERSINFO == 4 )); then
       printf -- '%s ' "${*^^}" | paste -sd '\0' -
-    elif command -v awk >/dev/null 2>&1; then
+    elif exists awk; then
       printf -- '%s ' "$*" | awk '{print toupper($0)}'
-    elif command -v tr >/dev/null 2>&1; then
+    elif exists tr; then
       printf -- '%s ' "$*" | tr '[:lower:]' '[:upper:]'
     else
       printf '%s\n' "toupper - no available method found" >&2
@@ -1402,9 +1388,9 @@ toupper() {
         printf '%s\n' "${REPLY^^}"
       done
       [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY^^}"
-    elif command -v awk >/dev/null 2>&1; then
+    elif exists awk; then
       awk '{print toupper($0)}'
-    elif command -v tr >/dev/null 2>&1; then
+    elif exists tr; then
       tr '[:lower:]' '[:upper:]'
     else
       printf '%s\n' "toupper - no available method found" >&2
@@ -1507,7 +1493,7 @@ urandInt() {
 # Get local weather and present it nicely
 weather() {
   # We require 'curl' so check for it
-  if ! command -v curl &>/dev/null; then
+  if ! exists curl; then
     printf '%s\n' "[ERROR] weather: This command requires 'curl', please install it."
     return 1
   fi
@@ -1716,17 +1702,17 @@ cryptpasswd() {
   fi
 
   # We check for python and if it's there, we use it
-  if command -v python &>/dev/null; then
+  if exists python; then
     PwdSalted=$(python -c "import crypt; print crypt.crypt('${Pwd}', '\$${PwdKryptMode}\$${Salt}')")
     # Alternative
     #python -c 'import crypt; print(crypt.crypt('${Pwd}', crypt.mksalt(crypt.METHOD_SHA512)))'
   # Next we failover to perl
-  elif command -v perl &>/dev/null; then
+  elif exists perl; then
     PwdSalted=$(perl -e "print crypt('${Pwd}','\$${PwdKryptMode}\$${Salt}\$')")
   # Otherwise, we failover to openssl
   # If command can't find it, we try to search some common Linux and Solaris paths for it
-  elif ! command -v openssl &>/dev/null; then
-    OpenSSL=$(command -v {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -n 1)
+  elif ! exists openssl; then
+    OpenSSL=$(exists {,/usr/bin/,/usr/local/ssl/bin/,/opt/csw/bin/,/usr/sfw/bin/}openssl 2>/dev/null | head -n 1)
     # We can only generate an MD5 password using OpenSSL
     PwdSalted=$("${OpenSSL}" passwd -1 -salt "${Salt}" "${Pwd}")
     KryptMethod=OpenSSL
@@ -1861,7 +1847,7 @@ genphrase() {
   # First we test to see if shuf is available.  This should now work with the
   # 'shuf' step-in function and 'rand' scripts available from https://github.com/rawiriblundell
   # Also requires the 'capitalise' function from said source.
-  if command -v shuf &>/dev/null; then
+  if exists shuf; then
     # If we're using bash4, then use mapfile for safety
     if (( BASH_VERSINFO == 4 )); then
       # Basically we're using shuf and awk to generate lines of random words
@@ -1889,14 +1875,14 @@ genphrase() {
   
   # Otherwise, we switch to bash.  This is the fastest way I've found to perform this
   else
-    if ! command -v rand &>/dev/null; then
+    if ! exists rand; then
       printf '%s\n' "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
         "You can get this script from https://github.com/rawiriblundell"
       return 1
     fi
 
     # We test for 'mapfile' which indicates bash4 or some step-in function
-    if command -v mapfile &>/dev/null; then
+    if exists mapfile; then
       # Create two arrays, one with all the words, and one with a bunch of random numbers
       mapfile -t dictArray < ~/.pwords.dict
       mapfile -t numArray < <(rand -M "${#dictArray[@]}" -r -N "${totalWords}")
@@ -1938,7 +1924,7 @@ genphrase() {
 # Figure out the correct TERM value
 # Function to test indicated terminfo entries
 termtest() {
-  if command -v infocmp &>/dev/null; then
+  if exists infocmp; then
     infocmp "${1}" &>/dev/null
     return "$?"
   else
@@ -1965,7 +1951,7 @@ fi
 # If not, we set up ~/.terminfo appropriately (usually Solaris)
 if [[ "${TERM}" = "xterm-256color" ]]; then
   if ! termtest xterm-256color; then
-    if command -v tic &>/dev/null; then
+    if exists tic; then
       mkdir -p "${HOME}"/.terminfo
       print-xterm-256color > "${HOME}"/.terminfo/xterm-256color
       TERMINFO="${HOME}"/.terminfo

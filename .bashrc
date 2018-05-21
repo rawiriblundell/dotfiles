@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 ################################################################################
 # .bashrc
 # This file is read for interactive shells
@@ -144,19 +145,6 @@ fi
 # OS specific tweaks
 
 if [[ "$(uname)" = "SunOS" ]]; then
-  # 'xterm' does not support colour at all on Solaris, so we try for something else
-  for termType in xterm-256color xterm-color xtermc dtterm sun-color ansi xterm; do
-    # Set TERM to the currently selected type
-    export TERM="${termType}"
-    # Test if 'tput' is upset, if so, move to the next option
-    if tput colors 2>&1 | grep -E "unknown terminal|tgetent failure" >/dev/null 2>&1; then
-      continue
-    # If 'tput' is not upset, then we've got a working type, so move on!
-    else
-      break
-    fi
-  done
-
   # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
   vi() {
     local origWidth
@@ -169,25 +157,6 @@ if [[ "$(uname)" = "SunOS" ]]; then
   }
   
 elif [[ "$(uname)" = "Linux" ]]; then
-  # Often I connect using PuTTY, so we check that.  If it's the case, setup TERM.
-  # Otherwise, whatever is the tty emulator supplies (usually 'xterm') should be fine
-  # This assumes PuTTY is setup to report itself as e.g. 'putty' or 'putty-256color'
-  if [[ ! *"${TERM}"* = *"putty"* ]]; then
-    # Send an enquiry character to the tty emulator.  PuTTY should return "PuTTY"
-    # see: https://www.chiark.greenend.org.uk/~sgtatham/putty/faq.html#faq-puttyputty
-    get-answerback() {
-      stty raw min 0 time 5
-      printf '\005'
-      read -s
-      stty cooked
-      printf '%s\n' "${REPLY}"
-    }
-    # So if we're in PuTTY but not using a putty terminfo option, do so.
-    if [[ "$(get-answerback)" = "PuTTY" ]]; then
-      export TERM=putty-256color
-    fi
-  fi
-
   # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
   # Linux only, as -W/-w options aren't available in non-GNU
   alias diff='diff -W $(( $(tput cols) - 2 ))'
@@ -575,6 +544,7 @@ histrank() {
 
 # Write a horizontal line of characters
 hr() {
+  # shellcheck disable=SC2183
   printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
 }
 
@@ -826,8 +796,8 @@ quickserve() {
   fi
   local port="${1:-8000}"
   httpModule=$( \
-    python -c "import sys; \
-    print("http.server" if sys.version_info[:2] > (2,7) else "SimpleHTTPServer")"
+    python -c 'import sys; \
+    print("http.server" if sys.version_info[:2] > (2,7) else "SimpleHTTPServer")'
   ) 
   trap 'kill -9 "${httpPid}"' SIGHUP SIGINT SIGTERM
   (
@@ -853,6 +823,64 @@ quickserve() {
       ;;
     esac
   )
+}
+
+# This function prints the terminfo details for 'xterm-256color'
+# This is for importing this into systems that don't have this
+print-xterm-256color() {
+cat <<'NEWTERM'
+xterm-256color|xterm with 256 colors,
+        am, bce, ccc, km, mc5i, mir, msgr, npc, xenl,
+        colors#256, cols#80, it#8, lines#24, pairs#32767,
+        acsc=``aaffggiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
+        bel=^G, blink=\E[5m, bold=\E[1m, cbt=\E[Z, civis=\E[?25l,
+        clear=\E[H\E[2J, cnorm=\E[?12l\E[?25h, cr=^M,
+        csr=\E[%i%p1%d;%p2%dr, cub=\E[%p1%dD, cub1=^H,
+        cud=\E[%p1%dB, cud1=^J, cuf=\E[%p1%dC, cuf1=\E[C,
+        cup=\E[%i%p1%d;%p2%dH, cuu=\E[%p1%dA, cuu1=\E[A,
+        cvvis=\E[?12;25h, dch=\E[%p1%dP, dch1=\E[P, dl=\E[%p1%dM,
+        dl1=\E[M, ech=\E[%p1%dX, ed=\E[J, el=\E[K, el1=\E[1K,
+        flash=\E[?5h$<100/>\E[?5l, home=\E[H, hpa=\E[%i%p1%dG,
+        ht=^I, hts=\EH, ich=\E[%p1%d@, il=\E[%p1%dL, il1=\E[L,
+        ind=^J, indn=\E[%p1%dS,
+        initc=\E]4;%p1%d;rgb\:%p2%{255}%*%{1000}%/%2.2X/%p3%{255}%*%{1000}%/%2.2X/%p4%{255}%*%{1000}%/%2.2X\E\\,
+        invis=\E[8m, is2=\E[!p\E[?3;4l\E[4l\E>, kDC=\E[3;2~,
+        kEND=\E[1;2F, kHOM=\E[1;2H, kIC=\E[2;2~, kLFT=\E[1;2D,
+        kNXT=\E[6;2~, kPRV=\E[5;2~, kRIT=\E[1;2C, kb2=\EOE,
+        kbs=\177, kcbt=\E[Z, kcub1=\EOD, kcud1=\EOB, kcuf1=\EOC,
+        kcuu1=\EOA, kdch1=\E[3~, kend=\EOF, kent=\EOM, kf1=\EOP,
+        kf10=\E[21~, kf11=\E[23~, kf12=\E[24~, kf13=\E[1;2P,
+        kf14=\E[1;2Q, kf15=\E[1;2R, kf16=\E[1;2S, kf17=\E[15;2~,
+        kf18=\E[17;2~, kf19=\E[18;2~, kf2=\EOQ, kf20=\E[19;2~,
+        kf21=\E[20;2~, kf22=\E[21;2~, kf23=\E[23;2~,
+        kf24=\E[24;2~, kf25=\E[1;5P, kf26=\E[1;5Q, kf27=\E[1;5R,
+        kf28=\E[1;5S, kf29=\E[15;5~, kf3=\EOR, kf30=\E[17;5~,
+        kf31=\E[18;5~, kf32=\E[19;5~, kf33=\E[20;5~,
+        kf34=\E[21;5~, kf35=\E[23;5~, kf36=\E[24;5~,
+        kf37=\E[1;6P, kf38=\E[1;6Q, kf39=\E[1;6R, kf4=\EOS,
+        kf40=\E[1;6S, kf41=\E[15;6~, kf42=\E[17;6~,
+        kf43=\E[18;6~, kf44=\E[19;6~, kf45=\E[20;6~,
+        kf46=\E[21;6~, kf47=\E[23;6~, kf48=\E[24;6~,
+        kf49=\E[1;3P, kf5=\E[15~, kf50=\E[1;3Q, kf51=\E[1;3R,
+        kf52=\E[1;3S, kf53=\E[15;3~, kf54=\E[17;3~,
+        kf55=\E[18;3~, kf56=\E[19;3~, kf57=\E[20;3~,
+        kf58=\E[21;3~, kf59=\E[23;3~, kf6=\E[17~, kf60=\E[24;3~,
+        kf61=\E[1;4P, kf62=\E[1;4Q, kf63=\E[1;4R, kf7=\E[18~,
+        kf8=\E[19~, kf9=\E[20~, khome=\EOH, kich1=\E[2~,
+        kind=\E[1;2B, kmous=\E[M, knp=\E[6~, kpp=\E[5~,
+        kri=\E[1;2A, mc0=\E[i, mc4=\E[4i, mc5=\E[5i, meml=\El,
+        memu=\Em, op=\E[39;49m, rc=\E8, rev=\E[7m, ri=\EM,
+        rin=\E[%p1%dT, rmacs=\E(B, rmam=\E[?7l, rmcup=\E[?1049l,
+        rmir=\E[4l, rmkx=\E[?1l\E>, rmm=\E[?1034l, rmso=\E[27m,
+        rmul=\E[24m, rs1=\Ec, rs2=\E[!p\E[?3;4l\E[4l\E>, sc=\E7,
+        setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
+        setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
+        sgr=%?%p9%t\E(0%e\E(B%;\E[0%?%p6%t;1%;%?%p2%t;4%;%?%p1%p3%|%t;7%;%?%p4%t;5%;%?%p7%t;8%;m,
+        sgr0=\E(B\E[m, smacs=\E(0, smam=\E[?7h, smcup=\E[?1049h,
+        smir=\E[4h, smkx=\E[?1h\E=, smm=\E[?1034h, smso=\E[7m,
+        smul=\E[4m, tbc=\E[3g, u6=\E[%i%d;%dR, u7=\E[6n,
+        u8=\E[?1;2c, u9=\E[c, vpa=\E[%i%p1%dd,
+NEWTERM
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo
@@ -1385,47 +1413,40 @@ toupper() {
   fi
 }
 
-# Overlay 'tput' so that non GNU behaves as much like GNU as possible
-# Inspired by 'bashlib' and 'liquidprompt'
-tput() {
-  ctput() { command tput "${@}" 2>/dev/null; }
-  case "${1}" in
-    (blink)         ctput blink || ctput mb;;
-    (bold)          ctput bold  || ctput md;;
-    (civis)         ctput civis || ctput vi;;
-    (cnorm)         ctput cnorm || ctput ve;;
-    (cols)          ctput cols  || ctput co;;
-    (dim)           ctput dim   || ctput mh;;
-    (ed)            ctput ed    || ctput cd;;
-    (el)            ctput el    || ctput ce;;
-    (el1)           ctput el1   || ctput cb;;
-    (lines)         ctput lines || ctput li;;
-    (ritm)          ctput ritm  || ctput ZR;;
-    (rmcup)         ctput rmcup || ctput te;;
-    (rmso)          ctput rmso  || ctput se;;
-    (rmul)          ctput rmul  || ctput ue;;
-    (setaf)
-      case $(uname) in
-        (FreeBSD)   ctput AF "${2}";;
-        (OpenBSD)   ctput AF "${2}" 0 0;;
-        (*)         ctput setaf "${2}";;
-      esac
-    ;;
-    (setab)
-      case $(uname) in
-        (FreeBSD)   ctput AB "${2}";;
-        (OpenBSD)   ctput AB "${2}" 0 0;;
-        (*)         ctput setab "${2}";;
-      esac
-    ;;
-    (sgr0)          ctput sgr0  || ctput me;;
-    (sitm)          ctput sitm  || ctput ZH;;
-    (smcup)         ctput smcup || ctput ti;;
-    (smso)          ctput smso  || ctput so;;
-    (smul)          ctput smul  || ctput us;;
-    (*)             ctput "${@}";;
-  esac
-}
+# Overlay 'tput' so that non-GNU behaves as much like GNU as possible
+# This is a subset of a fuller gist
+# https://gist.github.com/rawiriblundell/83ed9408a7e3032c780ed56b7c9026f2
+# For performance we only implement if 'tput ce' (a harmless test) works
+if tput ce 2>/dev/null; then
+  tput() {
+    ctput-null() { command tput "${@}" 2>/dev/null; }
+    ctput() { command tput "${@}"; }
+    case "${1}" in
+      (bold)          ctput-null bold  || ctput md;;
+      (civis)         ctput-null civis || ctput vi;;
+      (cnorm)         ctput-null cnorm || ctput ve;;
+      (cols)          ctput-null cols  || ctput co;;
+      (dim)           ctput-null dim   || ctput mh;;
+      (lines)         ctput-null lines || ctput li;;
+      (setaf)
+        case $(uname) in
+          (FreeBSD)   ctput AF "${2}";;
+          (OpenBSD)   ctput AF "${2}" 0 0;;
+          (*)         ctput setaf "${2}";;
+        esac
+      ;;
+      (setab)
+        case $(uname) in
+          (FreeBSD)   ctput AB "${2}";;
+          (OpenBSD)   ctput AB "${2}" 0 0;;
+          (*)         ctput setab "${2}";;
+        esac
+      ;;
+      (sgr0)          ctput-null sgr0  || ctput me;;
+      (*)             ctput "${@}";;
+    esac
+  }
+fi
 
 # A small function to trim whitespace either side of a (sub)string
 # shellcheck disable=SC2120
@@ -1914,18 +1935,62 @@ genphrase() {
 }
 
 ################################################################################
-# Set the PROMPT_COMMAND
-# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.
-# Otherwise it will complain about 'history not found'
-if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
-  PROMPT_COMMAND="settitle; setprompt"
-# Otherwise, for newer versions of bash, we handle it differently
-elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
-  # After each command, append to the history file and reread it
-  # This attempts to keep history sync'd across multiple sessions
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
+# Figure out the correct TERM value
+# Function to test indicated terminfo entries
+termtest() {
+  if command -v infocmp &>/dev/null; then
+    infocmp "${1}" &>/dev/null
+    return "$?"
+  else
+    oldTerm="${TERM}"
+    TERM="${1}"
+    tput colors &>/dev/null
+    rc="$?"
+    TERM="${oldTerm}"
+    return "${rc}"
+  fi
+}
+
+# Firstly, we assume a PuTTY connection identified as 'putty-256color'
+if [[ "${TERM}" = "putty-256color" ]]; then
+  # We check whether an appropriate terminfo entry exists
+  # If not, failover to 'xterm-256color'
+  termtest putty-256color || TERM=xterm-256color
+# If we're not using 'putty-256color', then we want 'xterm-256color'
+else
+  TERM=xterm-256color
 fi
-export PROMPT_COMMAND
+
+# Next, we test for a 'xterm-256color' terminfo entry
+# If not, we set up ~/.terminfo appropriately (usually Solaris)
+if [[ "${TERM}" = "xterm-256color" ]]; then
+  if ! termtest xterm-256color; then
+    if command -v tic &>/dev/null; then
+      mkdir -p "${HOME}"/.terminfo
+      print-xterm-256color > "${HOME}"/.terminfo/xterm-256color
+      TERMINFO="${HOME}"/.terminfo
+      export TERMINFO
+      tic "${HOME}"/.terminfo/xterm-256color 2>/dev/null
+      TERM=xterm-256color
+    else
+      printf '%s\n' "'tic' is required to setup xterm-256color but was not found" \
+        "Usually this can be found in the 'ncurses' package"
+    fi
+  fi
+fi
+
+# Finally, if we get to this point, we take what we can get
+if [[ ! "${TERM}" = *"256color"* ]]; then
+  for termType in xterm-color xtermc dtterm sun-color xterm; do
+    if termtest "${termType}"; then
+      TERM="${termType}"
+      break
+    fi
+  done
+fi
+
+# Finally, lock in the TERM setting
+export TERM
 ################################################################################
 # Standardise the Command Prompt
 # NOTE for customisation: Any non-printing escape characters must be enclosed, 
@@ -1934,16 +1999,16 @@ export PROMPT_COMMAND
 # This is why all the escape codes have '\]' enclosing them.  Don't mess with that.
 
 # First, we map some basic colours:
-ps1Blk="\[\e[0;30m\]"        # Black
-ps1Red="\[\e[1;31m\]"        # Bold Red
-ps1Grn="\[\e[0;32m\]"        # Normal Green
-ps1Ylw="\[\e[1;33m\]"        # Bold Yellow
-ps1Blu="\[\e[38;5;32m\]"     # Blue
-ps1Mag="\[\e[1;35m\]"        # Bold Magenta
-ps1Cyn="\[\e[1;36m\]"        # Bold Cyan
-ps1Wte="\[\e[1;37m\]"        # Bold White
-ps1Ora="\[\e[38;5;214m\]"    # Orange
-ps1Rst="\[\e[0m\]"           # Reset text to defaults
+ps1Blk="\[$(tput setaf 0)\]"                    # Black - \[\e[0;30m\]
+ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"    # Bold Red - \[\e[1;31m\]
+ps1Grn="\[$(tput setaf 10)\]"                   # Normal Green - \[\e[0;32m\]
+ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"   # Bold Yellow - \[\e[1;33m\]
+ps1Blu="\[$(tput setaf 32)\]"                   # Blue - \[\e[38;5;32m\]
+ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"   # Bold Magenta - \[\e[1;35m\]
+ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"   # Bold Cyan - \[\e[1;36m\]
+ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"   # Bold White - \[\e[1;37m\]
+ps1Ora="\[$(tput setaf 202)\]"                  # Orange - \[\e[38;5;214m\]
+ps1Rst="\[$(tput sgr0)\]"                       # Reset text - \[\e[0m\]
 
 # Map out some block characters
 block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%
@@ -2014,7 +2079,7 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
-    (rand)                  ps1Pri="\[\e[38;5;$((RANDOM%255))m\]";;
+    (rand)                  ps1Pri="\[$(tput setaf $((RANDOM%255)))\]";;
     (*[0-9]*)
       if (( "${1//[^0-9]/}" > 255 )); then
         setprompt-help; return 1
@@ -2035,7 +2100,7 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
-    (rand)                  ps1Sec="\[\e[38;5;$((RANDOM%255))m\]";;
+    (rand)                  ps1Sec="\[$(tput setaf $((RANDOM%255)))\]";;
     (*[0-9]*)
       if (( "${2//[^0-9]/}" > 255 )); then
         setprompt-help; return 1
@@ -2080,3 +2145,18 @@ setprompt() {
 
 # Useful for debugging
 export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '
+
+################################################################################
+# Set the PROMPT_COMMAND
+# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.
+# Otherwise it will complain about 'history not found'
+if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
+  PROMPT_COMMAND="settitle; setprompt"
+# Otherwise, for newer versions of bash, we handle it differently
+elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
+  # After each command, append to the history file and reread it
+  # This attempts to keep history sync'd across multiple sessions
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
+fi
+export PROMPT_COMMAND
+################################################################################

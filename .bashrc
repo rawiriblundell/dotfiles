@@ -227,9 +227,7 @@ fi
 # Functions
 
 # Because you never know what crazy systems are out there
-if ! exists apropos >/dev/null 2>&1; then
-  apropos() { man -k "$*"; }
-fi
+exists apropos || apropos() { man -k "$*"; }
 
 # Function to kill the parents of interruptable zombies, will not touch pid 1
 boomstick() {
@@ -412,9 +410,7 @@ checkyaml() {
 }
 
 # Indent code by four spaces, useful for posting in markdown
-codecat() {
-  indent 4 "$1"
-}
+codecat() { indent 4 "${1}"; }
 
 # Provide a function to compress common compressed Filetypes
 compress() {
@@ -538,13 +534,13 @@ hr() {
 indent() {
   local identWidth
   identWidth="${1:-2}"
-  identWidth=$(eval "printf '%.0s ' {1..$identWidth}")
+  identWidth=$(eval "printf '%.0s ' {1..${identWidth}}")
   sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
 }
 
 # Test if a given value is an integer
 isinteger() {
-  if test "$1" -eq "$1" 2>/dev/null; then
+  if test "${1}" -eq "${1}" 2>/dev/null; then
     return 0
   else
     return 1
@@ -719,14 +715,10 @@ fi
 
 # Convert multiple lines to comma separated format
 # See also c2n() for the opposite behaviour
-n2c() {
-  paste -sd ',' "${1:--}"
-}
+n2c() { paste -sd ',' "${1:--}"; }
 
 # Backup a file with the extension '.old'
-old() { 
-  cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}
-}
+old() { cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}; }
 
 # A function to print a specific line from a file
 printline() {
@@ -984,9 +976,7 @@ rtrim() {
 }
 
 # Escape special characters in a string, named for a similar function in R
-sanitize() {
-  printf '%q\n' "$1"
-}
+sanitize() { printf -- '%q\n' "${1}"; }
 alias sanitise='sanitize'
 
 # Check if 'seq' is available, if not, provide a basic replacement function
@@ -1199,9 +1189,7 @@ fi
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
 # and automatically adds them to ~/.ssh/known_hosts
-ssh() {
-  /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"
-}
+ssh() { /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"; }
 
 # Display the fingerprint for a host
 ssh-fingerprint() {
@@ -1225,10 +1213,10 @@ ssh-fingerprint() {
 }
 
 # Test if a string contains a substring
-# Example: stringContains needle haystack
-stringContains() { 
-  case "$2" in 
-    (*$1*)  return 0 ;; 
+# Example: string-contains needle haystack
+string-contains() { 
+  case "${2}" in 
+    (*${1}*)  return 0 ;; 
     (*)     return 1 ;; 
   esac
 }
@@ -1437,7 +1425,7 @@ fi
 # A small function to trim whitespace either side of a (sub)string
 # shellcheck disable=SC2120
 trim() {
-  if [[ -n "$1" ]]; then
+  if [[ -n "${1}" ]]; then
     printf -- '%s\n' "${@}" | awk '{$1=$1};1'
   else
     awk '{$1=$1};1'
@@ -1445,9 +1433,7 @@ trim() {
 }
 
 # Provide normal, no-options ssh for error checking
-unssh() {
-  /usr/bin/ssh "$@"
-}
+unssh() { /usr/bin/ssh "${@}"; }
 
 # Provide 'up', so instead of e.g. 'cd ../../../' you simply type 'up 3'
 up() {
@@ -1520,15 +1506,15 @@ what() {
 # Function to get the owner of a file
 whoowns() {
   # First we try GNU-style 'stat'
-  if stat -c '%U' "$1" >/dev/null 2>&1; then
-     stat -c '%U' "$1"
+  if stat -c '%U' "${1}" >/dev/null 2>&1; then
+     stat -c '%U' "${1}"
   # Next is BSD-style 'stat'
-  elif stat -f '%Su' "$1" >/dev/null 2>&1; then
-    stat -f '%Su' "$1"
+  elif stat -f '%Su' "${1}" >/dev/null 2>&1; then
+    stat -f '%Su' "${1}"
   # Otherwise, we failover to 'ls', which is not usually desireable
   else
     # shellcheck disable=SC2012
-    ls -ld "$1" | awk 'NR==1 {print $3}'
+    ls -ld "${1}" | awk 'NR==1 {print $3}'
   fi
 }
 
@@ -1966,7 +1952,7 @@ if [[ "${TERM}" = "xterm-256color" ]]; then
 fi
 
 # Finally, if we get to this point, we take what we can get
-if [[ ! "${TERM}" = *"256color"* ]]; then
+if ! string-contains 256color "${TERM}"; then
   for termType in xterm-color xtermc dtterm sun-color xterm; do
     if termtest "${termType}"; then
       TERM="${termType}"

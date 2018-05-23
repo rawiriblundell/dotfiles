@@ -1686,7 +1686,11 @@ cryptpasswd() {
   # If the crypt mode isn't defined as 1, 5, 6 or n: default to 1
   case "${2}" in
     (n)
-      printf '%s' "${inputPwd}" | iconv -t utf16le | openssl md4 | awk '{print $2}'
+      printf '%s' "${inputPwd}" \
+        | iconv -t utf16le \
+        | openssl md4 \
+        | awk '{print $2}' \
+        | toupper
       return "$?"
     ;;
     (*)

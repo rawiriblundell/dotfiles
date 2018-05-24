@@ -289,19 +289,19 @@ capitalise() {
   local GLOBIGNORE="*"
   
   # Check that stdin or $1 isn't empty
-  if [[ -t 0 ]] && [[ -z $1 ]]; then
+  if [[ -t 0 ]] && [[ -z "${1}" ]]; then
     printf '%s\n' "Usage:  capitalise string" ""
     printf '\t%s\n' "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
-  elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+  elif [[ ! -t 0 ]] && [[ ! -z "${1}" ]]; then
     printf '%s\n' "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
     return 1
   fi
 
   # If parameter is a file, or stdin is used, action that first
   # shellcheck disable=SC2119
-  if [[ -r $1 ]]||[[ ! -t 0 ]]; then
+  if [[ -r "${1}" ]]||[[ ! -t 0 ]]; then
     # We require an exit condition for 'read', this covers the edge case
     # where a line is read that does not have a newline
     eof=
@@ -313,46 +313,41 @@ capitalise() {
         printf '%s\n' ""
         continue
       fi
-      # If we're using bash4, stop mucking about
-      if (( BASH_VERSINFO == 4 )); then
-        #read -r -a inLine <<< "${REPLY}" # upsets Solaris grr
-        for inString in ${REPLY}; do
-          printf '%s ' "${inString^}" | trim
-        done
-      # Otherwise, take the more exhaustive approach
-      else
-        # Split each line element for processing
-        for inString in ${REPLY}; do
-          # If inString is an integer, skip to the next element
-          isinteger "${inString}" && continue
-          # Split off the first character and capitalise it
-          inWord=$(echo "${inString:0:1}" | toupper)
-          # Print out the uppercase var and the rest of the element
-          outWord="${inWord}${inString:1}"
-          # Pad the output so that multiple elements are spaced out
-          printf "%s " "${outWord}"
-        # We use to trim to remove any trailing whitespace
-        done | trim
-      fi
+      # Split each line element for processing
+      for inString in ${REPLY}; do
+        # If inString is an integer, skip to the next element
+        isinteger "${inString}" && continue
+        capitalise-string "${inString}"
+      # We use to trim to remove any trailing whitespace
+      done | paste -sd ' ' -
     done < "${1:-/dev/stdin}"
 
   # Otherwise, if a parameter exists, then capitalise all given elements
   # Processing follows the same path as before.
   elif [[ -n "$*" ]]; then
-    if (( BASH_VERSINFO == 4 )); then
-      printf '%s ' "${@^}" | trim
-    else
-      for inString in "$@"; do
-        inWord=$(echo "${inString:0:1}" | toupper)
-        outWord="$inWord${inString:1}"
-        printf "%s " "${outWord}"
-      done | trim
-    fi
+    for inString in "$@"; do
+      capitalise-string "${inString}"
+    done | paste -sd ' ' -
   fi
   
   # Unset GLOBIGNORE, even though we've tried to limit it to this function
   local GLOBIGNORE=
 }
+
+# Setup a function for capitalising a single string
+# This is used by the above capitalise() function
+# The portable version depends on toupper() and trim()
+if (( BASH_VERSINFO == 4 )); then
+  capitalise-string() {
+    printf -- '%s\n' "${1^}"
+  }
+else
+  capitalise-string() {
+    # Split off the first character, uppercase it and trim
+    # Next, print the string from the second character onwards
+    printf -- '%s\n' "$(toupper "${1:0:1}" | trim)${1:1}"
+  }
+fi
 
 # Print the given text in the center of the screen.
 # From https://github.com/Haroenv/config/blob/master/.bash_profile

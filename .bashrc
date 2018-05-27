@@ -1977,7 +1977,7 @@ ps1Blu="\[$(tput setaf 32)\]"                   # Blue - \[\e[38;5;32m\]
 ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"   # Bold Magenta - \[\e[1;35m\]
 ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"   # Bold Cyan - \[\e[1;36m\]
 ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"   # Bold White - \[\e[1;37m\]
-ps1Ora="\[$(tput setaf 202)\]"                  # Orange - \[\e[38;5;214m\]
+ps1Ora="\[$(tput setaf 208)\]"                  # Orange - \[\e[38;5;208m\]
 ps1Rst="\[$(tput sgr0)\]"                       # Reset text - \[\e[0m\]
 
 # Map out some block characters

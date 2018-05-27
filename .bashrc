@@ -90,6 +90,9 @@ fi
 shopt -s checkwinsize cdspell extglob histappend
 (( BASH_VERSINFO >= 4 )) && shopt -s globstar
 
+# Some older hosts require this to be explicitly declared
+enable -a history
+
 # Set the bash history timestamp format
 export HISTTIMEFORMAT="%F,%T "
 
@@ -2111,19 +2114,11 @@ setprompt() {
 }
 
 # Useful for debugging
-export PS4='+$BASH_SOURCE:$LINENO:${FUNCNAME:-}: '
+export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME:-}: '
 
 ################################################################################
 # Set the PROMPT_COMMAND
-# If we've got bash v2 (e.g. Solaris 9), we cripple PROMPT_COMMAND.
-# Otherwise it will complain about 'history not found'
-if (( BASH_VERSINFO[0] = 2 )) 2>/dev/null; then
-  PROMPT_COMMAND="settitle; setprompt"
-# Otherwise, for newer versions of bash, we handle it differently
-elif (( BASH_VERSINFO[0] > 2 )) 2>/dev/null; then
-  # After each command, append to the history file and reread it
-  # This attempts to keep history sync'd across multiple sessions
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
-fi
-export PROMPT_COMMAND
+# After each command, append to the history file and reread it
+# This attempts to keep history sync'd across multiple sessions
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
 ################################################################################

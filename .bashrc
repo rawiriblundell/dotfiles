@@ -99,6 +99,9 @@ export HISTTIMEFORMAT="%F,%T "
 # Don't put duplicate lines in the history. See bash(1) for more options
 # and ignore commands that start with a space
 HISTCONTROL=ignoredups:ignorespace
+
+# Ignore the following commands
+HISTIGNORE='ls:bg:fg:history*:exit'
  
 # For setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000

@@ -548,6 +548,28 @@ isinteger() {
   fi
 }
 
+# Test if a given value is a global var, local var (default) or array
+isset() {
+  case "${1}" in
+    (-a|-array)
+      declare -p "${2}" 2>/dev/null | grep -- "-a ${2}=" >/dev/null 2>&1
+      return "${?}"
+    ;;
+    (-g|-global)
+      export -p | grep "declare -x ${2}=" >/dev/null 2>&1
+      return "${?}"
+    ;;
+    (-l|-local)
+      declare -p "${2}" 2>/dev/null | grep -- "-- ${2}=" >/dev/null 2>&1
+      return "${?}"
+    ;;
+    (*)
+      declare -p "${1}" 2>/dev/null | grep -- "-- ${1}=" >/dev/null 2>&1
+      return "${?}"
+    ;;
+  esac
+}
+
 # A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
 # This provides human readable 'ls' output for systems
 # whose version of 'ls' does not have the '-h' option

@@ -2111,6 +2111,10 @@ setprompt() {
     export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
     alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
   fi
+  
+  # After each command, append to the history file and reread it
+  # This attempts to keep history sync'd across multiple sessions
+  history -a; history -c; history -r
 }
 
 # Useful for debugging
@@ -2118,7 +2122,6 @@ export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME:-}: '
 
 ################################################################################
 # Set the PROMPT_COMMAND
-# After each command, append to the history file and reread it
-# This attempts to keep history sync'd across multiple sessions
-PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r; settitle; setprompt"
+# This updates the terminal emulator title and the prompt
+PROMPT_COMMAND="settitle; setprompt; ${PROMPT_COMMAND}"
 ################################################################################

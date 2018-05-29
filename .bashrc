@@ -107,6 +107,9 @@ HISTIGNORE='ls:bg:fg:history*:exit'
 HISTSIZE=5000
 HISTFILESIZE=5000
 
+# If we're disconnected, capture whatever is in history
+trap 'history -a' SIGHUP
+
 # Disable ctrl+s (XOFF)
 stty ixany
 stty ixoff -ixon

@@ -569,6 +569,12 @@ isset() {
       export -p | grep "declare -x ${2}=" >/dev/null 2>&1
       return "${?}"
     ;;
+    (-h|--help|"")
+      printf -- '%s\n' "Function to test whether NAME is declared" \
+        "Usage: isset [-a(rray)|-l(ocal var)|-g(lobal var)|-h(elp)] NAME" \
+        "If no option is supplied, NAME is tested as a local var"
+      return 0
+    ;;
     (-l|-local)
       declare -p "${2}" 2>/dev/null | grep -- "-- ${2}=" >/dev/null 2>&1
       return "${?}"

@@ -430,6 +430,13 @@ compress() {
   esac
 }
 
+# Wrap long comma separated lists by element count (default: 8 elements)
+csvwrap() {
+  export splitCount="${1:-8}"
+  perl -pe 's{,}{++$n % $ENV{splitCount} ? $& : ",\\\n"}ge'
+  unset splitCount
+}
+
 # Optional error handling function
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {

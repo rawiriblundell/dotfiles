@@ -1465,9 +1465,9 @@ fi
 # shellcheck disable=SC2120
 trim() {
   if [[ -n "${1}" ]]; then
-    printf -- '%s\n' "${@}" | awk '{$1=$1};1'
+    printf -- '%s\n' "${@}" | ltrim | rtrim
   else
-    awk '{$1=$1};1'
+    ltrim "${@}" | rtrim
   fi
 }
 

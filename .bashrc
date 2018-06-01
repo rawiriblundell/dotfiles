@@ -1068,11 +1068,18 @@ fi
 # Standardise the terminal window title header
 # reference: http://www.faqs.org/docs/Linux-mini/Xterm-Title.html#s3
 settitle() {
-  # shellcheck disable=SC2059,SC1117
-  printf "\033]0;${HOSTNAME%%.*}:${PWD}\007"
-  # This might also need to be expressed as
-  #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
-  # I possibly need to test and figure out a way to auto-switch between these two
+  case $(tty) in
+    (*tty*)
+      : # Physical terminal, so no-op.
+    ;;
+    (*pts*)
+      # shellcheck disable=SC2059,SC1117
+      printf "\033]0;${HOSTNAME%%.*}:${PWD}\007"
+      # This might also need to be expressed as
+      #printf "\\033]2;${HOSTNAME}:${PWD}\\007\\003"
+      # I possibly need to test and figure out a way to auto-switch between these two
+    ;;
+  esac
 }
 
 # Check if 'shuf' is available, if not, provide basic shuffle functionality

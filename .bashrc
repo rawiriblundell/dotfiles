@@ -1993,6 +1993,8 @@ if [[ "${TERM}" = "xterm-256color" ]]; then
     else
       printf '%s\n' "'tic' is required to setup xterm-256color but was not found" \
         "Usually this can be found in the 'ncurses' package"
+      # Set a dummy TERM to invoke the next block
+      TERM=pants
     fi
   fi
 fi
@@ -2042,19 +2044,22 @@ blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
 if grep "^${USER}:" /etc/passwd &>/dev/null; then
   auth="LCL"
 else
-  auth="AD"
+  auth="ADS"
 fi
 
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
-  printf '\t%s\n' "Usage: setprompt [-hfmr|rand|colour code] [rand|colour code]" ""
+  printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand||safe|[0-255]] [rand|[0-255]]" ""
   printf '\t%s\n' "Options:" \
+    "  -a    Automatic type selection (width based)" \
     "  -h    Help, usage information" \
     "  -f    Full prompt" \
     "  -m    Minimal prompt" \
     "  -r    Restore prompt colours to defaults" \
+    "  -s    Simplified prompt" \
     "  rand  Select a random colour.  Can be used for 1st and 2nd colours" \
     "        e.g. 'setprompt rand rand'" \
+    "  safe  Sets 1st and 2nd colours to white.  In case of weird behaviour" \
     "" \
     "The first and second parameters will accept human readable colour codes." \
     "These are represented in short and full format e.g." \
@@ -2062,14 +2067,17 @@ setprompt-help() {
     "This applies for Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange." \
     "ANSI Numerical codes (0-255) can also be supplied e.g. 'setprompt 143 76'." \
     "" \
-    "256 colours is assumed at all times.  If you find issues, run 'setprompt w w'." \
-    "This will set the prompt to white using a safe colour code." \
+    "256 colours is assumed at all times.  If you find issues, run 'setprompt safe'." \
     "" \
-    "'setprompt' will also detect the width of the invoking terminal window" \
-    "If less than 80 columns is detected, the prompt is automatically simplified." \
-    "This means that 'setprompt' has full, simplified and minimal output modes."
+    "'setprompt -a' enables automatic prompt mode selection based on the terminal width" \
+    "If less than 60 columns is detected, the prompt is set to minimal mode." \
+    "If less than 80 columns is detected, the prompt is set to simple mode." \
+    "When the columns exceed 80, the prompt is set to the full mode."
   return 0
 }
+
+# If we want to define our colours with a dotfile, we load it here
+[[ -f "${HOME}/.setpromptrc" ]] && . "${HOME}/.setpromptrc"
 
 setprompt() {
   # Let's setup some default primary and secondary colours for root/sudo
@@ -2079,15 +2087,21 @@ setprompt() {
     ps1Block="${blockAsc}"
     ps1Char='#'
   fi
- 
-  case "$1" in
+
+  case "${1}" in
+    (-a)                    export PS1_MODE=Auto;;
     (-h)                    setprompt-help; return 0;;
-    (-f)                    export PS1_UNSET=False;;
-    (-m)                    export PS1_UNSET=True;;
+    (-f)                    export PS1_MODE=Full;;
+    (-m)                    export PS1_MODE=Minimal;;
     (-r)
-      ps1Pri="${ps1Red}"
-      ps1Sec="${ps1Grn}"      
+      if [[ -r "${HOME}/.setpromptrc" ]]; then
+        . "${HOME}/.setpromptrc"
+      else
+        ps1Pri="${ps1Red}"
+        ps1Sec="${ps1Grn}"
+      fi
     ;;
+    (-s)                    export PS1_MODE=Simple;;
     (b|B|black|Black)       ps1Pri="${ps1Blk}";;
     (r|R|red|Red)           ps1Pri="${ps1Red}";;
     (g|G|green|Green)       ps1Pri="${ps1Grn}";;
@@ -2098,6 +2112,10 @@ setprompt() {
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
     (rand)                  ps1Pri="\[$(tput setaf $((RANDOM%255)))\]";;
+    (safe)
+      ps1Pri="${ps1Wte}"
+      ps1Sec="${ps1Wte}"      
+    ;;
     (*[0-9]*)
       if (( "${1//[^0-9]/}" > 255 )); then
         setprompt-help; return 1
@@ -2108,7 +2126,7 @@ setprompt() {
     (-|_)                   : #no-op ;;
   esac
 
-  case "$2" in
+  case "${2}" in
     (b|B|black|Black)       ps1Sec="${ps1Blk}";;
     (r|R|red|Red)           ps1Sec="${ps1Red}";;
     (g|G|green|Green)       ps1Sec="${ps1Grn}";;
@@ -2129,36 +2147,52 @@ setprompt() {
     (-|_)                   : #no-op ;;
   esac
 
-  case "$3" in
+  case "${3}" in
     (a|A|asc|Asc)           ps1Block="${blockAsc}";;
     (d|D|dwn|Dwn)           ps1Block="${blockDwn}";;
   esac
-  
+
   # Default catch-all for non-root scenarios
   [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
   [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
   [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"
   [[ -z "${ps1Char}" ]] && ps1Char='$'
 
-  # Throw it all together, first we check if our unset flag is set
-  # If so, we switch to a minimal prompt until 'setprompt -f' is run again
-  if [[ "${PS1_UNSET}" = "True" ]]; then
-    export PS1="${ps1Pri}${ps1Block}${ps1Rst}${ps1Char} "
-    alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}${ps1Char} ' sudo"
-    return 0  # Stop further processing
-  fi
-  
-  # Otherwise, it's business as usual.  We test how many columns we have.
-  # If columns exceeds 80, use the long form, otherwise use the short form
-  if (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-    # shellcheck disable=SC1117
-    export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
-    alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
+  # If PS1_MODE is set to Auto, it figures out the appropriate mode to use
+  if [[ "${PS1_MODE}" = "Auto" ]]; then
+    # We store the fact that we're in auto mode
+    export PS1_AUTO=True
+    if (( "${COLUMNS:-$(tput cols)}" < 60 )); then
+      export PS1_MODE=Minimal
+    elif (( "${COLUMNS:-$(tput cols)}" > 80 )); then
+      export PS1_MODE=Full
+    else
+      export PS1_MODE=Simple
+    fi
   else
-    # shellcheck disable=SC1117
-    export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
-    alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
+    export PS1_AUTO=False
   fi
+
+  # Throw it all together, first we check the PS1_AUTO for truthy/falsy
+  case "${PS1_MODE}" in
+    (Minimal)
+      export PS1="${ps1Pri}${ps1Block}${ps1Rst}${ps1Char} "
+      alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}${ps1Char} ' sudo"
+    ;;
+    (Simple)
+      # shellcheck disable=SC1117
+      export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
+    ;;
+    (Full)
+      # shellcheck disable=SC1117
+      export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
+    ;;
+  esac
+
+  # If we're in auto mode, now that PS1 is set, we need to reset PS1_MODE
+  [[ "${PS1_AUTO}" = "True" ]] && export PS1_MODE=Auto
   
   # After each command, append to the history file and reread it
   # This attempts to keep history sync'd across multiple sessions

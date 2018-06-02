@@ -2152,7 +2152,8 @@ setprompt() {
     (d|D|dwn|Dwn)           ps1Block="${blockDwn}";;
   esac
 
-  # Default catch-all for non-root scenarios
+  # Setup sane defaults for the following variables
+  [[ -z "${PS1_MODE}" ]] && export PS1_MODE=Auto
   [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
   [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
   [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"

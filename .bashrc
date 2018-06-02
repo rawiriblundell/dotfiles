@@ -2045,7 +2045,7 @@ fi
 
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
-  printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand||safe|[0-255]] [rand|[0-255]]" ""
+  printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
   printf '\t%s\n' "Options:" \
     "  -a    Automatic type selection (width based)" \
     "  -h    Help, usage information" \

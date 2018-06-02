@@ -515,11 +515,7 @@ get-shell() {
 # I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {
   if [[ -z "$1" ]]; then
-    # setprompt root
-    case $(uname) in
-      (SunOS)   sudo bash;;
-      (Linux)   sudo -i;;
-    esac
+    sudo -E bash || sudo bash --rcfile "${HOME}"/.bashrc
   else
     sudo "$@"
   fi

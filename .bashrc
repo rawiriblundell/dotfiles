@@ -1781,7 +1781,7 @@ genphrase() {
     # Test if we can download our wordlist, otherwise use the standard 'words' file to generate something usable
     if ! wget -T 2 https://raw.githubusercontent.com/rawiriblundell/dotfiles/master/.pwords.dict -O ~/.pwords.dict &>/dev/null; then
       # Alternatively, we could just use grep -v "[[:punct:]]", but we err on the side of portability
-      grep -Eh '^.{3,9}$' /usr/{,share/}dict/words 2>/dev/null | grep -Ev "é|'|-|\\.|/|&" > ~/.pwords.dict
+      LC_COLLATE=C grep -Eh '^[A-Za-z].{3,9}$' /usr/{,share/}dict/words 2>/dev/null | grep -v "'" > ~/.pwords.dict
     fi
   fi
 

@@ -346,7 +346,7 @@ capitalise() {
 # Setup a function for capitalising a single string
 # This is used by the above capitalise() function
 # The portable version depends on toupper() and trim()
-if (( BASH_VERSINFO == 4 )); then
+if (( BASH_VERSINFO >= 4 )); then
   capitalise-string() {
     printf -- '%s\n' "${1^}"
   }
@@ -1038,7 +1038,7 @@ if ! exists seq; then
     # and with three parameters we use the second as our increment
     elif [[ -n "$3" ]]; then
       # First we test if the bash version is 4, if so, use native increment
-      if (( "${BASH_VERSINFO[0]}" = "4" )); then
+      if (( BASH_VERSINFO >= 4 )); then
         eval "printf -- '%d\\n' {$1..$3..$2}"
       # Otherwise, use the manual approach
       else
@@ -1371,7 +1371,7 @@ fi
 # shellcheck disable=SC2120
 tolower() {
   if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
-    if (( BASH_VERSINFO == 4 )); then
+    if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*,,}" | paste -sd '\0' -
     elif exists awk; then
       printf -- '%s ' "$*" | awk '{print tolower($0)}'
@@ -1382,7 +1382,7 @@ tolower() {
       return 1
     fi
   else
-    if (( BASH_VERSINFO == 4 )); then
+    if (( BASH_VERSINFO >= 4 )); then
       while read -r; do
         printf '%s\n' "${REPLY,,}"
       done
@@ -1402,7 +1402,7 @@ tolower() {
 # shellcheck disable=SC2120
 toupper() {
   if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
-    if (( BASH_VERSINFO == 4 )); then
+    if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*^^}" | paste -sd '\0' -
     elif exists awk; then
       printf -- '%s ' "$*" | awk '{print toupper($0)}'
@@ -1413,7 +1413,7 @@ toupper() {
       return 1
     fi
   else
-    if (( BASH_VERSINFO == 4 )); then
+    if (( BASH_VERSINFO >= 4 )); then
       while read -r; do
         printf '%s\n' "${REPLY^^}"
       done
@@ -1877,7 +1877,7 @@ genphrase() {
   # Also requires the 'capitalise' function from said source.
   if exists shuf; then
     # If we're using bash4, then use mapfile for safety
-    if (( BASH_VERSINFO == 4 )); then
+    if (( BASH_VERSINFO >= 4 )); then
       # Basically we're using shuf and awk to generate lines of random words
       # and assigning each line to an array element
       mapfile -t wordArray < <(shuf -n "${totalWords}" ~/.pwords.dict | awk -v w="${phraseWords}" 'ORS=NR%w?FS:RS')
@@ -1893,7 +1893,7 @@ genphrase() {
       # Convert the line to an array of its own and add any seed word
       # shellcheck disable=SC2206
       lineArray=( "${seedWord}" ${line} )
-      if (( BASH_VERSINFO == 4 )); then
+      if (( BASH_VERSINFO >= 4 )); then
         shuf -e "${lineArray[@]^}"
       else
         shuf -e "${lineArray[@]}" | capitalise
@@ -1932,7 +1932,7 @@ genphrase() {
         # all of the output, which randomises the location of any seed word
         printf '%s\n' "${RANDOM} ${seedWord}"
         for randInt in "${numArray[@]:loWord:phraseWords}"; do
-          if (( BASH_VERSINFO == 4 )); then
+          if (( BASH_VERSINFO >= 4 )); then
             printf '%s\n' "${RANDOM} ${dictArray[randInt]^}"
           else
             printf '%s\n' "${RANDOM} ${dictArray[randInt]}" | capitalise

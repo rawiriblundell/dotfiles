@@ -515,7 +515,13 @@ get-shell() {
 # I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {
   if [[ -z "$1" ]]; then
-    sudo -E bash || sudo bash --rcfile "${HOME}"/.bashrc
+    # Test for newer versions of sudo that have '-E'
+    if sudo -h 2>&1 | grep -q -- '-E'; then
+      sudo -E bash
+     # Otherwise, use this alternative approach
+     else
+      sudo bash --rcfile "${HOME}"/.bashrc
+     fi
   else
     sudo "$@"
   fi

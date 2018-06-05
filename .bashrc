@@ -2066,12 +2066,14 @@ setprompt-help() {
     "The first and second parameters will accept human readable colour codes." \
     "These are represented in short and full format e.g." \
     "For 'blue', you can enter 'bl', 'Bl', 'blue' or 'Blue'." \
-    "This applies for Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange." \
-    "ANSI Numerical codes (0-255) can also be supplied e.g. 'setprompt 143 76'." \
+    "This applies for:" \
+    "Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange." \
+    "ANSI Numerical codes (0-255) can also be supplied" \
+    "e.g. 'setprompt 143 76'." \
     "" \
-    "256 colours is assumed at all times.  If you find issues, run 'setprompt safe'." \
+    "256 colours is assumed.  If you find issues, run 'setprompt safe'." \
     "" \
-    "'setprompt -a' enables automatic prompt mode selection based on the terminal width" \
+    "'setprompt -a' enables auto width-based prompt mode selection." \
     "If less than 60 columns is detected, the prompt is set to minimal mode." \
     "If less than 80 columns is detected, the prompt is set to simple mode." \
     "When the columns exceed 80, the prompt is set to the full mode."

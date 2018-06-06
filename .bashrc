@@ -256,7 +256,7 @@ bytestohuman() {
   # converts a byte count to a human readable format in IEC binary notation (base-1024),
   # rounded to two decimal places for anything larger than a byte. 
   # switchable to padded format and base-1000 if desired.
-  if [[ "$1" = "-h" ]]; then
+  if [[ "${1}" = "-h" ]]; then
     printf '%s\n' "Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]"
     return 0
   fi
@@ -362,8 +362,8 @@ fi
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
   width="${COLUMNS:-$(tput cols)}"
-  if [[ -r "$1" ]]; then
-    pr -o "$(( width/2/2 ))" -t < "$1"
+  if [[ -r "${1}" ]]; then
+    pr -o "$(( width/2/2 ))" -t < "${1}"
   else
     str="$*";
     len=${#str};
@@ -383,19 +383,19 @@ checkyaml() {
   textRst=$(tput sgr0)
 
   # Check that $1 is defined...
-  if [[ -z $1 ]]; then
+  if [[ -z "${1}" ]]; then
     printf '%s\n' "Usage:  checkyaml file" ""
     printf '\t%s\n'  "Check the YAML syntax in FILE"
     return 1
   fi
   
   # ...and readable
-  if [[ ! -r "$1" ]]; then
-    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: '$1' does not appear to exist or I can't read it."
+  if [[ ! -r "${1}" ]]; then
+    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: '${1}' does not appear to exist or I can't read it."
     return 1
   else
     local file
-    file="$1"
+    file="${1}"
   fi
 
   # If we can see the internet, let's use it!
@@ -472,33 +472,33 @@ epochdays() {
 
 # Function to extract common compressed file types
 extract() {
- if [[ -z "$1" ]]; then
+ if [[ -z "${1}" ]]; then
     # display usage if no parameters given
     printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
  else
-    if [[ -f "$1" ]]; then
+    if [[ -f "${1}" ]]; then
       local nameInLowerCase
-      nameInLowerCase=$(tolower "$1")
+      nameInLowerCase=$(tolower "${1}")
       case "${nameInLowerCase}" in
-        (*.tar.bz2)   tar xvjf ./"$1"    ;;
-        (*.tar.gz)    tar xvzf ./"$1"    ;;
-        (*.tar.xz)    tar xvJf ./"$1"    ;;
-        (*.lzma)      unlzma ./"$1"      ;;
-        (*.bz2)       bunzip2 ./"$1"     ;;
-        (*.rar)       unrar x -ad ./"$1" ;;
-        (*.gz)        gunzip ./"$1"      ;;
-        (*.tar)       tar xvf ./"$1"     ;;
-        (*.tbz2)      tar xvjf ./"$1"    ;;
-        (*.tgz)       tar xvzf ./"$1"    ;;
-        (*.zip)       unzip ./"$1"       ;;
-        (*.Z)         uncompress ./"$1"  ;;
-        (*.7z)        7z x ./"$1"        ;;
-        (*.xz)        unxz ./"$1"        ;;
-        (*.exe)       cabextract ./"$1"  ;;
-        (*)           echo "extract: '$1' - unknown archive method" ;;
+        (*.tar.bz2)   tar xvjf ./"${1}"    ;;
+        (*.tar.gz)    tar xvzf ./"${1}"    ;;
+        (*.tar.xz)    tar xvJf ./"${1}"    ;;
+        (*.lzma)      unlzma ./"${1}"      ;;
+        (*.bz2)       bunzip2 ./"${1}"     ;;
+        (*.rar)       unrar x -ad ./"${1}" ;;
+        (*.gz)        gunzip ./"${1}"      ;;
+        (*.tar)       tar xvf ./"${1}"     ;;
+        (*.tbz2)      tar xvjf ./"${1}"    ;;
+        (*.tgz)       tar xvzf ./"${1}"    ;;
+        (*.zip)       unzip ./"${1}"       ;;
+        (*.Z)         uncompress ./"${1}"  ;;
+        (*.7z)        7z x ./"${1}"        ;;
+        (*.xz)        unxz ./"${1}"        ;;
+        (*.exe)       cabextract ./"${1}"  ;;
+        (*)           echo "extract: '${1}' - unknown archive method" ;;
       esac
     else
-      printf '%s\n' "'$1' - file does not exist"
+      printf '%s\n' "'${1}' - file does not exist"
     fi
   fi
 }
@@ -514,14 +514,9 @@ get-shell() {
 # Small function to try and ensure setprompt etc behaves when escalating to root
 # I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {
-  if [[ -z "$1" ]]; then
-    # Test for newer versions of sudo that have '-E'
-    if sudo -h 2>&1 | grep -q -- '-E'; then
-      sudo -E bash
-     # Otherwise, use this alternative approach
-     else
-      sudo bash --rcfile "${HOME}"/.bashrc
-     fi
+  if [[ -z "${1}" ]]; then
+    # Testing for 'sudo -E' is hackish, let's just use this
+    sudo bash --rcfile "${HOME}"/.bashrc
   else
     sudo "$@"
   fi
@@ -628,7 +623,7 @@ llh() {
 # awk alternative (portability unknown/untested):
 # awk '{ sub(/^[ \t]+/, ""); print }'
 ltrim() {
-  if [[ -r "$1" ]]||[[ -z "$1" ]]; then
+  if [[ -r "${1}" ]]||[[ -z "${1}" ]]; then
     while read -r; do
       printf -- '%s\n' "${REPLY##+([[:space:]])}"
     done < "${1:-/dev/stdin}"
@@ -730,7 +725,7 @@ if ! exists mapfile; then
 
     # Finally, rename the array if required
     # I would love to know a better way to handle this
-    if [[ -n "$1" ]]; then
+    if [[ -n "${1}" ]]; then
       # shellcheck disable=SC2034
       for element in "${MAPFILE[@]}"; do
         eval "$1+=( \"\${element}\" )"
@@ -750,7 +745,7 @@ fi
 if ! exists members; then
   members() {
     [[ "$(getent group "${1?No Group Supplied}" | cut -d ":" -f4-)" ]] \
-      && getent group "$1" | cut -d ":" -f4-
+      && getent group "${1}" | cut -d ":" -f4-
   }
 fi
 
@@ -759,12 +754,12 @@ fi
 n2c() { paste -sd ',' "${1:--}"; }
 
 # Backup a file with the extension '.old'
-old() { cp --reflink=auto "$1"{,.old} 2>/dev/null || cp "$1"{,.old}; }
+old() { cp --reflink=auto "${1}"{,.old} 2>/dev/null || cp "${1}"{,.old}; }
 
 # A function to print a specific line from a file
 printline() {
   # If $1 is empty, print a usage message
-  if [[ -z $1 ]]; then
+  if [[ -z "${1}" ]]; then
     printf '%s\n' "Usage:  printline n [file]" ""
     printf '\t%s\n' "Print the Nth line of FILE." "" \
       "With no FILE or when FILE is -, read standard input instead."
@@ -774,20 +769,20 @@ printline() {
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    (''|*[!0-9]*) printf '%s\n' "[ERROR] printline: '$1' does not appear to be a number." "" \
+    (''|*[!0-9]*) printf '%s\n' "[ERROR] printline: '${1}' does not appear to be a number." "" \
                     "Run 'printline' with no arguments for usage.";
                   return 1 ;;
     (*)           local lineNo="$((10#$1))" ;;
   esac
 
   # Next, if $2 is set, check that we can actually read it
-  if [[ -n "$2" ]]; then
-    if [[ ! -r "$2" ]]; then
+  if [[ -n "${2}" ]]; then
+    if [[ ! -r "${2}" ]]; then
       printf '%s\n' "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
         "Run 'printline' with no arguments for usage."
       return 1
     else
-      local file="$2"
+      local file="${2}"
     fi
   fi
 
@@ -929,20 +924,20 @@ randInt() {
 if ! exists rev; then
   rev() {
     # Check that stdin or $1 isn't empty
-    if [[ -t 0 ]] && [[ -z $1 ]]; then
+    if [[ -t 0 ]] && [[ -z "${1}" ]]; then
       printf '%s\n' "Usage:  rev string|file" ""
       printf '\t%s\n'  "Reverse the order of characters in STRING or FILE." "" \
         "With no STRING or FILE, read standard input instead." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
       return 0
     # Disallow both piping in strings and declaring strings
-    elif [[ ! -t 0 ]] && [[ ! -z $1 ]]; then
+    elif [[ ! -t 0 ]] && [[ ! -z "${1}" ]]; then
       printf '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
       return 1
     fi
 
     # If parameter is a file, or stdin in used, action that first
-    if [[ -f $1 ]]||[[ ! -t 0 ]]; then
+    if [[ -f "${1}" ]]||[[ ! -t 0 ]]; then
       while read -r; do
         len=${#REPLY}
         rev=
@@ -967,8 +962,8 @@ fi
 # A function to repeat an action any number of times
 repeat() {
   # check that $1 is a digit, if not error out, if so, set the repeatNum variable
-  case "$1" in
-    (*[!0-9]*|'') printf '%s\n' "[ERROR]: '$1' is not a number.  Usage: 'repeat n command'"; return 1;;
+  case "${1}" in
+    (*[!0-9]*|'') printf '%s\n' "[ERROR]: '${1}' is not a number.  Usage: 'repeat n command'"; return 1;;
     (*)           local repeatNum=$1;;
   esac
   # shift so that the rest of the line is the command to execute
@@ -982,7 +977,7 @@ repeat() {
 
 # Create the file structure for an Ansible role
 rolesetup() {
-  if [[ -z "$1" ]]; then
+  if [[ -z "${1}" ]]; then
     printf '%s\n' "rolesetup - setup the file structure for an Ansible role." \
       "By default this creates into the current directory" \
       "and you can recursively copy the structure from there." "" \
@@ -993,12 +988,12 @@ rolesetup() {
   if [[ ! -w . ]]; then
     printf '%s\n' "Unable to write to the current directory"
     return 1
-  elif [[ -d "$1" ]]; then
-    printf '%s\n' "The directory '$1' seems to already exist!"
+  elif [[ -d "${1}" ]]; then
+    printf '%s\n' "The directory '${1}' seems to already exist!"
     return 1
   else
-    mkdir -p "$1"/{defaults,files,handlers,meta,templates,tasks,vars}
-    printf '%s\n' "---" > "$1"/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
+    mkdir -p "${1}"/{defaults,files,handlers,meta,templates,tasks,vars}
+    printf '%s\n' "---" > "${1}"/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
   fi
 }
 
@@ -1007,7 +1002,7 @@ rolesetup() {
 # awk alternative (portability unknown/untested):
 # awk '{ sub(/[ \t]+$/, ""); print }'
 rtrim() {
-  if [[ -r "$1" ]]||[[ -z "$1" ]]; then
+  if [[ -r "${1}" ]]||[[ -z "${1}" ]]; then
     while read -r; do
       printf -- '%s\n' "${REPLY%%+([[:space:]])}"
     done < "${1:-/dev/stdin}"
@@ -1035,20 +1030,20 @@ if ! exists seq; then
     fi
     
     # If only one number is given, we assume 1..n
-    if [[ -z "$2" ]]; then
+    if [[ -z "${2}" ]]; then
       eval "printf -- '%d\\n' {1..$1}"
     # Otherwise, we act accordingly depending on how many parameters we get
     # This runs with a default increment of 1/-1 for two parameters
-    elif [[ -z "$3" ]]; then
+    elif [[ -z "${3}" ]]; then
       eval "printf -- '%d\\n' {$1..$2}"
     # and with three parameters we use the second as our increment
-    elif [[ -n "$3" ]]; then
+    elif [[ -n "${3}" ]]; then
       # First we test if the bash version is 4, if so, use native increment
       if (( BASH_VERSINFO >= 4 )); then
         eval "printf -- '%d\\n' {$1..$3..$2}"
       # Otherwise, use the manual approach
       else
-        first="$1"
+        first="${1}"
         # Simply iterate through in ascending order
         if (( first < $3 )); then
           while (( first <= $3 )); do
@@ -1145,12 +1140,12 @@ if ! exists shuf; then
     reservoirSize=4096
 
     # If we're dealing with a file, feed that into file descriptor 6
-    if [[ -r "$1" ]]; then
+    if [[ -r "${1}" ]]; then
       # Size it up first and adjust nCount if necessary
-      if [[ -n "${nCount}" ]] && (( $(wc -l < "$1") < nCount )); then
-        nCount=$(wc -l < "$1")
+      if [[ -n "${nCount}" ]] && (( $(wc -l < "${1}") < nCount )); then
+        nCount=$(wc -l < "${1}")
       fi
-      exec 6< "$1"
+      exec 6< "${1}"
     # Cater for the -i option
     elif [[ "${inputRange}" = "true" ]]; then
       # If an input range is provided and repeats are ok, then simply call randInt:
@@ -1241,7 +1236,7 @@ ssh() { /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"; }
 
 # Display the fingerprint for a host
 ssh-fingerprint() {
-  if [[ -z $1 ]]; then
+  if [[ -z "${1}" ]]; then
     printf '%s\n' "Usage: ssh-fingerprint [hostname]"
     return 1
   fi
@@ -1252,9 +1247,9 @@ ssh-fingerprint() {
   # Older versions of ssh don't have '-Q' so also likely won't have ed25519
   # If you wanted a more portable test: 'man ssh | grep ed25519' might be it
   if ssh -Q key 2>/dev/null | grep -q ed25519; then
-    ssh-keyscan -t ed25519,rsa,ecdsa "$1" > "${fingerprint}" 2> /dev/null
+    ssh-keyscan -t ed25519,rsa,ecdsa "${1}" > "${fingerprint}" 2> /dev/null
   else
-    ssh-keyscan "$1" > "${fingerprint}" 2> /dev/null
+    ssh-keyscan "${1}" > "${fingerprint}" 2> /dev/null
   fi
   ssh-keygen -l -f "${fingerprint}"
   rm -f "${fingerprint}"
@@ -1317,8 +1312,8 @@ if ! exists timeout; then
     fi
     
     # Check that $1 complies, if not error out, if so, set the duration variable
-    case "$1" in
-      (*[!0-9smhd]*|'') printf '%s\n' "[ERROR] timeout: '$1' is not valid.  Run 'timeout' for usage."; return 1;;
+    case "${1}" in
+      (*[!0-9smhd]*|'') printf '%s\n' "[ERROR] timeout: '${1}' is not valid.  Run 'timeout' for usage."; return 1;;
       (*)           local duration=$1;;
     esac
     # shift so that the rest of the line is the command to execute
@@ -1376,7 +1371,7 @@ fi
 # perl option: perl -e "while (<STDIN>) { print lc; }"
 # shellcheck disable=SC2120
 tolower() {
-  if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
+  if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*,,}" | paste -sd '\0' -
     elif exists awk; then
@@ -1407,7 +1402,7 @@ tolower() {
 # perl option: perl -e "while (<STDIN>) { print uc; }"
 # shellcheck disable=SC2120
 toupper() {
-  if [[ -n "$1" ]] && [[ ! -r "$1" ]]; then
+  if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*^^}" | paste -sd '\0' -
     elif exists awk; then
@@ -1540,11 +1535,11 @@ weather() {
 # Non-portable swap: for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r
 what() {
   # Start processing $1.  I initially tried coding this with getopts but it blew up
-  if [[ "$1" = "-c" ]]; then
+  if [[ "${1}" = "-c" ]]; then
     ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn
-  elif [[ "$1" = "-m" ]]; then
+  elif [[ "${1}" = "-m" ]]; then
     ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn
-  elif [[ -z "$1" ]]; then
+  elif [[ -z "${1}" ]]; then
     ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
   else
     printf '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
@@ -2033,6 +2028,7 @@ ps1Ora="\[$(tput setaf 208)\]"                  # Orange - \[\e[38;5;208m\]
 ps1Rst="\[$(tput sgr0)\]"                       # Reset text - \[\e[0m\]
 
 # Map out some block characters
+# shellcheck disable=SC2034
 block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%
 block75="\xe2\x96\x93"   # u2593\0xe2 0x96 0x93 Dark shade 75%
 block50="\xe2\x96\x92"   # u2592\0xe2 0x96 0x92 Half shade 50%
@@ -2081,6 +2077,7 @@ setprompt-help() {
 }
 
 # If we want to define our colours with a dotfile, we load it here
+# shellcheck disable=SC1090
 [[ -f "${HOME}/.setpromptrc" ]] && . "${HOME}/.setpromptrc"
 
 setprompt() {
@@ -2099,6 +2096,7 @@ setprompt() {
     (-m)                    export PS1_MODE=Minimal;;
     (-r)
       if [[ -r "${HOME}/.setpromptrc" ]]; then
+        # shellcheck disable=SC1090
         . "${HOME}/.setpromptrc"
       else
         ps1Pri="${ps1Red}"
@@ -2179,20 +2177,19 @@ setprompt() {
   fi
 
   # Throw it all together, first we check the PS1_AUTO for truthy/falsy
+  # shellcheck disable=SC1117
   case "${PS1_MODE}" in
     (Minimal)
       export PS1="${ps1Pri}${ps1Block}${ps1Rst}${ps1Char} "
-      alias sudo="PS1='${ps1Red}${blockAsc}${ps1Rst}${ps1Char} ' sudo"
     ;;
     (Simple)
-      # shellcheck disable=SC1117
       export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
-      alias sudo="PS1='${ps1Red}[\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
     ;;
     (Full)
-      # shellcheck disable=SC1117
-      export PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
-      alias sudo="PS1='${ps1Red}${blockAsc}[\$(date +%y%m%d/%H:%M)][${auth}][\u@\h${ps1Rst} \W${ps1Red}]${ps1Rst}${ps1Char} ' sudo"
+      PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)]"
+      PS1="${PS1}[${auth}]${ps1Rst}"
+      PS1="{PS1}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      export PS1
     ;;
   esac
 

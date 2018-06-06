@@ -2188,7 +2188,7 @@ setprompt() {
     (Full)
       PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)]"
       PS1="${PS1}[${auth}]${ps1Rst}"
-      PS1="{PS1}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      PS1="${PS1}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
       export PS1
     ;;
   esac

@@ -890,6 +890,12 @@ xterm-256color|xterm with 256 colors,
 NEWTERM
 }
 
+# A small function to test a remote host's TCP port.
+# Used here for ssh, but can be used for any port
+probe-ssh() {
+  timeout 1 bash -c "</dev/tcp/${1:?No target}/${2:-22}" 2>/dev/null
+}
+
 # Get a number of random integers using $RANDOM with debiased modulo
 randInt() {
   local nCount nMin nMax nMod randThres i xInt

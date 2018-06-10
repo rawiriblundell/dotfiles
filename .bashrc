@@ -2159,6 +2159,8 @@ setprompt() {
   [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
   [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"
   [[ -z "${ps1Char}" ]] && ps1Char='$'
+  ps1Triplet="${ps1Pri}${ps1Block}"
+  ps1Main="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char}"
 
   # If PS1_MODE is set to Auto, it figures out the appropriate mode to use
   if [[ "${PS1_MODE}" = "Auto" ]]; then
@@ -2175,19 +2177,17 @@ setprompt() {
     export PS1_AUTO=False
   fi
 
-  # Throw it all together, first we check the PS1_AUTO for truthy/falsy
+  # Throw it all together, based on the selected mode
   # shellcheck disable=SC1117
   case "${PS1_MODE}" in
     (Minimal)
-      export PS1="${ps1Pri}${ps1Block}${ps1Rst}${ps1Char} "
+      export PS1="${ps1Triplet}${ps1Rst}${ps1Char} "
     ;;
     (Simple)
-      export PS1="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      export PS1="${ps1Triplet}${ps1Main} "
     ;;
     (Full)
-      PS1="${ps1Pri}${ps1Block}[\$(date +%y%m%d/%H:%M)]"
-      PS1="${PS1}[${auth}]${ps1Rst}"
-      PS1="${PS1}${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char} "
+      PS1="${ps1Triplet}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Main} "
       export PS1
     ;;
   esac

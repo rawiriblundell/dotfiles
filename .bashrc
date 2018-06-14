@@ -1299,46 +1299,44 @@ throttle() {
 # Check if 'timeout' is available, if not, enable a stop-gap function
 if ! exists timeout; then
   timeout() {
+    local duration
 
     # $# should be at least 1, if not, print a usage message
-    if (($# == 0 )); then
+    if (( $# == 0 )); then
       printf '%s\n' "Usage:  timeout DURATION COMMAND" ""
-      printf '\t%s\n' "Start COMMAND, and kill it if still running after DURATION." "" \
-        "DURATION is an integer with an optional  suffix:  's'  for" \
-        "seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days." "" \
-        "Note: This is a bash function to provide the basic functionality of the command 'timeout'"
+      printf '\t%s\n' \
+        "Start COMMAND, and kill it if still running after DURATION." "" \
+        "DURATION is an integer with an optional suffix:" \
+        "  's'  for seconds (the default)" \
+        "  'm' for minutes" \
+        "  'h' for hours" \
+        "  'd' for days" "" \
+        "Note: This is a bash function that mimics the command 'timeout'"
       return 0
     fi
     
-    # Check that $1 complies, if not error out, if so, set the duration variable
+    # Is $1 good?  If so, sanitise and convert to seconds
     case "${1}" in
-      (*[!0-9smhd]*|'') printf '%s\n' "[ERROR] timeout: '${1}' is not valid.  Run 'timeout' for usage."; return 1;;
-      (*)           local duration=$1;;
+      (*[!0-9smhd]*|'')
+        printf '%s\n' \
+          "timeout: '${1}' is not valid.  Run 'timeout' for usage." >&2
+        return 1
+      ;;
+      (*m)
+        duration="${1//[!0-9]/}"; duration=$(( duration * 60 ));;
+      ;;
+      (*h)
+        duration="${1//[!0-9]/}"; duration=$(( duration * 60 * 60 ))
+      ;;
+      (*d)
+        duration="${1//[!0-9]/}"; duration=$(( duration * 60 * 60 * 24 ))
+      ;;
+      (*)
+        duration="${1//[!0-9]/}"
+      ;;
     esac
     # shift so that the rest of the line is the command to execute
     shift
-
-    # Convert timeout period into seconds
-    # If it contains 'm', then convert to minutes
-    if echo "${duration}" | grep "m" &>/dev/null; then
-      # Make the variable numeric only
-      duration="${duration//[!0-9]/}" 
-      duration=$(( duration * 60 ))
-      
-    # ...and 'h' is for hours...
-    elif echo "${duration}" | grep "h" &>/dev/null; then
-      duration="${duration//[!0-9]/}" 
-      duration=$(( duration * 60 * 60 ))
-      
-    # ...and 'd' is for days...
-    elif echo "${duration}" | grep "d" &>/dev/null; then
-      duration="${duration//[!0-9]/}" 
-      duration=$(( duration * 60 * 60 * 24 ))
-      
-    # Otherwise, sanitise the variable of any other non-numeric characters
-    else
-      duration="${duration//[!0-9]/}"
-    fi
 
     # If 'perl' is available, it has a few pretty good one-line options
     # see: http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time

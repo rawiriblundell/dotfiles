@@ -1339,14 +1339,14 @@ if ! exists timeout; then
     shift
 
     # If 'perl' is available, it has a few pretty good one-line options
-    # see: http://stackoverflow.com/questions/601543/command-line-command-to-auto-kill-a-command-after-a-certain-amount-of-time
+    # see: http://stackoverflow.com/q/601543
     if exists perl; then
       perl -e '$s = shift; $SIG{ALRM} = sub { kill INT => $p; exit 77 }; exec(@ARGV) unless $p = fork; alarm $s; waitpid $p, 0; exit ($? >> 8)' "${duration}" "$@"
       #perl -MPOSIX -e '$SIG{ALRM} = sub { kill(SIGTERM, -$$); }; alarm shift; $exit = system @ARGV; exit(WIFEXITED($exit) ? WEXITSTATUS($exit) : WTERMSIG($exit));' "$@"
 
     # Otherwise we offer a shell based failover.
     # I tested a few, this one works nicely and is fairly simple
-    # http://stackoverflow.com/questions/24412721/elegant-solution-to-implement-timeout-for-bash-commands-and-functions/24413646?noredirect=1#24413646
+    # http://stackoverflow.com/a/24413646
     else
       # Run in a subshell to avoid job control messages
       ( "$@" &

@@ -1331,7 +1331,7 @@ if ! exists timeout; then
         return 1
       ;;
       (*m)
-        duration="${1//[!0-9]/}"; duration=$(( duration * 60 ));;
+        duration="${1//[!0-9]/}"; duration=$(( duration * 60 ))
       ;;
       (*h)
         duration="${1//[!0-9]/}"; duration=$(( duration * 60 * 60 ))

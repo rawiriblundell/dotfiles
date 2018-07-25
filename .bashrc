@@ -1239,7 +1239,30 @@ fi
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
 # and automatically adds them to ~/.ssh/known_hosts
-ssh() { /usr/bin/ssh -o StrictHostKeyChecking=no -q "$@"; }
+ssh() {
+  case "${1}" in
+    (-h)
+      command ssh -h 2>&1 | grep -v "^unknown"
+      printf '%s\n' "Overlay options:"
+      printf '\t   %s\n' "nokeys: Forces password based authentication" \
+        "raw: Runs ssh in its default, noisy state"
+      return 0
+    ;;
+    (nokeys)
+      command ssh \
+        -o PubkeyAuthentication=no \
+        -o StrictHostKeyChecking=no \
+        -q \
+        "${@:2}"
+    ;;
+    (raw)
+      command ssh "${@:2}"
+    ;;
+    (*)
+      command ssh -o StrictHostKeyChecking=no -q "${@}"
+    ;;
+  esac
+}
 
 # Display the fingerprint for a host
 ssh-fingerprint() {
@@ -1479,9 +1502,6 @@ trim() {
     ltrim "${@}" | rtrim
   fi
 }
-
-# Provide normal, no-options ssh for error checking
-unssh() { /usr/bin/ssh "${@}"; }
 
 # Provide 'up', so instead of e.g. 'cd ../../../' you simply type 'up 3'
 up() {

@@ -509,7 +509,8 @@ extract() {
 # This won't work for 'fish', which needs 'ps -p %self'
 # Good thing we don't care about 'fish'
 get-shell() {
-  ps -o comm= -p $$
+  ps -o pid,comm= | awk -v ppid="$$" '$1==ppid {print $2}'
+  #ps -o comm= -p $$ # This one works well except for busybox
   #ps -p "$$" | tail -n 1 | awk '{print $NF}'
 }
 

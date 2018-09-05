@@ -478,9 +478,7 @@ extract() {
     printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|exe|tar.bz2|tar.gz|tar.xz|rpm>"
  else
     if [[ -r "${1}" ]]; then
-      local nameInLowerCase
-      nameInLowerCase=$(tolower "${1}")
-      case "${nameInLowerCase}" in
+      case "${1}" in
         (*.tar.bz2)   tar xvjf ./"${1}"    ;;
         (*.tar.gz)    tar xvzf ./"${1}"    ;;
         (*.tar.xz)    tar xvJf ./"${1}"    ;;

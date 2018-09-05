@@ -475,9 +475,9 @@ epochdays() {
 extract() {
  if [[ -z "${1}" ]]; then
     # display usage if no parameters given
-    printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
+    printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|exe|tar.bz2|tar.gz|tar.xz|rpm>"
  else
-    if [[ -f "${1}" ]]; then
+    if [[ -r "${1}" ]]; then
       local nameInLowerCase
       nameInLowerCase=$(tolower "${1}")
       case "${nameInLowerCase}" in
@@ -496,10 +496,11 @@ extract() {
         (*.7z)        7z x ./"${1}"        ;;
         (*.xz)        unxz ./"${1}"        ;;
         (*.exe)       cabextract ./"${1}"  ;;
+        (*.rpm)       rpm2cpio ./"${1}" | cpio -idmv ;;
         (*)           echo "extract: '${1}' - unknown archive method" ;;
       esac
     else
-      printf '%s\n' "'${1}' - file does not exist"
+      printf '%s\n' "'${1}' - file not found or not readable"
     fi
   fi
 }

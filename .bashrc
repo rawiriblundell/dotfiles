@@ -2107,7 +2107,7 @@ setprompt-help() {
 
 setprompt() {
   # Let's setup some default primary and secondary colours for root/sudo
-  if (("${EUID:-0}" || "$(id -u)")); then
+  if (( EUID == 0 )); then
     ps1Pri="${ps1Red}"
     ps1Sec="${ps1Red}"
     ps1Block="${blockAsc}"

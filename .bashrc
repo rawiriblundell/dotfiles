@@ -1000,7 +1000,12 @@ rolesetup() {
     return 1
   else
     mkdir -p "${1}"/{defaults,files,handlers,meta,templates,tasks,vars}
-    printf '%s\n' "---" > "${1}"/{defaults,files,handlers,meta,templates,tasks,vars}/main.yml
+    (
+      cd "${1}" || return 1
+      for dir in defaults files handlers meta templates tasks vars; do
+        printf '%s\n' "---" > "${dir}/main.yml"
+      done
+    )
   fi
 }
 

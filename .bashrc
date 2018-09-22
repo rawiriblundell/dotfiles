@@ -758,6 +758,7 @@ n2c() { paste -sd ',' "${1:--}"; }
 old() { cp --reflink=auto "${1}"{,.old} 2>/dev/null || cp "${1}"{,.old}; }
 
 # A function to print a specific line from a file
+# TO-DO: Update it to handle globs e.g. 'printline 4 *'
 printline() {
   # If $1 is empty, print a usage message
   if [[ -z "${1}" ]]; then

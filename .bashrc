@@ -1328,7 +1328,7 @@ throttle() {
 
   # Now we output line by line with a sleep in the middle
   while read -r; do
-    printf '%s\n' "${REPLY}"
+    printf -- '%s\n' "${REPLY}"
     sleep "${sleepTime}" 2>/dev/null || sleep 1
   done
 }

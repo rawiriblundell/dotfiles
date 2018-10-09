@@ -1511,15 +1511,12 @@ trim() {
 
 # Provide 'up', so instead of e.g. 'cd ../../../' you simply type 'up 3'
 up() {
-  if (( "$#" < 1 )); then
-    cd ..
-  else
-    cdstr=""
-    for ((i=0; i<$1; i++)); do
-      cdstr="../${cdstr}"
-    done
-    cd "${cdstr}" || exit
-  fi
+  case "${1}" in
+    (*[!0-9]*)  : ;;
+    ("")        cd || return ;;
+    (1)         cd .. || return ;;
+    (*)         cd "$(eval "printf '../'%.0s {1..$1}")" || return ;;
+  esac
 }
 
 # This is based on one of the best urandom+bash random integer scripts IMHO

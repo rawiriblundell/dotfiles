@@ -67,6 +67,7 @@ pathfind() {
 
 # Functionalise 'command -v' to allow 'if exists [command]' idiom
 exists() { command -v "${1}" &>/dev/null; }
+alias iscommand='exists'
 
 # Check if /usr/bin/sudo and /bin/bash exist
 # If not, try to find them and suggest a symlink
@@ -545,6 +546,11 @@ indent() {
   identWidth="${1:-2}"
   identWidth=$(eval "printf '%.0s ' {1..${identWidth}}")
   sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
+}
+
+# Test if a given item is a function and emit a return code
+isfunction() {
+  [[ $(type -t "${1:-grobblegobble}") = function ]]
 }
 
 # Test if a given value is an integer

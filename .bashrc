@@ -448,6 +448,22 @@ die() {
   return 1
 }
 
+# Basic step-in function for dos2unix
+# This simply removes dos line endings using 'sed'
+if ! command -v dos2unix &>/dev/null; then
+  dos2unix() {
+    if [[ "${1:0:1}" = '-' ]]; then
+      printf '%s\n' "This is a simple step-in function, '${1}' isn't supported"
+      return 1
+    fi
+    if [[ -w "${1}" ]]; then
+      sed -ie 's/\r//g' "${1}"
+    else
+      sed -e 's/\r//g' -
+    fi
+  }
+fi
+
 # Calculate how many seconds since epoch
 # Portable version based on http://www.etalabs.net/sh_tricks.html
 # We strip leading 0's in order to prevent unwanted octal math

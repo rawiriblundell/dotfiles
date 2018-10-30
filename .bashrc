@@ -520,13 +520,27 @@ extract() {
   fi
 }
 
-# Because $SHELL is a bad thing to test against, we provide this function
-# This won't work for 'fish', which needs 'ps -p %self'
-# Good thing we don't care about 'fish'
+# Because $SHELL is an unreliable thing to test against, we provide this function
+# This won't work for 'fish', which needs 'ps -p %self' or similar
+# non-bourne-esque syntax.  Good thing we don't care about 'fish'
 get-shell() {
-  ps -o pid,comm= | awk -v ppid="$$" '$1==ppid {print $2}'
-  #ps -o comm= -p $$ # This one works well except for busybox
-  #ps -p "$$" | tail -n 1 | awk '{print $NF}'
+  if ps -p "$$" >/dev/null 2>&1; then
+    # This double-awk caters for situations where CMD/COMMAND
+    # might be a full path e.g. /usr/bin/zsh
+    ps -p "$$" | tail -n 1 | awk '{print $NF}' | awk -F '/' '{print $NF}'
+  # This one works well except for busybox
+  elif ps -o comm= -p $$ >/dev/null 2>&1; then
+    ps -o comm= -p $$
+  elif ps -o pid,comm= >/dev/null 2>&1; then
+    ps -o pid,comm= | awk -v ppid="$$" '$1==ppid {print $2}'
+  else
+    case "${BASH_VERSION}" in (*.*) printf '%s\n' "bash";; esac; return 0
+    case "${KSH_VERSION}" in (*.*) printf '%s\n' "ksh";; esac; return 0
+    case "${ZSH_VERSION}" in (*.*) printf '%s\n' "zsh";; esac; return 0
+    # If we get to this point, fail out:
+    printf '%s\n' "Unable to find method to determine the shell"
+    return 1
+  fi
 }
 
 # Small function to try and ensure setprompt etc behaves when escalating to root

@@ -123,12 +123,21 @@ stty ixoff -ixon
 # sources /etc/bash.bashrc).
 if ! shopt -oq posix; then
   if [[ -f /usr/share/bash-completion/bash_completion ]]; then
-    # shellcheck disable=SC1091
+    # shellcheck source=/dev/null
     . /usr/share/bash-completion/bash_completion
   elif [[ -f /etc/bash_completion ]]; then
-    # shellcheck disable=SC1091
+    # shellcheck source=/dev/null
     . /etc/bash_completion
+  elif [[ -f /usr/local/etc/bash_completion ]]; then
+    # shellcheck source=/dev/null
+    . /usr/local/etc/bash_completion
   fi
+fi
+if [[ -d /etc/bash_completion.d/ ]]; then
+  for compFile in /etc/bash_completion.d/* ; do
+    # shellcheck source=/dev/null
+    . "${compFile}"
+  done
 fi
 
 # Fix 'cd' tab completion

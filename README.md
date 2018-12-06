@@ -1,4 +1,4 @@
 dotfiles
 ========
 
-![Alt text](https://cdn.rawgit.com/rawiriblundell/dotfiles/master/termtosvg_e_udnoec.svg "setprompt demonstration")
+![Alt text](https://cdn.jsdelivr.net/gh/rawiriblundell/dotfiles/termtosvg_e_udnoec.svg "setprompt demonstration")

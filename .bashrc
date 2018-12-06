@@ -293,7 +293,7 @@ bytestohuman() {
 }
 
 # Convert comma separated list to long format e.g. id user | tr "," "\n"
-# See also n2c() for the opposite behaviour
+# See also n2c() and n2s() for the opposite behaviour
 c2n() {
   while read -r; do 
     printf -- '%s\n' "${REPLY}" | tr "," "\\n"
@@ -798,6 +798,9 @@ fi
 # Convert multiple lines to comma separated format
 # See also c2n() for the opposite behaviour
 n2c() { paste -sd ',' "${1:--}"; }
+
+# Convert multiple lines to space separated format
+n2s() { paste -sd ' ' "${1:--}"; }
 
 # Backup a file with the extension '.old'
 old() { cp --reflink=auto "${1}"{,.old} 2>/dev/null || cp "${1}"{,.old}; }

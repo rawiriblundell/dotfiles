@@ -947,10 +947,15 @@ xterm-256color|xterm with 256 colors,
 NEWTERM
 }
 
-# A small function to test a remote host's TCP port.
-# Used here for ssh, but can be used for any port
+# A small function to test connectivity to a remote host's port.
+# Usage: probe-port [remote host] [port (default: 22)] [tcp/udp (default: tcp)]
+probe-port() {
+  timeout 1 bash -c "</dev/${3:-tcp}/${1:?No target}/${2:-22}" 2>/dev/null
+}
+
+# Use probe-port to test a remote host's ssh connectivity
 probe-ssh() {
-  timeout 1 bash -c "</dev/tcp/${1:?No target}/${2:-22}" 2>/dev/null
+  probe-port "${1:?No target}" "${2:-22}"
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo

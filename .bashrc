@@ -1552,6 +1552,26 @@ if tput ce 2>/dev/null; then
   }
 fi
 
+# Format the output of 'du'.  Found on the internet, unknown origin.
+if ! exists treesize; then
+  treesize() {
+    du -k --max-depth=1 "${@}" | sort -nr | awk '
+     BEGIN {
+        split("KB,MB,GB,TB", Units, ",");
+     }
+     {
+        u = 1;
+        while ($1 >= 1024) {
+           $1 = $1 / 1024;
+           u += 1
+        }
+        $1 = sprintf("%.1f %s", $1, Units[u]);
+        print $0;
+     }
+    '
+  }
+fi
+
 # A small function to trim whitespace either side of a (sub)string
 # shellcheck disable=SC2120
 trim() {

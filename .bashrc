@@ -1628,8 +1628,21 @@ weather() {
     return 1
   fi
 
+  # Handle our variables
   # If no arg is given, default to Wellington NZ
-  curl -m 10 "http://wttr.in/${*:-Wellington}" 2>/dev/null || printf '%s\n' "[ERROR] weather: Could not connect to weather service."
+  local request curlArgs
+  curlArgs="-H \"Accept-Language: ${LANG%_*}\" --compressed -m 10"
+  case "${1}" in
+    (-h|--help) request="wttr.in/:help" ;;
+    (*)         request="wttr.in/${*:-Wellington}" ;;
+  esac
+
+  # If the width is less than 125 cols, automatically switch to narrow mode
+  (( "${COLUMNS:-$(tput cols)}" < 125 )) && request+='?n'
+  
+  # Finally, make the request
+  curl "${curlArgs}" "${request}" 2>/dev/null \
+    || printf '%s\n' "[ERROR] weather: Could not connect to weather service."
 }
 
 # Function to display a list of users and their memory and cpu usage

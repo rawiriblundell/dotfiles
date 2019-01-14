@@ -424,6 +424,22 @@ checkyaml() {
   fi
 }
 
+# Try to enable clipboard functionality
+# Terse version of https://raw.githubusercontent.com/rettier/c/master/c
+if iscommand pbcopy; then
+  clipin() { pbcopy; }
+  clipout() { pbpaste; }
+elif iscommand xclip; then
+  clipin() { xclip -selection c; }
+  clipout() { xclip -selection clipboard -o; }
+elif iscommand xsel ; then
+  clipin() { xsel --clipboard --input; }
+  clipout() { xsel --clipboard --output; }
+else
+  clipin() { printf '%s\n' "No clipboard capability found" >&2; }
+  clipout() { printf '%s\n' "No clipboard capability found" >&2; }
+fi
+
 # Indent code by four spaces, useful for posting in markdown
 codecat() { indent 4 "${1}"; }
 

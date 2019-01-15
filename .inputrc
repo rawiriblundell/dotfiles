@@ -1,0 +1,65 @@
+#.inputrc, mostly to get Solaris to behave nicely
+# Copied and modified slightly from Linux's garden variety /etc/inputrc
+# See also https://www.topbug.net/blog/2017/07/31/inputrc-for-humans/
+
+$if mode=emacs
+
+# for Linux and Solaris
+"\e[1~": beginning-of-line
+"\e[4~": end-of-line
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"\e[5~": beginning-of-history
+"\e[6~": end-of-history
+"\e[3~": delete-char
+"\e[7~": beginning-of-line
+"\e[2~": quoted-insert
+"\e[5C": forward-word
+"\e[5D": backward-word
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+"\e[C": forward-char
+"\e[D": backward-char
+
+# for rxvt
+$if term=rxvt
+"\e[8~": end-of-line
+"\eOc": forward-word
+"\eOd": backward-word
+$endif
+
+# for non RH/Debian xterm, can't hurt for RH/Debian xterm
+"\eOH": beginning-of-line
+"\eOF": end-of-line
+
+# for freebsd console
+"\e[H": beginning-of-line
+"\e[F": end-of-line
+
+$endif
+
+# Set auto completion to be case insensitive
+set completion-ignore-case on
+
+# Display completion matches immediately instead of ringing a bell and delaying you
+set show-all-if-ambiguous on
+set show-all-if-unmodified on
+
+# do not bell on tab-completion
+set bell-style none
+
+set meta-flag on
+set input-meta on
+set convert-meta off
+set output-meta on
+
+# Completed names which are symbolic links to
+# directories have a slash appended.
+set mark-symlinked-directories on
+
+"\C-p":history-search-backward
+"\C-n":history-search-forward
+
+set colored-stats On
+set completion-prefix-display-length 3
+set visible-stats On

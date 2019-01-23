@@ -133,12 +133,26 @@ if ! shopt -oq posix; then
     . /usr/local/etc/bash_completion
   fi
 fi
+
+# 'have()' is sometimes unset by one/all of the above completion files
+# Which can upset the loading of the following conf frags
+# We temporarily provide a variant of it using exists()
+# TO-DO: Figure out a smarter way to handle this scenario
+have() {
+  unset -v have 
+  exists "${1}" && have=yes
+}
+
 if [[ -d /etc/bash_completion.d/ ]]; then
   for compFile in /etc/bash_completion.d/* ; do
     # shellcheck source=/dev/null
     . "${compFile}"
   done
 fi
+
+# Clean up after ourselves
+unset -f have
+unset have
 
 # Fix 'cd' tab completion
 complete -d cd

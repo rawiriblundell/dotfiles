@@ -1175,6 +1175,15 @@ settitle() {
   esac
 }
 
+# shift_array <arr_name> [<n>]
+# From https://www.reddit.com/r/bash/comments/aj0xm0/quicktip_shifting_arrays/
+shift_array() {
+  # Create nameref to real array
+  local -n arr="$1"
+  local n="${2:-1}"
+  arr=("${arr[@]:${n}}")
+}
+
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Check commit history for a range of alternative methods - ruby, perl, python etc
 # Requires: randInt function

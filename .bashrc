@@ -1011,6 +1011,12 @@ randInt() {
   done
 }
 
+# 'redo' the last command, replacing all instances of 'foo' with 'bar'
+# Usage: redo foo bar
+redo() {
+  fc -s "${1:?Search parameter missing}"="${2:?Replacement parameter missing}"
+}
+
 # Check if 'rev' is available, if not, enable a stop-gap function
 if ! exists rev; then
   rev() {

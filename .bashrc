@@ -588,7 +588,8 @@ get-shell() {
 if is_command git; then
   git() {
     command git "${@}"
-    export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+    GIT_BRANCH="$(command git branch 2>/dev/null| sed -n '/\* /s///p')"
+    export GIT_BRANCH
   }
 fi
 

@@ -440,13 +440,13 @@ checkyaml() {
 
 # Try to enable clipboard functionality
 # Terse version of https://raw.githubusercontent.com/rettier/c/master/c
-if iscommand pbcopy; then
+if is_command pbcopy; then
   clipin() { pbcopy; }
   clipout() { pbpaste; }
-elif iscommand xclip; then
+elif is_command xclip; then
   clipin() { xclip -selection c; }
   clipout() { xclip -selection clipboard -o; }
-elif iscommand xsel ; then
+elif is_command xsel ; then
   clipin() { xsel --clipboard --input; }
   clipout() { xsel --clipboard --output; }
 else

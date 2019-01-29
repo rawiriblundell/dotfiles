@@ -386,10 +386,12 @@ fi
 # Wrap 'cd' to automatically update GIT_BRANCH when necessary
 cd() {
   command cd "${@}" || return 1
-  if is_gitdir; then
-    export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
-  else
-    export GIT_BRANCH="NON-GIT"
+  if [[ "${ps1GitMode}" = True ]]; then
+    if is_gitdir; then
+      export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+    else
+      export GIT_BRANCH="NON-GIT"
+    fi
   fi
 }
 
@@ -2284,14 +2286,13 @@ setprompt() {
     (-g|--git)
       case "${gitMode}" in
         (true|True)
-          gitMode=False
+          ps1GitMode=False
         ;;
         (false|False|*)
-          gitMode=True
+          ps1GitMode=True
           if [[ -z "${GIT_BRANCH}" ]]; then
             if is_gitdir; then
-              GIT_BRANCH="$(
-                timeout 0.3 2>/dev/null || timegit branch 2>/dev/null| sed -n '/\* /s///p')"
+              GIT_BRANCH="$(git branch 2>/dev/null | sed -n '/\* /s///p')"
             fi
           fi
         ;;
@@ -2393,7 +2394,7 @@ setprompt() {
       export PS1="${ps1Triplet}${ps1Main} "
     ;;
     (Full)
-      if [[ "${gitMode}" = "True" ]]; then
+      if [[ "${ps1GitMode}" = "True" ]]; then
         if is_gitdir; then
           PS1="${ps1Triplet}[${GIT_BRANCH:-UNKNOWN}][${auth}]${ps1Rst}${ps1Main} "
         else

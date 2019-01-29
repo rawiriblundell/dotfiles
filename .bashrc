@@ -582,6 +582,16 @@ get-shell() {
   fi
 }
 
+# Let 'git' take the perf hit of setting GIT_BRANCH rather than PROMPT_COMMAND
+# There's no one true way to get the current git branch, they all have pros/cons
+# See e.g. https://stackoverflow.com/q/6245570
+if exists git; then
+  git() {
+    command git "${@}"
+    export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+  }
+fi
+
 # Small function to try and ensure setprompt etc behaves when escalating to root
 # I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {

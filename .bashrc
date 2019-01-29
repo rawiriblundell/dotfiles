@@ -67,7 +67,7 @@ pathfind() {
 
 # Functionalise 'command -v' to allow 'if exists [command]' idiom
 exists() { command -v "${1}" &>/dev/null; }
-alias iscommand='exists'
+alias is_command='exists'
 
 # Check if /usr/bin/sudo and /bin/bash exist
 # If not, try to find them and suggest a symlink
@@ -350,7 +350,7 @@ capitalise() {
       # Split each line element for processing
       for inString in ${REPLY}; do
         # If inString is an integer, skip to the next element
-        isinteger "${inString}" && continue
+        is_integer "${inString}" && continue
         capitalise-string "${inString}"
       # We use to trim to remove any trailing whitespace
       done | paste -sd ' ' -
@@ -585,7 +585,7 @@ get-shell() {
 # Let 'git' take the perf hit of setting GIT_BRANCH rather than PROMPT_COMMAND
 # There's no one true way to get the current git branch, they all have pros/cons
 # See e.g. https://stackoverflow.com/q/6245570
-if exists git; then
+if is_command git; then
   git() {
     command git "${@}"
     export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
@@ -628,12 +628,21 @@ indent() {
 }
 
 # Test if a given item is a function and emit a return code
-isfunction() {
+is_function() {
   [[ $(type -t "${1:-grobblegobble}") = function ]]
 }
 
+# Are we within a directory that's tracked by git?
+is_gitdir() {
+  if [[ -d .git ]]; then
+    return 0
+  else
+    git rev-parse --git-dir 2> /dev/null
+  fi
+}
+
 # Test if a given value is an integer
-isinteger() {
+is_integer() {
   if test "${1}" -eq "${1}" 2>/dev/null; then
     return 0
   else
@@ -642,7 +651,7 @@ isinteger() {
 }
 
 # Test if a given value is a global var, local var (default) or array
-isset() {
+is_set() {
   case "${1}" in
     (-a|-array)
       declare -p "${2}" 2>/dev/null | grep -- "-a ${2}=" >/dev/null 2>&1
@@ -654,7 +663,7 @@ isset() {
     ;;
     (-h|--help|"")
       printf -- '%s\n' "Function to test whether NAME is declared" \
-        "Usage: isset [-a(rray)|-l(ocal var)|-g(lobal var)|-h(elp)] NAME" \
+        "Usage: is_set [-a(rray)|-l(ocal var)|-g(lobal var)|-h(elp)] NAME" \
         "If no option is supplied, NAME is tested as a local var"
       return 0
     ;;
@@ -877,7 +886,7 @@ printline() {
   fi
 
   # Finally after all that testing is done, we throw in a cursory test for 'sed'
-  if exists sed; then
+  if is_command sed; then
     sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
@@ -1411,11 +1420,11 @@ string-contains() {
 # Provide a very simple 'tac' step-in function
 if ! exists tac; then
   tac() {
-    if exists perl; then
+    if is_command perl; then
       perl -e 'print reverse<>' < "${1:-/dev/stdin}"
-    elif exists awk; then
+    elif is_command awk; then
       awk '{line[NR]=$0} END {for (i=NR; i>=1; i--) print line[i]}' < "${1:-/dev/stdin}"
-    elif exists sed; then
+    elif is_command sed; then
       sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
     fi
   }
@@ -1485,7 +1494,7 @@ if ! exists timeout; then
 
     # If 'perl' is available, it has a few pretty good one-line options
     # see: http://stackoverflow.com/q/601543
-    if exists perl; then
+    if is_command perl; then
       perl -e '$s = shift; $SIG{ALRM} = sub { kill INT => $p; exit 77 }; exec(@ARGV) unless $p = fork; alarm $s; waitpid $p, 0; exit ($? >> 8)' "${duration}" "$@"
       #perl -MPOSIX -e '$SIG{ALRM} = sub { kill(SIGTERM, -$$); }; alarm shift; $exit = system @ARGV; exit(WIFEXITED($exit) ? WEXITSTATUS($exit) : WTERMSIG($exit));' "$@"
 
@@ -1516,9 +1525,9 @@ tolower() {
   if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*,,}" | paste -sd '\0' -
-    elif exists awk; then
+    elif is_command awk; then
       printf -- '%s ' "$*" | awk '{print tolower($0)}'
-    elif exists tr; then
+    elif is_command tr; then
       printf -- '%s ' "$*" | tr '[:upper:]' '[:lower:]'
     else
       printf '%s\n' "tolower - no available method found" >&2
@@ -1530,9 +1539,9 @@ tolower() {
         printf '%s\n' "${REPLY,,}"
       done
       [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY,,}"
-    elif exists awk; then
+    elif is_command awk; then
       awk '{print tolower($0)}'
-    elif exists tr; then
+    elif is_command tr; then
       tr '[:upper:]' '[:lower:]'
     else
       printf '%s\n' "tolower - no available method found" >&2
@@ -1547,9 +1556,9 @@ toupper() {
   if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*^^}" | paste -sd '\0' -
-    elif exists awk; then
+    elif is_command awk; then
       printf -- '%s ' "$*" | awk '{print toupper($0)}'
-    elif exists tr; then
+    elif is_command tr; then
       printf -- '%s ' "$*" | tr '[:lower:]' '[:upper:]'
     else
       printf '%s\n' "toupper - no available method found" >&2
@@ -1561,9 +1570,9 @@ toupper() {
         printf '%s\n' "${REPLY^^}"
       done
       [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY^^}"
-    elif exists awk; then
+    elif is_command awk; then
       awk '{print toupper($0)}'
-    elif exists tr; then
+    elif is_command tr; then
       tr '[:lower:]' '[:upper:]'
     else
       printf '%s\n' "toupper - no available method found" >&2
@@ -1910,12 +1919,12 @@ cryptpasswd() {
         (1|5|6) pwdKryptMode="${2}";;
         (*)     pwdKryptMode=1;;        # Default to MD5
       esac
-      if exists python; then
+      if is_command python; then
         #python -c 'import crypt; print(crypt.crypt('${inputPwd}', crypt.mksalt(crypt.METHOD_SHA512)))'
         python -c "import crypt; print crypt.crypt('${inputPwd}', '\$${pwdKryptMode}\$${pwdSalt}')"
-      elif exists perl; then
+      elif is_command perl; then
         perl -e "print crypt('${inputPwd}','\$${pwdKryptMode}\$${pwdSalt}\$')"
-      elif exists openssl; then
+      elif is_command openssl; then
         printf '%s\n' "This was handled by OpenSSL which is only MD5 capable." >&2
         openssl passwd -1 -salt "${pwdSalt}" "${inputPwd}"
       else
@@ -2045,7 +2054,7 @@ genphrase() {
   # First we test to see if shuf is available.  This should now work with the
   # 'shuf' step-in function and 'rand' scripts available from https://github.com/rawiriblundell
   # Also requires the 'capitalise' function from said source.
-  if exists shuf; then
+  if is_command shuf; then
     # If we're using bash4, then use mapfile for safety
     if (( BASH_VERSINFO >= 4 )); then
       # Basically we're using shuf and awk to generate lines of random words
@@ -2080,7 +2089,7 @@ genphrase() {
     fi
 
     # We test for 'mapfile' which indicates bash4 or some step-in function
-    if exists mapfile; then
+    if is_command mapfile; then
       # Create two arrays, one with all the words, and one with a bunch of random numbers
       mapfile -t dictArray < ~/.pwords.dict
       mapfile -t numArray < <(rand -M "${#dictArray[@]}" -r -N "${totalWords}")
@@ -2122,7 +2131,7 @@ genphrase() {
 # Figure out the correct TERM value
 # Function to test indicated terminfo entries
 termtest() {
-  if exists infocmp; then
+  if is_command infocmp; then
     infocmp "${1}" &>/dev/null
     return "$?"
   else
@@ -2149,7 +2158,7 @@ fi
 # If not, we set up ~/.terminfo appropriately (usually Solaris)
 if [[ "${TERM}" = "xterm-256color" ]]; then
   if ! termtest xterm-256color; then
-    if exists tic; then
+    if is_command tic; then
       mkdir -p "${HOME}"/.terminfo
       print-xterm-256color > "${HOME}"/.terminfo/xterm-256color
       TERMINFO="${HOME}"/.terminfo

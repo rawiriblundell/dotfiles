@@ -383,6 +383,16 @@ else
   }
 fi
 
+# Wrap 'cd' to automatically update GIT_BRANCH when necessary
+cd() {
+  command cd "${@}" || return 1
+  if is_gitdir; then
+    export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+  else
+    export GIT_BRANCH="NON-GIT"
+  fi
+}
+
 # Print the given text in the center of the screen.
 # From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
@@ -638,7 +648,7 @@ is_gitdir() {
   if [[ -d .git ]]; then
     return 0
   else
-    git rev-parse --git-dir 2> /dev/null
+    git rev-parse --git-dir | grep -q '.git'
   fi
 }
 
@@ -2229,6 +2239,7 @@ setprompt-help() {
   printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
   printf '\t%s\n' "Options:" \
     "  -a    Automatic type selection (width based)" \
+    "  -g    Enable/disable git branch in the first text block" \
     "  -h    Help, usage information" \
     "  -f    Full prompt" \
     "  -m    Minimal prompt" \
@@ -2269,20 +2280,35 @@ setprompt() {
   fi
 
   case "${1}" in
-    (-a)                    export PS1_MODE=Auto;;
-    (-h)                    setprompt-help; return 0;;
-    (-f)                    export PS1_MODE=Full;;
-    (-m)                    export PS1_MODE=Minimal;;
-    (-r)
+    (-a|--auto)             export PS1_MODE=Auto;;
+    (-g|--git)
+      case "${gitMode}" in
+        (true|True)
+          gitMode=False
+        ;;
+        (false|False|*)
+          gitMode=True
+          if [[ -z "${GIT_BRANCH}" ]]; then
+            if is_gitdir; then
+              GIT_BRANCH="$(
+                timeout 0.3 2>/dev/null || timegit branch 2>/dev/null| sed -n '/\* /s///p')"
+            fi
+          fi
+        ;;
+      esac
+    ;;
+    (-h|--help)             setprompt-help; return 0;;
+    (-f|--full)             export PS1_MODE=Full;;
+    (-m|--mini)             export PS1_MODE=Minimal;;
+    (-r|--reset)
       if [[ -r "${HOME}/.setpromptrc" ]]; then
-        # shellcheck disable=SC1090
         . "${HOME}/.setpromptrc"
       else
         ps1Pri="${ps1Red}"
         ps1Sec="${ps1Grn}"
       fi
     ;;
-    (-s)                    export PS1_MODE=Simple;;
+    (-s|--simple)           export PS1_MODE=Simple;;
     (b|B|black|Black)       ps1Pri="${ps1Blk}";;
     (r|R|red|Red)           ps1Pri="${ps1Red}";;
     (g|G|green|Green)       ps1Pri="${ps1Grn}";;
@@ -2367,7 +2393,15 @@ setprompt() {
       export PS1="${ps1Triplet}${ps1Main} "
     ;;
     (Full)
-      PS1="${ps1Triplet}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Main} "
+      if [[ "${gitMode}" = "True" ]]; then
+        if is_gitdir; then
+          PS1="${ps1Triplet}[${GIT_BRANCH:-UNKNOWN}][${auth}]${ps1Rst}${ps1Main} "
+        else
+          PS1="${ps1Triplet}[NOT-GIT][${auth}]${ps1Rst}${ps1Main} "
+        fi
+      else
+        PS1="${ps1Triplet}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Main} "
+      fi
       export PS1
     ;;
   esac
@@ -2386,5 +2420,5 @@ export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME:-}: '
 ################################################################################
 # Set the PROMPT_COMMAND
 # This updates the terminal emulator title and the prompt
-PROMPT_COMMAND="settitle; setprompt; ${PROMPT_COMMAND}"
+PROMPT_COMMAND="settitle; setprompt"
 ################################################################################

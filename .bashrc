@@ -650,7 +650,7 @@ is_gitdir() {
   if [[ -d .git ]]; then
     return 0
   else
-    git rev-parse --git-dir | grep -q '.git'
+    git rev-parse --git-dir 2>&1 | grep -Eq '^.git|/.git'
   fi
 }
 

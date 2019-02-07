@@ -725,6 +725,7 @@ llh() {
     done < <(command ls -l | grep -v "total")
   fi
 }
+
 # A function to log messages to the system log
 # http://hacking.elboulangero.com/2015/12/06/bash-logging.html may be useful
 logmsg() {

@@ -725,6 +725,36 @@ llh() {
     done < <(command ls -l | grep -v "total")
   fi
 }
+# A function to log messages to the system log
+# http://hacking.elboulangero.com/2015/12/06/bash-logging.html may be useful
+logmsg() {
+  local logIdent
+  while getopts ":t:" optFlags; do
+    case "${optFlags}" in
+      (t)   logIdent="-t ${OPTARG}";;
+      (\?)  echo "ERROR: Invalid option: '-$OPTARG'." >&2
+            return 1;;
+      (:)   echo \
+              "Option '-$OPTARG' requires an argument. e.g. '-$OPTARG 10'" >&2
+            return 1;;
+    esac
+  done
+  if command -v systemd-cat &>/dev/null; then
+    systemd-cat "${logIdent}" <<< "${*}"
+  elif command -v logger &>/dev/null; then
+    logger "${logIdent}" "${*}"
+  else
+    if [[ -w /var/log/messages ]]; then
+      logFile=/var/log/messages
+    elif [[ -w /var/log/syslog ]]; then
+      logFile=/var/log/syslog
+    else
+      logFile=/var/log/logmsg
+    fi
+    printf '%s\n' \
+      "date '+%b %d %T' ${HOSTNAME} ${logIdent/-t /} ${*}" >> "${logFile}" 2>&1
+  fi
+}
 
 # Trim whitespace from the left hand side of an input
 # Requires: shopt -s extglob

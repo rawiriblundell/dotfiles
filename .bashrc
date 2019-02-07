@@ -753,7 +753,7 @@ logmsg() {
       logFile=/var/log/logmsg
     fi
     printf '%s\n' \
-      "date '+%b %d %T' ${HOSTNAME} ${logIdent/-t /} ${*}" >> "${logFile}" 2>&1
+      "$(date '+%b %d %T') ${HOSTNAME} ${logIdent/-t /} ${*}" >> "${logFile}" 2>&1
   fi
 }
 

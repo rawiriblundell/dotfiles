@@ -1051,6 +1051,14 @@ probe-ssh() {
   probe-port "${1:?No target}" "${2:-22}"
 }
 
+# Alternative to 'pgrep'.  Converts the first character of the search term to [x]
+# e.g. psgrep jboss = ps auxf | grep [j]boss
+# This removes the need for an extra 'grep' invocation
+# e.g. ps auxf | grep jboss | grep -v grep
+psgrep() {
+  ps auxf | grep "[${1:0:1}]${1:1}"
+}
+
 # Get a number of random integers using $RANDOM with debiased modulo
 randInt() {
   local nCount nMin nMax nMod randThres i xInt

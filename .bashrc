@@ -571,10 +571,19 @@ extract() {
   fi
 }
 
+# Try to emit a certificate expiry date from openssl
+get_certexpiry() {
+  local host="${1}"
+  local hostport="${2:-443}"
+  echo | openssl s_client -showcerts -host "${host}" -port "${hostport}" 2>&1 \
+    | openssl x509 -inform pem -noout -enddate \
+    | cut -d "=" -f 2
+}
+
 # Because $SHELL is an unreliable thing to test against, we provide this function
 # This won't work for 'fish', which needs 'ps -p %self' or similar
 # non-bourne-esque syntax.  Good thing we don't care about 'fish'
-get-shell() {
+get_shell() {
   if ps -p "$$" >/dev/null 2>&1; then
     # This double-awk caters for situations where CMD/COMMAND
     # might be a full path e.g. /usr/bin/zsh

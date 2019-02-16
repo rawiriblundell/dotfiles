@@ -749,6 +749,7 @@ logmsg() {
             return 1;;
     esac
   done
+  shift "$((OPTIND-1))"
   if command -v systemd-cat &>/dev/null; then
     systemd-cat "${logIdent}" <<< "${*}"
   elif command -v logger &>/dev/null; then

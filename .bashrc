@@ -1066,7 +1066,8 @@ probe-ssh() {
 # This removes the need for an extra 'grep' invocation
 # e.g. ps auxf | grep jboss | grep -v grep
 psgrep() {
-  ps auxf | grep "[${1:0:1}]${1:1}"
+  [[ "${1:?Usage: psgrep [search term]}" ]]
+  ps auxf | grep -i "[${1:0:1}]${1:1}" | awk '{print $2}'
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo

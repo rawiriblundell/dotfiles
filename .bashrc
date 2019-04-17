@@ -1679,6 +1679,13 @@ if tput ce 2>/dev/null; then
   }
 fi
 
+# Simple alternative for 'tree'
+if ! exists tree; then
+  tree() {
+    find "${1:-.}" -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
+  }
+fi
+
 # Format the output of 'du'.  Found on the internet, unknown origin.
 if ! exists treesize; then
   treesize() {

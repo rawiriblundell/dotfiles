@@ -1,14 +1,14 @@
 # shellcheck shell=bash
 ################################################################################
 # .bashrc
-# This file is read for interactive shells
-# and .bash_profile is read for login shells
-
-# Mostly, aliases and functions go into .bashrc 
-# and environment variables and startup programs go into .bash_profile
-
-# Unless there is a specific need, it's simpler to put most things into .bashrc
-# And reference it into .bash_profile
+# Please don't copy anything below unless you understand what the code does!
+# If you're looking for a licence... WTFPL plus Warranty Clause:
+#
+# This program is free software. It comes without any warranty, to
+#     * the extent permitted by applicable law. You can redistribute it
+#     * and/or modify it under the terms of the Do What The Fuck You Want
+#     * To Public License, Version 2, as published by Sam Hocevar. See
+#     * http://www.wtfpl.net/ for more details.
 ################################################################################
 
 # Source global definitions
@@ -515,6 +515,10 @@ if ! command -v dos2unix &>/dev/null; then
   }
 fi
 
+################################################################################
+# NOTE: This function is a work in progress
+# TO-DO: Factor in leaps
+################################################################################
 # Calculate how many seconds since epoch
 # Portable version based on http://www.etalabs.net/sh_tricks.html
 # We strip leading 0's in order to prevent unwanted octal math
@@ -781,6 +785,9 @@ ltrim() {
   fi
 }
 
+################################################################################
+# NOTE: This function is a work in progress
+################################################################################
 # If 'mapfile' is not available, offer it as a step-in function
 # Written as an attempt at http://wiki.bash-hackers.org/commands/builtin/mapfile?s[]=mapfile#to_do
 #   "Create an implementation as a shell function that's portable between Ksh, Zsh, and Bash 
@@ -1272,6 +1279,9 @@ shift_array() {
   arr=("${arr[@]:${n}}")
 }
 
+################################################################################
+# NOTE: This function is a work in progress
+################################################################################
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Check commit history for a range of alternative methods - ruby, perl, python etc
 # Requires: randInt function

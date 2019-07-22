@@ -587,9 +587,12 @@ get_certexpiry() {
 # Because $SHELL is an unreliable thing to test against, we provide this function
 # This won't work for 'fish', which needs 'ps -p %self' or similar
 # non-bourne-esque syntax.  Good thing we don't care about 'fish'
-# TO-DO: Merge in 'tr '\0' ' ' </proc/"$$"/cmdline'
 get_shell() {
-  if ps -p "$$" >/dev/null 2>&1; then
+  if [ -r "/proc/$$/cmdline" ]; then
+    # We use 'tr' because 'cmdline' files have NUL terminated lines
+    # TO-DO: Possibly handle multi-word output e.g. 'busybox ash'
+    printf -- '%s\n' "$(tr '\0' ' ' </proc/"$$"/cmdline)"
+  elif ps -p "$$" >/dev/null 2>&1; then
     # This double-awk caters for situations where CMD/COMMAND
     # might be a full path e.g. /usr/bin/zsh
     ps -p "$$" | tail -n 1 | awk '{print $NF}' | awk -F '/' '{print $NF}'

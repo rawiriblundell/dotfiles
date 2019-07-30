@@ -775,20 +775,6 @@ logmsg() {
   fi
 }
 
-# Trim whitespace from the left hand side of an input
-# Requires: shopt -s extglob
-# awk alternative (portability unknown/untested):
-# awk '{ sub(/^[ \t]+/, ""); print }'
-ltrim() {
-  if [[ -r "${1}" ]]||[[ -z "${1}" ]]; then
-    while read -r; do
-      printf -- '%s\n' "${REPLY##+([[:space:]])}"
-    done < "${1:-/dev/stdin}"
-  else
-    printf -- '%s\n' "${@##+([[:space:]])}"
-  fi
-}
-
 ################################################################################
 # NOTE: This function is a work in progress
 ################################################################################
@@ -1189,20 +1175,6 @@ rolesetup() {
         printf '%s\n' "---" > "${dir}/main.yml"
       done
     )
-  fi
-}
-
-# Trim whitespace from the right hand side of an input
-# Requires: shopt -s extglob
-# awk alternative (portability unknown/untested):
-# awk '{ sub(/[ \t]+$/, ""); print }'
-rtrim() {
-  if [[ -r "${1}" ]]||[[ -z "${1}" ]]; then
-    while read -r; do
-      printf -- '%s\n' "${REPLY%%+([[:space:]])}"
-    done < "${1:-/dev/stdin}"
-  else
-    printf -- '%s\n' "${@%%+([[:space:]])}"
   fi
 }
 
@@ -1720,13 +1692,22 @@ if ! exists treesize; then
   }
 fi
 
-# A small function to trim whitespace either side of a (sub)string
-# shellcheck disable=SC2120
+# A function to remove whitespace either side of an input
+# May require further testing and development
 trim() {
-  if [[ -n "${1}" ]]; then
-    printf -- '%s\n' "${@}" | ltrim | rtrim
+  LC_CTYPE=C
+  # If $1 is a readable file OR if $1 is blank, we process line by line
+  if [[ -r "${1}" ]]||[[ -z "$1" ]]; then
+    while read -r; do
+      # Strip the left padding while reassigning 'REPLY' to 'line'
+      line=${REPLY%"${REPLY##*[![:space:]]}"}
+      # Print 'line' while stripping right padding
+      printf -- '%s\n' "${line#"${line%%[![:space:]]*}"}"
+    done < "${1:-/dev/stdin}"
+  # Otherwise, we process whatever input arg(s) have been supplied
   else
-    ltrim "${@}" | rtrim
+    line=${*%"${*##*[![:space:]]}"}
+    printf -- '%s\n' "${line%"${line##*[![:space:]]}"}"
   fi
 }
 

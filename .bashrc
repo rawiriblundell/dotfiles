@@ -1630,7 +1630,8 @@ toupper() {
   fi
 }
 
-# Overlay 'tput' so that non-GNU behaves as much like GNU as possible
+# Detect if our version of 'tput' is so old that it uses termcap syntax
+# If this is the case, overlay it so that newer terminfo style syntax works
 # This is a subset of a fuller gist
 # https://gist.github.com/rawiriblundell/83ed9408a7e3032c780ed56b7c9026f2
 # For performance we only implement if 'tput ce' (a harmless test) works

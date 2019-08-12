@@ -1460,9 +1460,9 @@ ssh-fingerprint() {
 # Test if a string contains a substring
 # Example: string-contains needle haystack
 string-contains() { 
-  case "${2}" in 
-    (*${1}*)  return 0 ;; 
-    (*)     return 1 ;; 
+  case "${2?No string given}" in 
+    (*${1?No substring given}*)  return 0 ;; 
+    (*)                          return 1 ;; 
   esac
 }
 

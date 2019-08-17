@@ -10,6 +10,8 @@
 #     * To Public License, Version 2, as published by Sam Hocevar. See
 #     * http://www.wtfpl.net/ for more details.
 ################################################################################
+#
+# Note: A lot of the functions below were written for portability across Solaris
 
 # Source global definitions
 # shellcheck disable=SC1091
@@ -25,6 +27,10 @@
 # Some people use a different file for functions
 # shellcheck source=/dev/null
 [[ -f "${HOME}/.bash_functions" ]] && . "${HOME}/.bash_functions"
+
+# If we have a proxy file for defining http_proxy etc, load it up
+# shellcheck source=/dev/null
+[[ -f "${HOME}/.proxyrc" ]] && . "${HOME}/.proxyrc"
 
 # Set umask for new files
 umask 027
@@ -141,6 +147,7 @@ fi
 have() {
   unset -v have 
   exists "${1}" && have=yes
+  export have
 }
 
 if [[ -d /etc/bash_completion.d/ ]]; then
@@ -237,6 +244,9 @@ if echo "test" | grep --color=auto test &>/dev/null; then
   alias fgrep='fgrep --color=auto'
   alias egrep='egrep --color=auto'
 fi
+
+################################################################################
+# Colours
 
 # Generated using https://dom111.github.io/grep-colors
 GREP_COLORS='sl=49;39:cx=49;39:mt=49;31;1:fn=49;32:ln=49;33:bn=49;33:se=1;36'
@@ -386,12 +396,13 @@ fi
 # Wrap 'cd' to automatically update GIT_BRANCH when necessary
 cd() {
   command cd "${@}" || return 1
-  if [[ "${ps1GitMode}" = True ]]; then
+  if [[ "${PS1_GIT_MODE}" = True ]]; then
     if is_gitdir; then
-      export GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+      GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
     else
-      export GIT_BRANCH="NON-GIT"
+      GIT_BRANCH="NON-GIT"
     fi
+    export GIT_BRANCH
   fi
 }
 
@@ -572,6 +583,15 @@ extract() {
     else
       printf '%s\n' "'${1}' - file not found or not readable"
     fi
+  fi
+}
+
+# Try to find out if we're authenticating locally or remotely
+get_auth_type() {
+  if grep "^${USER}:" /etc/passwd &>/dev/null; then
+    printf -- '%s\n' "Local"
+  else
+    printf -- '%s\n' "Network"
   fi
 }
 
@@ -1062,6 +1082,7 @@ probe-ssh() {
 # e.g. psgrep jboss = ps auxf | grep [j]boss
 # This removes the need for an extra 'grep' invocation
 # e.g. ps auxf | grep jboss | grep -v grep
+# shellcheck disable=SC2009
 psgrep() {
   [[ "${1:?Usage: psgrep [search term]}" ]]
   ps auxf | grep -i "[${1:0:1}]${1:1}" | awk '{print $2}'
@@ -1107,7 +1128,7 @@ if ! exists rev; then
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
       return 0
     # Disallow both piping in strings and declaring strings
-    elif [[ ! -t 0 ]] && [[ ! -z "${1}" ]]; then
+    elif [[ ! -t 0 ]] && [[ -n "${1}" ]]; then
       printf '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
       return 1
     fi
@@ -1123,7 +1144,7 @@ if ! exists rev; then
         printf '%s\n' "${rev}"
       done < "${1:-/dev/stdin}"
     # Else, if parameter exists, action that
-    elif [[ ! -z "$*" ]]; then
+    elif [[ -n "$*" ]]; then
       Line=$*
       rev=
       len=${#Line}
@@ -1695,6 +1716,7 @@ fi
 
 # A function to remove whitespace either side of an input
 # May require further testing and development
+# shellcheck disable=SC2120
 trim() {
   LC_CTYPE=C
   # If $1 is a readable file OR if $1 is blank, we process line by line
@@ -2282,13 +2304,6 @@ block25="\xe2\x96\x91"   # u2591\0xe2 0x96 0x91 Light shade 25%
 blockAsc="$(printf '%b\n' "${block25}${block50}${block75}")"
 blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
 
-# Try to find out if we're authenticating locally or remotely
-if grep "^${USER}:" /etc/passwd &>/dev/null; then
-  auth="LCL"
-else
-  auth="ADS"
-fi
-
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
   printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
@@ -2337,19 +2352,12 @@ setprompt() {
   case "${1}" in
     (-a|--auto)             export PS1_MODE=Auto;;
     (-g|--git)
-      case "${gitMode}" in
-        (true|True)
-          ps1GitMode=False
-        ;;
-        (false|False|*)
-          ps1GitMode=True
-          if [[ -z "${GIT_BRANCH}" ]]; then
-            if is_gitdir; then
-              GIT_BRANCH="$(git branch 2>/dev/null | sed -n '/\* /s///p')"
-            fi
-          fi
-        ;;
+      case "${PS1_GIT_MODE}" in
+        (True)  PS1_GIT_MODE=False ;;
+        (False) PS1_GIT_MODE=True ;;
+        (''|*)  PS1_GIT_MODE=True ;;
       esac
+      export PS1_GIT_MODE
     ;;
     (-h|--help)             setprompt-help; return 0;;
     (-f|--full)             export PS1_MODE=Full;;
@@ -2372,7 +2380,10 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
-    (rand)                  ps1Pri="\[$(tput setaf $((RANDOM%255)))\]";;
+    (rand)
+      PS1_COLOUR_PRI=$((RANDOM%255))
+      ps1Pri="\[$(tput setaf ${PS1_COLOUR_PRI})\]"
+    ;;
     (safe)
       ps1Pri="${ps1Wte}"
       ps1Sec="${ps1Wte}"      
@@ -2397,7 +2408,10 @@ setprompt() {
     (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
-    (rand)                  ps1Sec="\[$(tput setaf $((RANDOM%255)))\]";;
+    (rand)
+      PS1_COLOUR_SEC=$((RANDOM%255))
+      ps1Sec="\[$(tput setaf ${PS1_COLOUR_SEC})\]"
+    ;;
     (*[0-9]*)
       if (( "${2//[^0-9]/}" > 255 )); then
         setprompt-help; return 1
@@ -2414,11 +2428,11 @@ setprompt() {
   esac
 
   # Setup sane defaults for the following variables
-  [[ -z "${PS1_MODE}" ]] && export PS1_MODE=Auto
-  [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
-  [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
-  [[ -z "${ps1Block}" ]] && ps1Block="${blockDwn}"
-  [[ -z "${ps1Char}" ]] && ps1Char='$'
+  export "${PS1_MODE:=Auto}"
+  : "${ps1Pri:=$ps1Red}"
+  : "${ps1Sec:=$ps1Grn}"
+  : "${ps1Block:=$blockDwn}"
+  : "${ps1Char:='$'}"
   ps1Triplet="${ps1Pri}${ps1Block}"
   ps1Main="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char}"
 
@@ -2447,15 +2461,21 @@ setprompt() {
       export PS1="${ps1Triplet}${ps1Main} "
     ;;
     (Full)
-      if [[ "${ps1GitMode}" = "True" ]]; then
+      if [[ "${PS1_GIT_MODE}" = "True" ]]; then
         if is_gitdir; then
-          PS1="${ps1Triplet}[${GIT_BRANCH:-UNKNOWN}][${auth}]${ps1Rst}${ps1Main} "
+          if [[ -z "${GIT_BRANCH}" ]]; then
+            if is_gitdir; then
+              GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+            fi
+          fi
+          : "[${GIT_BRANCH:-UNKNOWN}]"
         else
-          PS1="${ps1Triplet}[NOT-GIT][${auth}]${ps1Rst}${ps1Main} "
+          : "[NOT-GIT]"
         fi
       else
-        PS1="${ps1Triplet}[\$(date +%y%m%d/%H:%M)][${auth}]${ps1Rst}${ps1Main} "
+        : "[\$(date +%y%m%d/%H:%M)]"
       fi
+      PS1="${ps1Triplet}${_}${ps1Rst}${ps1Main} "
       export PS1
     ;;
   esac

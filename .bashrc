@@ -1199,6 +1199,12 @@ rolesetup() {
   fi
 }
 
+# Function for rounding floats
+# Usage: round [precision] [float]
+round() {
+  printf "%.${2:-0}f" "${1:?No float given}"
+}
+
 # Escape special characters in a string, named for a similar function in R
 sanitize() { printf -- '%q\n' "${1}"; }
 alias sanitise='sanitize'

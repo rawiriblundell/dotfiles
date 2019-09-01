@@ -1260,7 +1260,7 @@ fi
 # reference: http://www.faqs.org/docs/Linux-mini/Xterm-Title.html#s3
 settitle() {
   case $(tty) in
-    (*tty*)
+    (/dev/console|*tty*)
       : # Physical terminal, so no-op.
     ;;
     (*pts*)

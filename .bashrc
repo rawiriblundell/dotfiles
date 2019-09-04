@@ -2438,7 +2438,7 @@ setprompt() {
   : "${ps1Pri:=$ps1Red}"
   : "${ps1Sec:=$ps1Grn}"
   : "${ps1Block:=$blockDwn}"
-  : "${ps1Char:='$'}"
+  : "${ps1Char:=$}"
   ps1Triplet="${ps1Pri}${ps1Block}"
   ps1Main="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char}"
 

@@ -511,6 +511,29 @@ csvwrap() {
   unset splitCount
 }
 
+# Function to convert a decimal to an ascii character
+# See: https://www.ascii-code.com/
+dec_to_char() {
+  local int="${1:?No integer supplied}"
+  # Ensure that we have an integer
+  test "${int}" -eq "${int}" || return 1
+  
+  # Ensure int is within the range 32-126
+  # If it's less than 32, add 32 to bring it up into range
+  (( int < 32 )) && int=$(( int + 32 ))
+  
+  # If it's greater than 126, divide until it's in range
+  if (( int > 126 )); then
+    until (( int <= 126 )); do
+      int=$(( int / 2 ))
+    done
+  fi
+
+  # Finally, print our character
+  # shellcheck disable=SC2059
+  printf "\\$(printf '%03o' "${int}")"
+}
+
 # Optional error handling function
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {

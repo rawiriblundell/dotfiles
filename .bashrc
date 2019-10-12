@@ -262,6 +262,8 @@ export GREP_COLORS LS_COLORS
 if [[ -z "${LS_COLORS}" ]] && pathfind dircolors &>/dev/null; then
   if [[ -r ~/.dircolors ]]; then
     eval "$(dircolors -b ~/.dircolors)"
+  elif [[ -r /etc/DIR_COLORS ]] ; then
+		eval "$(dircolors -b /etc/DIR_COLORS)"
   else
     eval "$(dircolors -b)"
   fi

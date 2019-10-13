@@ -122,7 +122,7 @@ export HISTTIMEFORMAT="%F,%T "
 HISTCONTROL=ignoredups:ignorespace
 
 # Ignore the following commands
-HISTIGNORE='ls:bg:fg:history*:exit'
+HISTIGNORE='ls:bg:fg:history*:yore:exit'
  
 # For setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000
@@ -1930,6 +1930,13 @@ whoowns() {
     # shellcheck disable=SC2012
     ls -ld "${1}" | awk 'NR==1 {print $3}'
   fi
+}
+
+# Functionalise history | grep
+# Named for this synonym trace: history -> past -> yore.
+# 'past' kept triggering 'paste' in muscle memory :)
+yore() {
+  history | grep "${1:?No search term provided}"
 }
 
 ################################################################################

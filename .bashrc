@@ -790,7 +790,7 @@ is_function() {
 
 # Are we within a directory that's tracked by git?
 is_gitdir() {
-  if [[ -d .git ]]; then
+  if [[ -e .git ]]; then
     return 0
   else
     git rev-parse --git-dir 2>&1 | grep -Eq '^.git|/.git'

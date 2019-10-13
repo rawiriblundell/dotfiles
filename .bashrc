@@ -311,7 +311,7 @@ case "${TERM_PROGRAM}" in
   ("iTerm.app")    : iTerm2 ;;
   ("Terminal.app") : "Apple Terminal" ;;
   ("Hyper")        : HyperTerm ;;
-  (*)
+  ('')
     read -t 1 -r -s -dc -p $'\E[>c' da < /dev/tty || return 1
     da=${da##$'\E'[>}
     # We want the following word splitting
@@ -345,6 +345,7 @@ case "${TERM_PROGRAM}" in
       ;;
     esac
   ;;
+  (*)  : "${TERM_PROGRAM}" ;;
 esac
 
 export _termtype="$_"

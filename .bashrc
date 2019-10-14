@@ -312,8 +312,11 @@ case "${TERM_PROGRAM}" in
   ("Terminal.app") : "Apple Terminal" ;;
   ("Hyper")        : HyperTerm ;;
   ('')
-    read -t 1 -r -s -dc -p $'\E[>c' da < /dev/tty || return 1
-    da=${da##$'\E'[>}
+    if read -t 1 -r -s -dc -p $'\E[>c' da < /dev/tty; then
+      da=${da##$'\E'[>}
+    elif uname -r | grep -qi microsoft; then
+      da=95
+    fi   
     # We want the following word splitting
     # shellcheck disable=SC2086
     set - ${da//;/ }
@@ -341,6 +344,7 @@ case "${TERM_PROGRAM}" in
       (83)  : screen;;
       (84)  : tmux;;
       (85)  : rxvt-unicode;;
+      (95)  : WSL;;
       (*)   : "$(ps -p "$(ps -p $$ -o ppid=)" -o args=)"
       ;;
     esac

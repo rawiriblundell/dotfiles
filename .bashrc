@@ -265,6 +265,9 @@ if echo "test" | grep --color=auto test &>/dev/null; then
   alias egrep='egrep --color=auto'
 fi
 
+# Switch to the last used branch in git
+alias lastbranch='git checkout @{-1}'
+
 ################################################################################
 # Colours
 

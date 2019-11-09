@@ -497,20 +497,14 @@ cd() {
 }
 
 # Print the given text in the center of the screen.
-# From https://github.com/Haroenv/config/blob/master/.bash_profile
 center() {
+  local width
   width="${COLUMNS:-$(tput cols)}"
-  if [[ -r "${1}" ]]; then
-    pr -o "$(( width/2/2 ))" -t < "${1}"
-  else
-    str="$*";
-    len=${#str};
-    (( len >= width )) && echo "$str" && return;
-    for ((i = 0; i < $((((width - len)) / 2)); i++)); do
-      echo -n " ";
-    done;
-    echo "$str";
-  fi
+  while IFS= read -r; do
+    (( ${#REPLY} >= width )) && printf -- "%s\n" "${REPLY}" && continue
+    printf -- "%*s\n" $(( (${#REPLY} + columns) / 2 )) "${REPLY}"
+  done < "${1:-/dev/stdin}"
+  [[ -n "${REPLY}" ]] && printf -- "%s\n" "${REPLY}"
 }
 
 # Check YAML syntax

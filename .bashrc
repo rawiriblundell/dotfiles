@@ -2489,7 +2489,10 @@ setprompt() {
     (-m|--mini)             export PS1_MODE=Minimal;;
     (-r|--reset)
       if [[ -r "${HOME}/.setpromptrc" ]]; then
+        unset ps1Pri ps1Sec
         . "${HOME}/.setpromptrc"
+        [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
+        [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
       else
         ps1Pri="${ps1Red}"
         ps1Sec="${ps1Grn}"
@@ -2506,8 +2509,7 @@ setprompt() {
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
     (rand)
-      PS1_COLOUR_PRI=$((RANDOM%255))
-      ps1Pri="\[$(tput setaf ${PS1_COLOUR_PRI})\]"
+      ps1Pri="\[$(tput setaf $((RANDOM%255)))\]"
     ;;
     (safe)
       ps1Pri="${ps1Wte}"
@@ -2534,8 +2536,7 @@ setprompt() {
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
     (rand)
-      PS1_COLOUR_SEC=$((RANDOM%255))
-      ps1Sec="\[$(tput setaf ${PS1_COLOUR_SEC})\]"
+      ps1Sec="\[$(tput setaf $((RANDOM%255)))\]"
     ;;
     (*[0-9]*)
       if (( "${2//[^0-9]/}" > 255 )); then

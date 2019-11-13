@@ -1832,18 +1832,23 @@ fi
 # shellcheck disable=SC2120
 trim() {
   LC_CTYPE=C
+  local outLn=""
   # If $1 is a readable file OR if $1 is blank, we process line by line
-  if [[ -r "${1}" ]]||[[ -z "$1" ]]; then
-    while read -r; do
-      # Strip the left padding while reassigning 'REPLY' to 'line'
-      line=${REPLY%"${REPLY##*[![:space:]]}"}
-      # Print 'line' while stripping right padding
-      printf -- '%s\n' "${line#"${line%%[![:space:]]*}"}"
+  # Because we assign a variable, leading and trailing whitespace is stripped
+  if [[ -r "${1}" ]]||[[ -z "${1}" ]]; then
+    while read -r outLn; do
+      printf -- '%s\n' "${outLn}"
     done < "${1:-/dev/stdin}"
   # Otherwise, we process whatever input arg(s) have been supplied
   else
-    line=${*%"${*##*[![:space:]]}"}
-    printf -- '%s\n' "${line%"${line##*[![:space:]]}"}"
+    local readLn="${*}"
+    while true; do
+      outLn="${readLn#[[:space:]]}"  # Strip whitespace to the left
+      outLn="${outLn%[[:space:]]}"   # Strip whitespace to the right
+      [[ "${outLn}" = "${readLn}" ]] && break
+      readLn="${outLn}"
+    done
+    printf -- '%s\n' "${outLn}"
   fi
 }
 

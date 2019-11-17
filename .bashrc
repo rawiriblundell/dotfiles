@@ -564,6 +564,17 @@ fi
 # Indent code by four spaces, useful for posting in markdown
 codecat() { indent 4 "${1}"; }
 
+# A shell conversion of
+# https://gist.github.com/caseydunham/508e2994e1195e4cb8e4
+convert_ldaptime_to_unixepoch() {
+  local ldap_offset ldap_timestamp
+  ldap_timestamp="${1:?No ldap timestamp supplied}"
+  ldap_timestamp=$(( ldap_timestamp / 10000000 ))
+  # Calculated as '( (1970-1601) * 365 -3 + ((1970-1601)/4) ) * 86400'
+  ldap_offset=11644473600
+  printf -- '%s\n' "$(( ldap_timestamp - ldap_offset ))"
+}
+
 # Provide a function to compress common compressed Filetypes
 compress() {
   File=$1

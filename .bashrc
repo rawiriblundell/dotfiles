@@ -725,6 +725,7 @@ get_certexpiry() {
 # Because $SHELL is an unreliable thing to test against, we provide this function
 # This won't work for 'fish', which needs 'ps -p %self' or similar
 # non-bourne-esque syntax.  Good thing we don't care about 'fish'
+# TO-DO: Investigate application of 'export PS_PERSONALITY="posix"'
 get_shell() {
   if [ -r "/proc/$$/cmdline" ]; then
     # We use 'tr' because 'cmdline' files have NUL terminated lines

@@ -339,7 +339,7 @@ case "${TERM_PROGRAM}" in
           (2)  : openwin-xterm;;
           (1115)  : gnome-terminal;;
         esac
-        (( $2 >= 2000 )) && : "$(ps -p "$(ps -p $$ -o ppid=)" -o args=)"
+        (( $2 >= 2000 )) && : "$(ps -p "$(ps -p $$ -o ppid= | tr -d ' ')" -o args=)"
       ;;
       (67)  : cygwin;;
       (77)  : mintty;;
@@ -348,7 +348,7 @@ case "${TERM_PROGRAM}" in
       (84)  : tmux;;
       (85)  : rxvt-unicode;;
       (95)  : WSL;;
-      (*)   : "$(ps -p "$(ps -p $$ -o ppid=)" -o args=)"
+      (*)   : "$(ps -p "$(ps -p $$ -o ppid= | tr -d ' ')" -o args=)"
       ;;
     esac
   ;;

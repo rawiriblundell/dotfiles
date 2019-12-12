@@ -25,25 +25,34 @@
 umask 027
 
 ################################################################################
-# Open an array of potential PATH members, including Solaris bin/sbin paths
-pathArray=(
-  /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin /usr/kerberos/sbin \
-  /bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /opt/csw/bin \
-  /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin /usr/sfw/bin /usr/sfw/sbin \
-  /usr/games /usr/local/games /snap/bin "$HOME"/bin "$HOME"/go/bin /usr/local/go/bin
-)
+# A function to update the PATH variable
+# TO-DO: Robustly manage args i.e. set_env_path /path/to/add
+#        As a one-off this is easy, but how to permanently store it?  .pathrc?
+set_env_path() {
+  # Open an array of potential PATH members, including Solaris bin/sbin paths
+  pathArray=(
+    /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin \
+    /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin /usr/local/bin \
+    /usr/local/sbin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
+    /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games /snap/bin \
+    "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin
+  )
 
-# Iterate through the array and build the newPath variable using found paths
-newPath=
-for dir in "${pathArray[@]}"; do
-  [[ -d "${dir}" ]] && newPath="${newPath}:${dir}"
-done
+  # Iterate through the array and build the newPath variable using found paths
+  newPath=
+  for dir in "${pathArray[@]}"; do
+    [[ -d "${dir}" ]] && newPath="${newPath}:${dir}"
+  done
 
-# Now assign our freshly built newPath variable, removing any leading colon
-PATH="${newPath#:}"
+  # Now assign our freshly built newPath variable, removing any leading colon
+  PATH="${newPath#:}"
 
-# Finally, export the PATH
-export PATH
+  # Finally, export the PATH
+  export PATH
+}
+
+# Run the function to straighten out PATH
+set_env_path
 
 # A portable alternative to exists/which/type
 pathfind() {
@@ -501,10 +510,10 @@ center() {
   local width
   width="${COLUMNS:-$(tput cols)}"
   while IFS= read -r; do
-    (( ${#REPLY} >= width )) && printf -- "%s\n" "${REPLY}" && continue
-    printf -- "%*s\n" $(( (${#REPLY} + columns) / 2 )) "${REPLY}"
+    (( ${#REPLY} >= width )) && printf -- '%s\n' "${REPLY}" && continue
+    printf -- '%*s\n' $(( (${#REPLY} + width) / 2 )) "${REPLY}"
   done < "${1:-/dev/stdin}"
-  [[ -n "${REPLY}" ]] && printf -- "%s\n" "${REPLY}"
+  [[ -n "${REPLY}" ]] && printf -- '%s\n' "${REPLY}"
 }
 
 # Check YAML syntax

@@ -2511,6 +2511,7 @@ setprompt() {
     (-r|--reset)
       if [[ -r "${HOME}/.setpromptrc" ]]; then
         unset ps1Pri ps1Sec
+        # shellcheck source=/dev/null
         . "${HOME}/.setpromptrc"
         [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
         [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"

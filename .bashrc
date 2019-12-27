@@ -69,9 +69,10 @@ pathfind() {
   return 1
 }
 
-# Functionalise 'command -v' to allow 'if exists [command]' idiom
-exists() { command -v "${1}" &>/dev/null; }
-alias is_command='exists'
+# Functionalise 'command -v' to allow 'if get_command [command]' idiom
+get_command() { command -v "${1}" &>/dev/null; }
+alias exists='get_command'
+alias is_command='get_command'
 
 # Check if /usr/bin/sudo and /bin/bash exist
 # If not, try to find them and suggest a symlink

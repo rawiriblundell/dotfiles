@@ -37,10 +37,20 @@ set_env_path() {
     /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games /snap/bin \
     "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin
   )
+  
+  # Add anything from /etc/paths and /etc/paths.d/*
+  # i.e. OSX, because path_helper can be slow...
+  while read -r; do
+    pathArray+=( "${REPLY}" )
+  done < <(cat "$(find /etc/paths /etc/paths.d -type f 2>/dev/null)" 2>/dev/null)
 
   # Iterate through the array and build the newPath variable using found paths
   newPath=
   for dir in "${pathArray[@]}"; do
+    # If it's already in newPath, skip on to the next dir
+    case "${newPath}" in 
+      (*:${dir}:*|*:${dir}$) continue ;; 
+    esac
     [[ -d "${dir}" ]] && newPath="${newPath}:${dir}"
   done
 

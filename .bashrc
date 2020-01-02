@@ -26,9 +26,22 @@ umask 027
 
 ################################################################################
 # A function to update the PATH variable
-# TO-DO: Robustly manage args i.e. set_env_path /path/to/add
-#        As a one-off this is easy, but how to permanently store it?  .pathrc?
+# shellcheck disable=SC2120
 set_env_path() {
+  local path dir newPath
+  
+  # If we have any args, feed them into ~/.pathrc
+  if (( "${#}" > 0 )); then
+    # shellcheck disable=SC2048
+    for path in ${*}; do
+      if [[ -d "${path}" ]]; then
+        if ! grep -q "${path}" "${HOME}"/.pathrc; then
+          printf -- '%s\n' "${path}" >> "${HOME}"/.pathrc
+        fi
+      fi
+    done
+  fi
+
   # Open an array of potential PATH members, including Solaris bin/sbin paths
   pathArray=(
     /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin \
@@ -38,11 +51,11 @@ set_env_path() {
     "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin
   )
   
-  # Add anything from /etc/paths and /etc/paths.d/*
+  # Add anything from .pathrc, /etc/paths and /etc/paths.d/*
   # i.e. OSX, because path_helper can be slow...
   while read -r; do
     pathArray+=( "${REPLY}" )
-  done < <(cat "$(find /etc/paths /etc/paths.d -type f 2>/dev/null)" 2>/dev/null)
+  done < <(cat "$(find "${HOME}"/.pathrc /etc/paths /etc/paths.d -type f 2>/dev/null)" 2>/dev/null)
 
   # Iterate through the array and build the newPath variable using found paths
   newPath=
@@ -62,6 +75,7 @@ set_env_path() {
 }
 
 # Run the function to straighten out PATH
+# shellcheck disable=SC2119
 set_env_path
 
 # A portable alternative to exists/which/type

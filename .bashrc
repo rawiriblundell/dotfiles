@@ -46,10 +46,21 @@ set_env_path() {
   pathArray=(
     /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin \
     /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin /usr/local/bin \
-    /usr/local/sbin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
-    /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games /snap/bin \
-    "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin
+    /usr/local/sbin /usr/local/opt/texinfo/bin /usr/local/opt/libxml2/bin \
+    /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
+    /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games \
+    /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
+    "${HOME}"/.cargo /Library/TeX/texbin
   )
+  
+  # If Android Home exists, add more dirs
+  if [[ -d "${HOME}"/Library/Android/sdk ]]; then
+    export ANDROID_HOME="${HOME}"/Library/Android/sdk
+    pathArray+=( "${ANDROID_HOME}"/tools )
+    pathArray+=( "${ANDROID_HOME}"/tools/bin )
+    pathArray+=( "${ANDROID_HOME}"/emulator )
+    pathArray+=( "${ANDROID_HOME}"/platform-tools )
+  fi    
   
   # Add anything from .pathrc, /etc/paths and /etc/paths.d/*
   # i.e. OSX, because path_helper can be slow...

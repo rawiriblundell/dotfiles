@@ -930,32 +930,41 @@ llh() {
 # A function to log messages to the system log
 # http://hacking.elboulangero.com/2015/12/06/bash-logging.html may be useful
 logmsg() {
-  local logIdent
-  while getopts ":t:" optFlags; do
+  local optFlags logIdent printFmt stdOutArg OPTIND
+  unset optFlags logIdent printFmt stdOutArg OPTIND
+  while getopts ":t:s" optFlags; do
     case "${optFlags}" in
-      (t)   logIdent="-t ${OPTARG}";;
-      (\?)  echo "ERROR: Invalid option: '-$OPTARG'." >&2
-            return 1;;
-      (:)   echo \
-              "Option '-$OPTARG' requires an argument. e.g. '-$OPTARG 10'" >&2
-            return 1;;
+      (s)   stdOutArg='-s' ;;
+      (t)   logIdent="-t ${OPTARG}" ;;
+      (\?|:|*)  
+        printf -- '%s\n' "Usage: logmsg [-s(tdout) -t tag] message" >&2
+        return 1
+      ;;
     esac
   done
-  shift "$((OPTIND-1))"
-  if command -v systemd-cat &>/dev/null; then
-    systemd-cat "${logIdent}" <<< "${*}"
-  elif command -v logger &>/dev/null; then
+  shift "$(( OPTIND - 1 ))"
+  case "${logIdent}" in
+    ('')  printFmt="$(date '+%b %d %T') ${HOSTNAME%%.*}:" ;;
+    (*)   printFmt="$(date '+%b %d %T') ${HOSTNAME%%.*} ${logIdent/-t /}:" ;;
+  esac
+  if command -v systemd-cat >/dev/null 2>&1; then
+    [[ "${stdOutArg}" = "-s" ]] && printf -- '%s\n' "${printFmt} ${*}"
+    case "${logIdent}" in
+      ('') systemd-cat <<< "${*}" ;;
+      (*)  systemd-cat "${logIdent}" <<< "${*}" ;;
+    esac
+  elif command -v logger >/dev/null 2>&1; then
+    [[ "${stdOutArg}" = "-s" ]] && printf -- '%s\n' "${printFmt} ${*}"
     logger "${logIdent}" "${*}"
   else
-    if [[ -w /var/log/messages ]]; then
-      logFile=/var/log/messages
-    elif [[ -w /var/log/syslog ]]; then
-      logFile=/var/log/syslog
+    [[ -w /var/log/messages ]] && logFile=/var/log/messages
+    [[ -z "${logFile}" && -w /var/log/syslog ]] && logFile=/var/log/syslog
+    [[ -z "${logFile}" ]] && logFile=/var/log/logmsg
+    if [[ "${stdOutArg}" = "-s" ]]; then
+      printf -- '%s\n' "${printFmt} ${*}" | tee -a "${logFile}" 2>&1
     else
-      logFile=/var/log/logmsg
+      printf -- '%s\n' "${printFmt} ${*}" >> "${logFile}" 2>&1
     fi
-    printf '%s\n' \
-      "$(date '+%b %d %T') ${HOSTNAME} ${logIdent/-t /} ${*}" >> "${logFile}" 2>&1
   fi
 }
 

@@ -157,6 +157,19 @@ fi
 # shellcheck source=/dev/null
 [[ -f "${HOME}/.proxyrc" ]] && . "${HOME}/.proxyrc"
 
+# If pass is present, we set our environment variables
+if get_command pass; then
+  # If 'gpg2' is present, we need to set $GPG
+  # This prevents 'pass' from confusing gpg1 and gpg2 on e.g. Ubuntu
+  # While leaving other configurations alone (e.g. OSX brew "gpg" is gpg2)
+  # May require change to test e.g. $(gpg --version | awk 'NR==1{print $3}')
+  get_command gpg2 && GPG="gpg2"
+  GPG_OPTS=( "--quiet" "--yes" "--compress-algo=none" "--no-encrypt-to" )
+  GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"
+  readonly GPG GPG_OPTS GPG_TTY
+  export GPG GPG_OPTS GPG_TTY
+fi
+
 ################################################################################
 # Setup our desired shell options
 shopt -s checkwinsize cdspell extglob histappend

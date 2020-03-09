@@ -157,6 +157,10 @@ fi
 # shellcheck source=/dev/null
 [[ -f "${HOME}/.proxyrc" ]] && . "${HOME}/.proxyrc"
 
+# We might have a workrc file for defining anything host/customer specific
+# shellcheck source=/dev/null
+[[ -f "${HOME}/.workrc" ]] && . "${HOME}/.workrc"
+
 # If pass is present, we set our environment variables
 if get_command pass; then
   # If 'gpg2' is present, we need to set $GPG

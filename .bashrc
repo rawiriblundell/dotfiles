@@ -190,7 +190,7 @@ export HISTTIMEFORMAT="%F,%T "
 HISTCONTROL=ignoredups:ignorespace
 
 # Ignore the following commands
-HISTIGNORE='ls:bg:fg:history*:yore:exit'
+HISTIGNORE='ls:bg:fg:history*:yore*:redo*:exit'
  
 # For setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000
@@ -1301,10 +1301,39 @@ randInt() {
   done
 }
 
-# 'redo' the last command, replacing all instances of 'foo' with 'bar'
-# Usage: redo foo bar
+# 'redo' the last command, optionally with search and replace
+# Usage:
+# redo <-- Invokes the last command
+# redo foo bar <-- last command, replaces first instance of 'foo' with 'bar'
+# redo -g foo bar <-- last command, replaces all instances of 'foo' with 'bar'
 redo() {
-  fc -s "${1:?Search parameter missing}"="${2:?Replacement parameter missing}"
+  local last_cmd match_str replace_str
+  # Ensure that 'redo' calls aren't put into our command history
+  # This prevents 'redo' from 'redo'ing itself.  Which is a sin.  Repent etc.
+  case "${HISTIGNORE}" in
+    (*redo\**) : ;;
+    (*)
+      printf -- '%s\n' "Adding 'redo*' to HISTIGNORE.  Please make this permanent" >&2
+      export HISTIGNORE="${HISTIGNORE}:redo*"
+    ;;
+  esac
+  case "${1}" in
+    ('')
+      fc -s
+    ;;
+    (-g|--global)
+      shift 1
+      match_str="${1:?Search parameter missing}"
+      replace_str="${2:?Replacement parameter missing}"
+      fc -s "${match_str}"="${replace_str}"
+    ;;
+    (*)
+      last_cmd=$(fc -l -- -1  | cut -d ' ' -f2-)
+      match_str="${1:?Search parameter missing}"
+      replace_str="${2:?Replacement parameter missing}"
+      ${last_cmd/$match_str/$replace_str}
+    ;;
+  esac
 }
 
 # Check if 'rev' is available, if not, enable a stop-gap function

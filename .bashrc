@@ -168,6 +168,7 @@ if get_command pass; then
   # While leaving other configurations alone (e.g. OSX brew "gpg" is gpg2)
   # May require change to test e.g. $(gpg --version | awk 'NR==1{print $3}')
   get_command gpg2 && GPG="gpg2"
+  get_command gpg2 && alias gpg='gpg2'
   GPG_OPTS=( "--quiet" "--yes" "--compress-algo=none" "--no-encrypt-to" )
   GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"
   readonly GPG GPG_OPTS GPG_TTY

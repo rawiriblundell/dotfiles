@@ -1276,7 +1276,7 @@ probe-ssh() {
 # shellcheck disable=SC2009
 psgrep() {
   [[ "${1:?Usage: psgrep [search term]}" ]]
-  ps auxf | grep -i "[${1:0:1}]${1:1}" | awk '{print $2}'
+  ps auxf | awk -v proc="[${1:0:1}]${1:1}" '$0 ~ proc {print $2}'
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo

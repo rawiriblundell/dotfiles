@@ -204,6 +204,10 @@ trap 'history -a' SIGHUP
 stty ixany
 stty ixoff -ixon
 
+# Minimise the risk of pastejacking
+# See: https://lists.gnu.org/archive/html/bug-bash/2019-02/msg00057.html
+set enable-bracketed-paste On
+
 ################################################################################
 # Programmable Completion (Tab Completion)
 

@@ -2062,6 +2062,10 @@ whoowns() {
   fi
 }
 
+yaml2json() {
+  python -c 'import sys, yaml, json; json.dump(yaml.load(sys.stdin), sys.stdout, indent=4)' < "${1:-/dev/stdin}"
+}
+
 # Functionalise history | grep
 # Named for this synonym trace: history -> past -> yore.
 # 'past' kept triggering 'paste' in muscle memory :)

@@ -215,19 +215,22 @@ set enable-bracketed-paste On
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
 # sources /etc/bash.bashrc).
 if ! shopt -oq posix; then
-  if [[ -r /usr/share/bash-completion/bash_completion ]]; then
-    # shellcheck source=/dev/null
-    . /usr/share/bash-completion/bash_completion
-  elif [[ -r /etc/bash_completion ]]; then
-    # shellcheck source=/dev/null
-    . /etc/bash_completion
-  elif [[ -r /usr/local/etc/bash_completion ]]; then
-    # shellcheck source=/dev/null
-    . /usr/local/etc/bash_completion
-  elif [[ -r "/usr/local/etc/profile.d/bash_completion.sh" ]]; then
-    # shellcheck source=/dev/null
-    . "/usr/local/etc/profile.d/bash_completion.sh"
-  fi
+  # Define a list of completion files in order of preference
+  # This is Linux -> OSX Brew -> maybe Solaris -> maybe older Brew
+  compfiles=(
+    /etc/bash_completion
+    /usr/local/etc/profile.d/bash_completion.sh
+    /usr/share/bash-completion/bash_completion
+    /usr/local/etc/bash_completion
+  )
+
+  for compfile in "${compfiles[@]}"; do
+    if [[ -r "${compfile}" ]]; then
+      # shellcheck source=/dev/null
+      . "${compfile}" 
+      break
+    fi
+  done
 fi
 
 # 'have()' is sometimes unset by one/all of the above completion files

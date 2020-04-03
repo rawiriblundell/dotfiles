@@ -678,6 +678,14 @@ extract() {
   fi
 }
 
+# Go to the top of our git tree
+gcd() {
+  case "$(git rev-parse --show-toplevel 2>&1)" in
+    (fatal*) return 1 ;;
+    (*)      cd "$(git rev-parse --show-toplevel)/${1}" || return 1 ;;
+  esac
+}
+
 # Try to emit a certificate expiry date from openssl
 get_certexpiry() {
   local host="${1}"

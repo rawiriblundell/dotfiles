@@ -50,9 +50,9 @@ set_env_path() {
     /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
     /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games \
     /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
-    "${HOME}"/.cargo /Library/TeX/texbin
+    "${HOME}"/.cargo /Library/TeX/texbin "${HOME}"/.fzf/bin
   )
-  
+ 
   # If Android Home exists, add more dirs
   if [[ -d "${HOME}"/Library/Android/sdk ]]; then
     export ANDROID_HOME="${HOME}"/Library/Android/sdk
@@ -145,25 +145,23 @@ if [[ -z "${HOME}" ]]; then
   readonly HOME; export HOME
 fi
 
-# Some people use a different file for aliases
-# shellcheck source=/dev/null
-[[ -f "${HOME}/.bash_aliases" ]] && . "${HOME}/.bash_aliases"
+# Create an array of potential dotfiles
+dotfiles=(
+  "${HOME}/.bash_aliases"
+  "${HOME}/.bash_functions"
+  "${HOME}/.proxyrc"
+  "${HOME}/.workrc"
+  "${HOME}/.fzf/shell/completion.bash"
+  "${HOME}/.fzf/shell/key-bindings.bash"
+)
 
-# Some people use a different file for functions
+# Work through our list of dotfiles, if a match is found, load it
 # shellcheck source=/dev/null
-[[ -f "${HOME}/.bash_functions" ]] && . "${HOME}/.bash_functions"
+for dotfile in "${dotfiles[@]}"; do
+  [[ -r "${dotfile}" ]] && . "${dotfile}"
+done
 
-# If we have a proxy file for defining http_proxy etc, load it up
-# shellcheck source=/dev/null
-[[ -f "${HOME}/.proxyrc" ]] && . "${HOME}/.proxyrc"
-
-# We might have a workrc file for defining anything host/customer specific
-# shellcheck source=/dev/null
-[[ -f "${HOME}/.workrc" ]] && . "${HOME}/.workrc"
-
-# Load fzf if it's present
-# shellcheck source=/dev/null
-[[ -f "${HOME}/.fzf.bash" ]] && . "${HOME}/.fzf.bash"
+unset dotfiles; unset -v dotfile
 
 # If pass is present, we set our environment variables
 if get_command pass; then
@@ -235,6 +233,8 @@ if ! shopt -oq posix; then
     fi
   done
 fi
+
+unset compfiles; unset -v compfile
 
 # If we haven't found a compfile, try to manually load any
 # found files in /etc/bash_completion.d

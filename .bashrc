@@ -89,13 +89,13 @@ set_env_path() {
 # shellcheck disable=SC2119
 set_env_path
 
-# A portable alternative to exists/which/type
+# A portable alternative to exists/get_command/which/type
 pathfind() {
   OLDIFS="${IFS}"
   IFS=:
   for prog in ${PATH}; do
     if [[ -x "${prog}/$*" ]]; then
-      printf '%s\n' "${prog}/$*"
+      printf -- '%s\n' "${prog}/$*"
       IFS="${OLDIFS}"
       return 0
     fi
@@ -113,16 +113,16 @@ alias is_command='get_command'
 # If not, try to find them and suggest a symlink
 if [[ ! -f /usr/bin/sudo ]]; then
   if pathfind sudo &>/dev/null; then
-    printf '%s\n' "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
+    printf -- '%s\n' "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
   else
-    printf '%s\n' "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
+    printf -- '%s\n' "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
   fi
 fi
 if [[ ! -f /bin/bash ]]; then
   if pathfind bash &>/dev/null; then
-    printf '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
+    printf -- '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
   else
-    printf '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
+    printf -- '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
   fi
 fi
 
@@ -215,12 +215,10 @@ set enable-bracketed-paste On
 ################################################################################
 # Programmable Completion (Tab Completion)
 
-# Enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
+# Enable programmable completion features
 if ! shopt -oq posix; then
   # Define a list of completion files in order of preference
-  # This is Linux -> OSX Brew -> maybe Solaris -> maybe older Brew
+  # This is Linux -> OSX Brew -> older Linux/maybe Solaris -> maybe older Brew
   compfiles=(
     /etc/bash_completion
     /usr/local/etc/profile.d/bash_completion.sh
@@ -230,6 +228,7 @@ if ! shopt -oq posix; then
 
   for compfile in "${compfiles[@]}"; do
     if [[ -r "${compfile}" ]]; then
+      compfile_found=true
       # shellcheck source=/dev/null
       . "${compfile}" 
       break
@@ -237,39 +236,32 @@ if ! shopt -oq posix; then
   done
 fi
 
-# 'have()' is sometimes unset by one/all of the above completion files
-# Which can upset the loading of the following conf frags
-# We temporarily provide a variant of it using exists()
-# TO-DO: Figure out a smarter way to handle this scenario
-have() {
-  unset -v have 
-  exists "${1}" && have=yes
-  export have
-}
+# If we haven't found a compfile, try to manually load any
+# found files in /etc/bash_completion.d
+if [[ "${compfile_found}" != "true" ]]; then
+  # 'have()' is sometimes unset by one/all of the above completion files
+  # Which can upset the loading of the following conf frags
+  # We temporarily provide a variant of it using get_command()
+  have() {
+    unset -v have 
+    get_command "${1}" && have=yes
+    export have
+  }
 
-if [[ -d /etc/bash_completion.d/ ]]; then
-  for compFile in /etc/bash_completion.d/* ; do
-    # shellcheck source=/dev/null
-    . "${compFile}"
-  done
+  if [[ -d /etc/bash_completion.d/ ]]; then
+    for compFile in /etc/bash_completion.d/* ; do
+      # shellcheck source=/dev/null
+      . "${compFile}"
+    done
+  fi
+
+  # Clean up after ourselves
+  unset -f have
+  unset have
 fi
-
-# Clean up after ourselves
-unset -f have
-unset have
 
 # Fix 'cd' tab completion
 complete -d cd
-
-# SSH auto-completion based on ~/.ssh/config.
-if [[ -e ~/.ssh/config ]]; then
-  complete -o "default" -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2- | tr ' ' '\n')" scp sftp ssh
-fi
-
-# SSH auto-completion based on ~/.ssh/known_hosts.
-if [[ -e ~/.ssh/known_hosts ]]; then
-  complete -o "default" -W "$(awk -F "," '{print $1}' ~/.ssh/known_hosts | sed -e 's/ .*//g' | awk '!x[$0]++')" scp sftp ssh
-fi
 
 ################################################################################
 # OS specific tweaks
@@ -305,7 +297,7 @@ fi
 
 # If .curl-format exists, AND 'curl' is available, enable curl-trace alias
 # See: https://github.com/wickett/curl-trace
-if [[ -f ~/.curl-format ]] && exists curl; then
+if [[ -f ~/.curl-format ]] && get_command curl; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
 fi
 
@@ -332,7 +324,7 @@ fi
 
 # When EDITOR == vim ; alias vi to vim
 [[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
-exists vim && alias vi='vim'
+get_command vim && alias vi='vim'
 
 # It looks like blindly asserting the following upsets certain 
 # Solaris versions of *grep.  So we throw in an extra check
@@ -382,106 +374,11 @@ LESS_TERMCAP_us=$'\E[04;38;5;146m'
 export LESS_TERMCAP_mb LESS_TERMCAP_md LESS_TERMCAP_me LESS_TERMCAP_se
 export LESS_TERMCAP_so LESS_TERMCAP_ue LESS_TERMCAP_us
 
-# If TERM_PROGRAM is set, give it a name that we recognise
-# Otherwise, poll the terminal and interpret what it feeds back
-# Otherwise, try to glean the information from the PPID
-# A stripped version of
-# https://gist.github.com/rawiriblundell/cd54153066486ac7a32802eb772ebef3
-case "${TERM_PROGRAM}" in
-  ("iTerm.app")    : iTerm2 ;;
-  ("Terminal.app") : "Apple Terminal" ;;
-  ("Hyper")        : HyperTerm ;;
-  ('')
-    if read -t 1 -r -s -dc -p $'\E[>c' da < /dev/tty; then
-      da=${da##$'\E'[>}
-    elif uname -r | grep -qi microsoft; then
-      da=95
-    fi   
-    # We want the following word splitting
-    # shellcheck disable=SC2086
-    set - ${da//;/ }
-
-    case "${1}" in
-      (0)
-        : VT100
-        case "${2}" in
-          (95)   : tmux;;
-          (115)  : KDE-konsole;;
-          (136)  : PuTTY;;
-        esac
-      ;;
-      (1)
-        : VT220
-        case "${2}" in
-          (2)  : openwin-xterm;;
-          (1115)  : gnome-terminal;;
-        esac
-        (( $2 >= 2000 )) && : "$(ps -p "$(ps -p $$ -o ppid= | tr -d ' ')" -o args=)"
-      ;;
-      (67)  : cygwin;;
-      (77)  : mintty;;
-      (82)  : rxvt;;
-      (83)  : screen;;
-      (84)  : tmux;;
-      (85)  : rxvt-unicode;;
-      (95)  : WSL;;
-      (*)   : "$(ps -p "$(ps -p $$ -o ppid= | tr -d ' ')" -o args=)"
-      ;;
-    esac
-  ;;
-  (*)  : "${TERM_PROGRAM}" ;;
-esac
-
-export _termtype="$_"
-
 ################################################################################
 # Functions
 
 # Because you never know what crazy systems are out there
-exists apropos || apropos() { man -k "$*"; }
-
-# Function to kill the parents of interruptable zombies, will not touch pid 1
-boomstick() {
-  # shellcheck disable=SC2009
-  for ppid in $(ps -A -ostat,ppid | grep -e '^[Zz]' | awk '{print $2}' | sort | uniq); do
-    [[ -z "${ppid}" ]] && return 0
-    if (( ppid == 1 )); then
-      printf '%s\n' "PPID is '1', I won't kill that, Ash!"
-    else
-      kill -HUP "${ppid}"
-    fi
-  done
-}
-
-# Bytes to Human Readable conversion function from http://unix.stackexchange.com/a/98790
-bytestohuman() {
-  # converts a byte count to a human readable format in IEC binary notation (base-1024),
-  # rounded to two decimal places for anything larger than a byte. 
-  # switchable to padded format and base-1000 if desired.
-  if [[ "${1}" = "-h" ]]; then
-    printf '%s\n' "Usage: bytestohuman [number to convert] [pad or not yes/no] [base 1000/1024]"
-    return 0
-  fi
-  local L_BYTES="${1:-0}"
-  local L_PAD="${2:-no}"
-  local L_BASE="${3:-1024}"
-  awk -v bytes="${L_BYTES}" -v pad="${L_PAD}" -v base="${L_BASE}" 'function human(x, pad, base) {
-   if(base!=1024)base=1000
-   basesuf=(base==1024)?"iB":"B"
-
-   s="BKMGTEPYZ"
-   while (x>=base && length(s)>1)
-         {x/=base; s=substr(s,2)}
-   s=substr(s,1,1)
-
-   xf=(pad=="yes") ? ((s=="B")?"%5d   ":"%8.2f") : ((s=="B")?"%d":"%.2f")
-   s=(s!="B") ? (s basesuf) : ((pad=="no") ? s : ((basesuf=="iB")?(s "  "):(s " ")))
-
-   return sprintf( (xf " %s\n"), x, s)
-  }
-  BEGIN{print human(bytes, pad, base)}'
-  return $?
-}
+get_command apropos || apropos() { man -k "$*"; }
 
 # Convert comma separated list to long format e.g. id user | tr "," "\n"
 # See also n2c() and n2s() for the opposite behaviour
@@ -501,12 +398,12 @@ capitalise() {
   
   # Check that stdin or $1 isn't empty
   if [[ -t 0 ]] && [[ -z "${1}" ]]; then
-    printf '%s\n' "Usage:  capitalise string" ""
-    printf '\t%s\n' "Capitalises the first character of STRING and/or its elements."
+    printf -- '%s\n' "Usage:  capitalise string" ""
+    printf -- '\t%s\n' "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
   elif [[ ! -t 0 ]] && [[ ! -z "${1}" ]]; then
-    printf '%s\n' "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
+    printf -- '%s\n' "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
     return 1
   fi
 
@@ -521,7 +418,7 @@ capitalise() {
       read -r || eof=true
       # If the line is blank, then print a blank line and continue
       if [[ -z "${REPLY}" ]]; then
-        printf '%s\n' ""
+        printf -- '%s\n' ""
         continue
       fi
       # Split each line element for processing
@@ -593,14 +490,14 @@ checkyaml() {
 
   # Check that $1 is defined...
   if [[ -z "${1}" ]]; then
-    printf '%s\n' "Usage:  checkyaml file" ""
-    printf '\t%s\n'  "Check the YAML syntax in FILE"
+    printf -- '%s\n' "Usage:  checkyaml file" ""
+    printf -- '\t%s\n'  "Check the YAML syntax in FILE"
     return 1
   fi
   
   # ...and readable
   if [[ ! -r "${1}" ]]; then
-    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: '${1}' does not appear to exist or I can't read it."
+    printf -- '%s\n' "${textRed}[ERROR]${textRst} checkyaml: '${1}' does not appear to exist or I can't read it."
     return 1
   else
     local file
@@ -613,29 +510,29 @@ checkyaml() {
 
   # Check the YAML contents, if there's no error, print out a message saying so
   elif python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}" &>/dev/null; then
-    printf '%s\n' "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
+    printf -- '%s\n' "${textGreen}[OK]${textRst} checkyaml: It seems the provided YAML syntax is ok."
 
   # Otherwise, print out an error message and dump the trace
   else
-    printf '%s\n' "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
+    printf -- '%s\n' "${textRed}[ERROR]${textRst} checkyaml: It seems there is an issue with the provided YAML syntax." ""
     python -c 'import yaml, sys; print yaml.load(sys.stdin)' < "${file:-/dev/stdin}"
   fi
 }
 
 # Try to enable clipboard functionality
 # Terse version of https://raw.githubusercontent.com/rettier/c/master/c
-if is_command pbcopy; then
+if get_command pbcopy; then
   clipin() { pbcopy; }
   clipout() { pbpaste; }
-elif is_command xclip; then
+elif get_command xclip; then
   clipin() { xclip -selection c; }
   clipout() { xclip -selection clipboard -o; }
-elif is_command xsel ; then
+elif get_command xsel ; then
   clipin() { xsel --clipboard --input; }
   clipout() { xsel --clipboard --output; }
 else
-  clipin() { printf '%s\n' "No clipboard capability found" >&2; }
-  clipout() { printf '%s\n' "No clipboard capability found" >&2; }
+  clipin() { printf -- '%s\n' "No clipboard capability found" >&2; }
+  clipout() { printf -- '%s\n' "No clipboard capability found" >&2; }
 fi
 
 # Indent code by four spaces, useful for posting in markdown
@@ -693,14 +590,14 @@ dec_to_char() {
 
   # Finally, print our character
   # shellcheck disable=SC2059
-  printf "\\$(printf '%03o' "${int}")"
+  printf "\\$(printf -- '%03o' "${int}")"
 }
 
 # Optional error handling function
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {
   tput setaf 1
-  printf '%s\n' "$@" >&2
+  printf -- '%s\n' "$@" >&2
   tput sgr0
   return 1
 }
@@ -710,7 +607,7 @@ die() {
 if ! command -v dos2unix &>/dev/null; then
   dos2unix() {
     if [[ "${1:0:1}" = '-' ]]; then
-      printf '%s\n' "This is a simple step-in function, '${1}' isn't supported"
+      printf -- '%s\n' "This is a simple step-in function, '${1}' isn't supported"
       return 1
     fi
     if [[ -w "${1}" ]]; then
@@ -746,14 +643,14 @@ EOF
 
 # Calculate how many days since epoch
 epochdays() {
-  printf '%s\n' "$(( $(epoch) / 86400 ))"
+  printf -- '%s\n' "$(( $(epoch) / 86400 ))"
 }
 
 # Function to extract common compressed file types
 extract() {
  if [[ -z "${1}" ]]; then
     # display usage if no parameters given
-    printf '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|exe|tar.bz2|tar.gz|tar.xz|rpm>"
+    printf -- '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|exe|tar.bz2|tar.gz|tar.xz|rpm>"
  else
     if [[ -r "${1}" ]]; then
       case "${1}" in
@@ -776,17 +673,8 @@ extract() {
         (*)           echo "extract: '${1}' - unknown archive method" ;;
       esac
     else
-      printf '%s\n' "'${1}' - file not found or not readable"
+      printf -- '%s\n' "'${1}' - file not found or not readable"
     fi
-  fi
-}
-
-# Try to find out if we're authenticating locally or remotely
-get_auth_type() {
-  if grep "^${USER}:" /etc/passwd &>/dev/null; then
-    printf -- '%s\n' "Local"
-  else
-    printf -- '%s\n' "Network"
   fi
 }
 
@@ -799,38 +687,10 @@ get_certexpiry() {
     | cut -d "=" -f 2
 }
 
-# Because $SHELL is an unreliable thing to test against, we provide this function
-# This won't work for 'fish', which needs 'ps -p %self' or similar
-# non-bourne-esque syntax.  Good thing we don't care about 'fish'
-# TO-DO: Investigate application of 'export PS_PERSONALITY="posix"'
-get_shell() {
-  if [ -r "/proc/$$/cmdline" ]; then
-    # We use 'tr' because 'cmdline' files have NUL terminated lines
-    # TO-DO: Possibly handle multi-word output e.g. 'busybox ash'
-    printf -- '%s\n' "$(tr '\0' ' ' </proc/"$$"/cmdline)"
-  elif ps -p "$$" >/dev/null 2>&1; then
-    # This double-awk caters for situations where CMD/COMMAND
-    # might be a full path e.g. /usr/bin/zsh
-    ps -p "$$" | tail -n 1 | awk '{print $NF}' | awk -F '/' '{print $NF}'
-  # This one works well except for busybox
-  elif ps -o comm= -p $$ >/dev/null 2>&1; then
-    ps -o comm= -p $$
-  elif ps -o pid,comm= >/dev/null 2>&1; then
-    ps -o pid,comm= | awk -v ppid="$$" '$1==ppid {print $2}'
-  else
-    case "${BASH_VERSION}" in (*.*) printf '%s\n' "bash";; esac; return 0
-    case "${KSH_VERSION}" in (*.*) printf '%s\n' "ksh";; esac; return 0
-    case "${ZSH_VERSION}" in (*.*) printf '%s\n' "zsh";; esac; return 0
-    # If we get to this point, fail out:
-    printf '%s\n' "Unable to find method to determine the shell"
-    return 1
-  fi
-}
-
 # Let 'git' take the perf hit of setting GIT_BRANCH rather than PROMPT_COMMAND
 # There's no one true way to get the current git branch, they all have pros/cons
 # See e.g. https://stackoverflow.com/q/6245570
-if is_command git; then
+if get_command git; then
   git() {
     command git "${@}"
     GIT_BRANCH="$(command git branch 2>/dev/null| sed -n '/\* /s///p')"
@@ -862,14 +722,14 @@ histrank() {
 # Write a horizontal line of characters
 hr() {
   # shellcheck disable=SC2183
-  printf '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
+  printf -- '%*s\n' "${1:-$COLUMNS}" | tr ' ' "${2:-#}"
 }
 
 # Function to indent text by n spaces (default: 2 spaces)
 indent() {
   local identWidth
   identWidth="${1:-2}"
-  identWidth=$(eval "printf '%.0s ' {1..${identWidth}}")
+  identWidth=$(eval "printf -- '%.0s ' {1..${identWidth}}")
   sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
 }
 
@@ -922,41 +782,6 @@ is_set() {
       return "${?}"
     ;;
   esac
-}
-
-# A reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
-# This provides human readable 'ls' output for systems
-# whose version of 'ls' does not have the '-h' option
-# Requires: bytestohuman function
-llh() {
-  # Check if the available 'ls' supports '-h', if so, use it
-  if ls -h /dev/null >/dev/null 2>&1; then
-    command ls -lh "$@"
-  # If it doesn't support '-h', we replicate it using
-  # a reinterpretation of 'llh' from the hpuxtools toolset (hpux.ch)
-  # Requires: bytestohuman function
-  else
-    # Print out the total line
-    # shellcheck disable=SC2012
-    command ls -l | head -n 1
-
-    # Read each line of 'ls -l', excluding the total line
-    # shellcheck disable=SC2010
-    while read -r; do
-      # Get the size of the file
-      size=$(echo "${REPLY}" | awk '{print $5}')
-      
-      # Convert it to human readable
-      newSize=$(bytestohuman "${size}" no 1024)
-      
-      # Grab the filename from the $9th field onwards
-      # This caters for files with spaces
-      fileName=$(echo "${REPLY}" | awk '{print substr($0, index($0,$9))}')
-      
-      # Echo the line into awk, format it nicely and insert our substitutions
-      echo "${REPLY}" | awk -v size="${newSize}" -v file="${fileName}" '{printf "%-11s %+2s %-10s %-10s %+11s %s %02d %-5s %s\n",$1,$2,$3,$4,size,$6,$7,$8,file}'
-    done < <(command ls -l | grep -v "total")
-  fi
 }
 
 # A function to log messages to the system log
@@ -1015,7 +840,7 @@ logmsg() {
 # Known issue: No traps!  This means IFS might be left altered if 
 # the function is cancelled or fails in some way
 
-if ! exists mapfile; then
+if ! get_command mapfile; then
   # This is simply the appropriate section of 'help mapfile', edited, as a function:
   mapfilehelp() {
     # Hey, this exercise is for an array-capable shell, so let's use an array for this!
@@ -1043,7 +868,7 @@ if ! exists mapfile; then
     "      mapfile returns successfully unless an invalid option or option argument is supplied," 
     "      ARRAY is invalid or unassignable, or if ARRAY is not an indexed array."
     )
-    printf '%s\n' "${mapfileHelpArray[@]}"
+    printf -- '%s\n' "${mapfileHelpArray[@]}"
   }
 
   mapfile() {
@@ -1113,7 +938,7 @@ fi
 
 # Function to list the members of a group.  
 # Replicates the absolute basic functionality of a real 'members' command
-if ! exists members; then
+if ! get_command members; then
   members() {
     [[ "$(getent group "${1?No Group Supplied}" | cut -d ":" -f4-)" ]] \
       && getent group "${1}" | cut -d ":" -f4-
@@ -1135,8 +960,8 @@ old() { cp --reflink=auto "${1}"{,.old} 2>/dev/null || cp "${1}"{,.old}; }
 printline() {
   # If $1 is empty, print a usage message
   if [[ -z "${1}" ]]; then
-    printf '%s\n' "Usage:  printline n [file]" ""
-    printf '\t%s\n' "Print the Nth line of FILE." "" \
+    printf -- '%s\n' "Usage:  printline n [file]" ""
+    printf -- '\t%s\n' "Print the Nth line of FILE." "" \
       "With no FILE or when FILE is -, read standard input instead."
     return 0
   fi
@@ -1144,7 +969,7 @@ printline() {
   # Check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
   case $1 in
-    (''|*[!0-9]*) printf '%s\n' "[ERROR] printline: '${1}' does not appear to be a number." "" \
+    (''|*[!0-9]*) printf -- '%s\n' "[ERROR] printline: '${1}' does not appear to be a number." "" \
                     "Run 'printline' with no arguments for usage.";
                   return 1 ;;
     (*)           local lineNo="$((10#$1))" ;;
@@ -1153,7 +978,7 @@ printline() {
   # Next, if $2 is set, check that we can actually read it
   if [[ -n "${2}" ]]; then
     if [[ ! -r "${2}" ]]; then
-      printf '%s\n' "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
+      printf -- '%s\n' "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
         "Run 'printline' with no arguments for usage."
       return 1
     else
@@ -1162,11 +987,11 @@ printline() {
   fi
 
   # Finally after all that testing is done, we throw in a cursory test for 'sed'
-  if is_command sed; then
+  if get_command sed; then
     sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
   # Otherwise we print a message that 'sed' isn't available
   else
-    printf '%s\n' "[ERROR] printline: This function depends on 'sed' which was not found."
+    printf -- '%s\n' "[ERROR] printline: This function depends on 'sed' which was not found."
     return 1
   fi
 }
@@ -1180,7 +1005,7 @@ printline() {
 # shellcheck disable=SC2140
 quickserve() {
   if [[ "${1}" = "-h" ]]; then
-    printf '%s\n' "Usage: quickserve [port(default: 8000)] [path(default: cwd)]"
+    printf -- '%s\n' "Usage: quickserve [port(default: 8000)] [path(default: cwd)]"
     return 0
   fi
   local port="${1:-8000}"
@@ -1352,18 +1177,18 @@ redo() {
 }
 
 # Check if 'rev' is available, if not, enable a stop-gap function
-if ! exists rev; then
+if ! get_command rev; then
   rev() {
     # Check that stdin or $1 isn't empty
     if [[ -t 0 ]] && [[ -z "${1}" ]]; then
-      printf '%s\n' "Usage:  rev string|file" ""
-      printf '\t%s\n'  "Reverse the order of characters in STRING or FILE." "" \
+      printf -- '%s\n' "Usage:  rev string|file" ""
+      printf -- '\t%s\n'  "Reverse the order of characters in STRING or FILE." "" \
         "With no STRING or FILE, read standard input instead." "" \
         "Note: This is a bash function to provide the basic functionality of the command 'rev'"
       return 0
     # Disallow both piping in strings and declaring strings
     elif [[ ! -t 0 ]] && [[ -n "${1}" ]]; then
-      printf '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
+      printf -- '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
       return 1
     fi
 
@@ -1375,7 +1200,7 @@ if ! exists rev; then
         for((i=len-1;i>=0;i--)); do
           rev="$rev${REPLY:$i:1}"
         done
-        printf '%s\n' "${rev}"
+        printf -- '%s\n' "${rev}"
       done < "${1:-/dev/stdin}"
     # Else, if parameter exists, action that
     elif [[ -n "$*" ]]; then
@@ -1385,7 +1210,7 @@ if ! exists rev; then
       for((i=len-1;i>=0;i--)); do 
         rev="$rev${Line:$i:1}"
       done
-      printf '%s\n' "${rev}"
+      printf -- '%s\n' "${rev}"
     fi
   }
 fi
@@ -1394,7 +1219,7 @@ fi
 repeat() {
   # check that $1 is a digit, if not error out, if so, set the repeatNum variable
   case "${1}" in
-    (*[!0-9]*|'') printf '%s\n' "[ERROR]: '${1}' is not a number.  Usage: 'repeat n command'"; return 1;;
+    (*[!0-9]*|'') printf -- '%s\n' "[ERROR]: '${1}' is not a number.  Usage: 'repeat n command'"; return 1;;
     (*)           local repeatNum=$1;;
   esac
   # shift so that the rest of the line is the command to execute
@@ -1409,7 +1234,7 @@ repeat() {
 # Create the file structure for an Ansible role
 rolesetup() {
   if [[ -z "${1}" ]]; then
-    printf '%s\n' "rolesetup - setup the file structure for an Ansible role." \
+    printf -- '%s\n' "rolesetup - setup the file structure for an Ansible role." \
       "By default this creates into the current directory" \
       "and you can recursively copy the structure from there." "" \
       "Usage: rolesetup rolename" ""
@@ -1417,17 +1242,17 @@ rolesetup() {
   fi
 
   if [[ ! -w . ]]; then
-    printf '%s\n' "Unable to write to the current directory"
+    printf -- '%s\n' "Unable to write to the current directory"
     return 1
   elif [[ -d "${1}" ]]; then
-    printf '%s\n' "The directory '${1}' seems to already exist!"
+    printf -- '%s\n' "The directory '${1}' seems to already exist!"
     return 1
   else
     mkdir -p "${1}"/{defaults,files,handlers,meta,templates,tasks,vars}
     (
       cd "${1}" || return 1
       for dir in defaults files handlers meta templates tasks vars; do
-        printf '%s\n' "---" > "${dir}/main.yml"
+        printf -- '%s\n' "---" > "${dir}/main.yml"
       done
     )
   fi
@@ -1444,13 +1269,13 @@ sanitize() { printf -- '%q\n' "${1}"; }
 alias sanitise='sanitize'
 
 # Check if 'seq' is available, if not, provide a basic replacement function
-if ! exists seq; then
+if ! get_command seq; then
   seq() {
     local first
     # If no parameters are given, print out usage
     if [[ -z "$*" ]]; then
-      printf '%s\n' "Usage:"
-      printf '\t%s\n'  "seq LAST" \
+      printf -- '%s\n' "Usage:"
+      printf -- '\t%s\n'  "seq LAST" \
         "seq FIRST LAST" \
         "seq FIRST INCR LAST" \
         "Note: this is a step-in function, no args are supported."
@@ -1522,7 +1347,7 @@ shift_array() {
 # Check if 'shuf' is available, if not, provide basic shuffle functionality
 # Check commit history for a range of alternative methods - ruby, perl, python etc
 # Requires: randInt function
-if ! exists shuf; then
+if ! get_command shuf; then
   shuf() {
     local OPTIND inputRange inputStrings nMin nMax nCount shufArray shufRepeat
 
@@ -1541,7 +1366,7 @@ if ! exists shuf; then
               shufArray+=($(eval "echo \${$OPTIND}"))
               OPTIND=$((OPTIND + 1))
             done;;
-        (h)  printf '%s\n' "" "shuf - generate random permutations" \
+        (h)  printf -- '%s\n' "" "shuf - generate random permutations" \
                 "" "Options:" \
                 "  -e, echo.                Treat each ARG as an input line" \
                 "  -h, help.                Print a summary of the options" \
@@ -1557,12 +1382,12 @@ if ! exists shuf; then
             ;;
         (n) nCount="${OPTARG}";;
         (r) shufRepeat=true;;
-        (v)  printf '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
+        (v)  printf -- '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
              return 0;;
-        (\?)  printf '%s\n' "shuf: invalid option -- '-$OPTARG'." \
+        (\?)  printf -- '%s\n' "shuf: invalid option -- '-$OPTARG'." \
                 "Try -h for usage or -v for version info." >&2
               returnt 1;;
-        (:)  printf '%s\n' "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
+        (:)  printf -- '%s\n' "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
              return 1;;
       esac
     done
@@ -1571,7 +1396,7 @@ if ! exists shuf; then
     # Handle -e and -i options.  They shouldn't be together because we can't
     # understand their love.  -e is handled later on in the script
     if [[ "${inputRange}" = "true" ]] && [[ "${inputStrings}" == "true" ]]; then
-      printf '%s\n' "shuf: cannot combine -e and -i options" >&2
+      printf -- '%s\n' "shuf: cannot combine -e and -i options" >&2
       return 1
     fi
 
@@ -1676,8 +1501,8 @@ ssh() {
   case "${1}" in
     (-h)
       command ssh -h 2>&1 | grep -v "^unknown"
-      printf '%s\n' "Overlay options:"
-      printf '\t   %s\n' "nokeys: Forces password based authentication" \
+      printf -- '%s\n' "Overlay options:"
+      printf -- '\t   %s\n' "nokeys: Forces password based authentication" \
         "raw: Runs ssh in its default, noisy state"
       return 0
     ;;
@@ -1700,7 +1525,7 @@ ssh() {
 # Display the fingerprint for a host
 ssh-fingerprint() {
   if [[ -z "${1}" ]]; then
-    printf '%s\n' "Usage: ssh-fingerprint [hostname]"
+    printf -- '%s\n' "Usage: ssh-fingerprint [hostname]"
     return 1
   fi
 
@@ -1728,13 +1553,13 @@ string-contains() {
 }
 
 # Provide a very simple 'tac' step-in function
-if ! exists tac; then
+if ! get_command tac; then
   tac() {
-    if is_command perl; then
+    if get_command perl; then
       perl -e 'print reverse<>' < "${1:-/dev/stdin}"
-    elif is_command awk; then
+    elif get_command awk; then
       awk '{line[NR]=$0} END {for (i=NR; i>=1; i--) print line[i]}' < "${1:-/dev/stdin}"
-    elif is_command sed; then
+    elif get_command sed; then
       sed -e '1!G;h;$!d' < "${1:-/dev/stdin}"
     fi
   }
@@ -1744,8 +1569,8 @@ fi
 throttle() {
   # Check that stdin isn't empty
   if [[ -t 0 ]]; then
-    printf '%s\n' "Usage:  pipe | to | throttle [n]" ""
-    printf '\t%s\n'  "Increment line by line through the output of other commands" "" \
+    printf -- '%s\n' "Usage:  pipe | to | throttle [n]" ""
+    printf -- '\t%s\n'  "Increment line by line through the output of other commands" "" \
       "Delay between each increment can be defined.  Default is 1 second."
     return 0
   fi
@@ -1761,14 +1586,14 @@ throttle() {
 }
 
 # Check if 'timeout' is available, if not, enable a stop-gap function
-if ! exists timeout; then
+if ! get_command timeout; then
   timeout() {
     local duration
 
     # $# should be at least 1, if not, print a usage message
     if (( $# == 0 )); then
-      printf '%s\n' "Usage:  timeout DURATION COMMAND" ""
-      printf '\t%s\n' \
+      printf -- '%s\n' "Usage:  timeout DURATION COMMAND" ""
+      printf -- '\t%s\n' \
         "Start COMMAND, and kill it if still running after DURATION." "" \
         "DURATION is an integer with an optional suffix:" \
         "  's'  for seconds (the default)" \
@@ -1782,7 +1607,7 @@ if ! exists timeout; then
     # Is $1 good?  If so, sanitise and convert to seconds
     case "${1}" in
       (*[!0-9smhd]*|'')
-        printf '%s\n' \
+        printf -- '%s\n' \
           "timeout: '${1}' is not valid.  Run 'timeout' for usage." >&2
         return 1
       ;;
@@ -1804,7 +1629,7 @@ if ! exists timeout; then
 
     # If 'perl' is available, it has a few pretty good one-line options
     # see: http://stackoverflow.com/q/601543
-    if is_command perl; then
+    if get_command perl; then
       perl -e '$s = shift; $SIG{ALRM} = sub { kill INT => $p; exit 77 }; exec(@ARGV) unless $p = fork; alarm $s; waitpid $p, 0; exit ($? >> 8)' "${duration}" "$@"
       #perl -MPOSIX -e '$SIG{ALRM} = sub { kill(SIGTERM, -$$); }; alarm shift; $exit = system @ARGV; exit(WIFEXITED($exit) ? WEXITSTATUS($exit) : WTERMSIG($exit));' "$@"
 
@@ -1835,26 +1660,26 @@ tolower() {
   if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*,,}" | paste -sd '\0' -
-    elif is_command awk; then
+    elif get_command awk; then
       printf -- '%s ' "$*" | awk '{print tolower($0)}'
-    elif is_command tr; then
+    elif get_command tr; then
       printf -- '%s ' "$*" | tr '[:upper:]' '[:lower:]'
     else
-      printf '%s\n' "tolower - no available method found" >&2
+      printf -- '%s\n' "tolower - no available method found" >&2
       return 1
     fi
   else
     if (( BASH_VERSINFO >= 4 )); then
       while read -r; do
-        printf '%s\n' "${REPLY,,}"
+        printf -- '%s\n' "${REPLY,,}"
       done
-      [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY,,}"
-    elif is_command awk; then
+      [[ -n "${REPLY}" ]] && printf -- '%s\n' "${REPLY,,}"
+    elif get_command awk; then
       awk '{print tolower($0)}'
-    elif is_command tr; then
+    elif get_command tr; then
       tr '[:upper:]' '[:lower:]'
     else
-      printf '%s\n' "tolower - no available method found" >&2
+      printf -- '%s\n' "tolower - no available method found" >&2
       return 1
     fi < "${1:-/dev/stdin}"
   fi
@@ -1866,26 +1691,26 @@ toupper() {
   if [[ -n "${1}" ]] && [[ ! -r "${1}" ]]; then
     if (( BASH_VERSINFO >= 4 )); then
       printf -- '%s ' "${*^^}" | paste -sd '\0' -
-    elif is_command awk; then
+    elif get_command awk; then
       printf -- '%s ' "$*" | awk '{print toupper($0)}'
-    elif is_command tr; then
+    elif get_command tr; then
       printf -- '%s ' "$*" | tr '[:lower:]' '[:upper:]'
     else
-      printf '%s\n' "toupper - no available method found" >&2
+      printf -- '%s\n' "toupper - no available method found" >&2
       return 1
     fi
   else
     if (( BASH_VERSINFO >= 4 )); then
       while read -r; do
-        printf '%s\n' "${REPLY^^}"
+        printf -- '%s\n' "${REPLY^^}"
       done
-      [[ -n "${REPLY}" ]] && printf '%s\n' "${REPLY^^}"
-    elif is_command awk; then
+      [[ -n "${REPLY}" ]] && printf -- '%s\n' "${REPLY^^}"
+    elif get_command awk; then
       awk '{print toupper($0)}'
-    elif is_command tr; then
+    elif get_command tr; then
       tr '[:lower:]' '[:upper:]'
     else
-      printf '%s\n' "toupper - no available method found" >&2
+      printf -- '%s\n' "toupper - no available method found" >&2
       return 1
     fi < "${1:-/dev/stdin}"
   fi
@@ -1928,14 +1753,14 @@ if tput ce 2>/dev/null; then
 fi
 
 # Simple alternative for 'tree'
-if ! exists tree; then
+if ! get_command tree; then
   tree() {
     find "${1:-.}" -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
   }
 fi
 
 # Format the output of 'du'.  Found on the internet, unknown origin.
-if ! exists treesize; then
+if ! get_command treesize; then
   treesize() {
     du -k --max-depth=1 "${@}" | sort -nr | awk '
      BEGIN {
@@ -1985,7 +1810,7 @@ up() {
     (*[!0-9]*)  : ;;
     ("")        cd || return ;;
     (1)         cd .. || return ;;
-    (*)         cd "$(eval "printf '../'%.0s {1..$1}")" || return ;;
+    (*)         cd "$(eval "printf -- '../'%.0s {1..$1}")" || return ;;
   esac
 }
 
@@ -2013,15 +1838,15 @@ urandInt() {
       hexrandom=$(dd if=/dev/urandom bs=1 count=${bytes} 2>/dev/null | xxd -p)
       (( 16#$hexrandom < range * mult )) && break
     done
-    printf '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
+    printf -- '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
   done
 }
 
 # Get local weather and present it nicely
 weather() {
   # We require 'curl' so check for it
-  if ! exists curl; then
-    printf '%s\n' "[ERROR] weather: This command requires 'curl', please install it."
+  if ! get_command curl; then
+    printf -- '%s\n' "[ERROR] weather: This command requires 'curl', please install it."
     return 1
   fi
 
@@ -2038,8 +1863,8 @@ weather() {
   (( "${COLUMNS:-$(tput cols)}" < 125 )) && request+='?n'
   
   # Finally, make the request
-  curl "${curlArgs}" "${request}" 2>/dev/null \
-    || printf '%s\n' "[ERROR] weather: Could not connect to weather service."
+  curl "${curlArgs}" "${request}" 2>/dev/null ||
+    printf -- '%s\n' "[ERROR] weather: Could not connect to weather service."
 }
 
 # Function to display a list of users and their memory and cpu usage
@@ -2053,7 +1878,7 @@ what() {
   elif [[ -z "${1}" ]]; then
     ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
   else
-    printf '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
+    printf -- '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
   fi
 }
 
@@ -2124,7 +1949,7 @@ genpasswd() {
     case "${Flags}" in
       (c)  pwdChars="${OPTARG}";;
       (D)  pwdDigit="true";;
-      (h)  printf '%s\n' "" "genpasswd - a poor sysadmin's pwgen" \
+      (h)  printf -- '%s\n' "" "genpasswd - a poor sysadmin's pwgen" \
              "" "Usage: genpasswd [options]" "" \
              "Optional arguments:" \
              "-c [Number of characters. Minimum is 4. (Default:${pwdChars})]" \
@@ -2148,7 +1973,7 @@ genpasswd() {
       (S)  pwdSet="[:graph:]";;
       (U)  pwdUpper="true";;
       (Y)  pwdSpecial="true";;
-      (\?)  printf '%s\n' "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
+      (\?)  printf -- '%s\n' "[ERROR] genpasswd: Invalid option: $OPTARG.  Try 'genpasswd -h' for usage." >&2
             return 1;;
       (:)  echo "[ERROR] genpasswd: Option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
            return 1;;
@@ -2158,7 +1983,7 @@ genpasswd() {
   # We need to check that the character length is more than 4 to protect against
   # infinite loops caused by the character checks.  i.e. 4 character checks on a 3 character password
   if (( pwdChars < 4 )); then
-    printf '%s\n' "[ERROR] genpasswd: Password length must be greater than four characters." >&2
+    printf -- '%s\n' "[ERROR] genpasswd: Password length must be greater than four characters." >&2
     return 1
   fi
 
@@ -2166,7 +1991,7 @@ genpasswd() {
     for (( i=0; i<pwdNum; i++ )); do
       n=0
       for int in $(randInt "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
-        tmpArray[n]=$(printf '%s\n' "${pwdSyllables[int]}")
+        tmpArray[n]=$(printf -- '%s\n' "${pwdSyllables[int]}")
         (( n++ ))
       done
       read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
@@ -2187,7 +2012,7 @@ genpasswd() {
         randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) )
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
-      printf '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
+      printf -- '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
     done
   else
     for (( i=0; i<pwdNum; i++ )); do
@@ -2199,7 +2024,7 @@ genpasswd() {
       read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
-        if ! printf '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
+        if ! printf -- '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
           tmpArray[t]=$(capitalise "${tmpArray[t]}")
         fi
       fi
@@ -2207,7 +2032,7 @@ genpasswd() {
         while (( u == t )); do
           u="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
         done
-        if ! printf '%s\n' "tmpArray[@]}" | grep "[0-9]" >/dev/null 2>&1; then
+        if ! printf -- '%s\n' "tmpArray[@]}" | grep "[0-9]" >/dev/null 2>&1; then
           tmpArray[u]="$(randInt 1 0 9)"
         fi
       fi
@@ -2220,7 +2045,7 @@ genpasswd() {
         randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) ) 
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
-      printf '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
+      printf -- '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
     done
   fi
 } 
@@ -2232,7 +2057,7 @@ cryptpasswd() {
 
   # If $1 is blank, print usage
   if [[ -z "${1}" ]]; then
-    printf '%s\n' "" "cryptpasswd - a tool for hashing passwords" "" \
+    printf -- '%s\n' "" "cryptpasswd - a tool for hashing passwords" "" \
     "Usage: cryptpasswd [password to hash] [1|5|6|n]" \
     "    Crypt method can be set using one of the following options:" \
     "    '1' (MD5, default)" \
@@ -2251,7 +2076,7 @@ cryptpasswd() {
   # If the crypt mode isn't defined as 1, 5, 6 or n: default to 1
   case "${2}" in
     (n)
-      printf '%s' "${inputPwd}" \
+      printf -- '%s' "${inputPwd}" \
         | iconv -t utf16le \
         | openssl md4 \
         | awk '{print $2}' \
@@ -2263,13 +2088,13 @@ cryptpasswd() {
         (1|5|6) pwdKryptMode="${2}";;
         (*)     pwdKryptMode=1;;        # Default to MD5
       esac
-      if is_command python; then
+      if get_command python; then
         #python -c 'import crypt; print(crypt.crypt('${inputPwd}', crypt.mksalt(crypt.METHOD_SHA512)))'
         python -c "import crypt; print crypt.crypt('${inputPwd}', '\$${pwdKryptMode}\$${pwdSalt}')"
-      elif is_command perl; then
+      elif get_command perl; then
         perl -e "print crypt('${inputPwd}','\$${pwdKryptMode}\$${pwdSalt}\$')"
-      elif is_command openssl; then
-        printf '%s\n' "This was handled by OpenSSL which is only MD5 capable." >&2
+      elif get_command openssl; then
+        printf -- '%s\n' "This was handled by OpenSSL which is only MD5 capable." >&2
         openssl passwd -1 -salt "${pwdSalt}" "${inputPwd}"
       else
         printf -- '%s\n' "No available method for this task" >&2
@@ -2288,14 +2113,14 @@ cryptpasswd() {
 # See the Schneier Method alternative i.e. "This little piggy went to market" = "tlpWENT2m"
 genphrase() {
   # Some examples of methods to do this (fastest to slowest):
-  # shuf:         printf '%s\n' "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
-  # perl:         printf '%s\n' "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
+  # shuf:         printf -- '%s\n' "$(shuf -n 3 ~/.pwords.dict | tr -d "\n")"
+  # perl:         printf -- '%s\n' "perl -nle '$word = $_ if rand($.) < 1; END { print $word }' ~/.pwords.dict"
   # sed:          printf "$s\n" "sed -n $((RANDOM%$(wc -l < ~/.pwords.dict)+1))p ~/.pwords.dict"
-  # python:       printf '%s\n' "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${phraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
-  # oawk/nawk:    printf '%s\n' "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
-  # gawk:         printf '%s\n' "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
-  # sort -R:      printf '%s\n' "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
-  # bash $RANDOM: printf '%s\n' "$(for i in $(<~/.pwords.dict); do echo "$RANDOM $i"; done | sort | cut -d' ' -f2 | head -3 | tr -d "\n")"
+  # python:       printf -- '%s\n' "$(python -c 'import random, sys; print("".join(random.sample(sys.stdin.readlines(), "${phraseWords}")).rstrip("\n"))' < ~/.pwords.dict | tr -d "\n")"
+  # oawk/nawk:    printf -- '%s\n' "$(for i in {1..3}; do sed -n "$(echo "$RANDOM" $(wc -l <~/.pwords.dict) | awk '{ printf("%.0f\n",(1.0 * $1/32768 * $2)+1) }')p" ~/.pwords.dict; done | tr -d "\n")"
+  # gawk:         printf -- '%s\n' "$(awk 'BEGIN{ srand(systime() + PROCINFO["pid"]); } { printf( "%.5f %s\n", rand(), $0); }' ~/.pwords.dict | sort -k 1n,1 | sed 's/^[^ ]* //' | head -3 | tr -d "\n")"
+  # sort -R:      printf -- '%s\n' "$(sort -R ~/.pwords.dict | head -3 | tr -d "\n")"
+  # bash $RANDOM: printf -- '%s\n' "$(for i in $(<~/.pwords.dict); do echo "$RANDOM $i"; done | sort | cut -d' ' -f2 | head -3 | tr -d "\n")"
 
   # perl, sed, oawk/nawk and bash are the most portable options in order of speed.  The bash $RANDOM example is horribly slow, but reliable.  Avoid if possible.
 
@@ -2310,7 +2135,7 @@ genphrase() {
 
   # Test we have the capitalise function available
   if ! type capitalise &>/dev/null; then
-    printf '%s\n' "[ERROR] genphrase: 'capitalise' function is required but was not found." \
+    printf -- '%s\n' "[ERROR] genphrase: 'capitalise' function is required but was not found." \
       "This function can be retrieved from https://github.com/rawiriblundell"
     return 1
   fi
@@ -2327,7 +2152,7 @@ genphrase() {
 
   while getopts ":hn:s:Sw:" Flags; do
     case "${Flags}" in
-      (h)  printf '%s\n' "" "genphrase - a basic passphrase generator" \
+      (h)  printf -- '%s\n' "" "genphrase - a basic passphrase generator" \
              "" "Optional Arguments:" \
              "-h [help]" \
              "-n [number of passphrases to generate (Default:${phraseNum})]" \
@@ -2349,7 +2174,7 @@ genphrase() {
   
   # If -S is selected, print out the documentation for word seeding
   if [[ "${phraseSeedDoc}" = "True" ]]; then
-    printf '%s\n' \
+    printf -- '%s\n' \
     "======================================================================" \
     "genphrase and the -s option: Why you would want to seed your own word?" \
     "======================================================================" \
@@ -2398,7 +2223,7 @@ genphrase() {
   # First we test to see if shuf is available.  This should now work with the
   # 'shuf' step-in function and 'rand' scripts available from https://github.com/rawiriblundell
   # Also requires the 'capitalise' function from said source.
-  if is_command shuf; then
+  if get_command shuf; then
     # If we're using bash4, then use mapfile for safety
     if (( BASH_VERSINFO >= 4 )); then
       # Basically we're using shuf and awk to generate lines of random words
@@ -2426,14 +2251,14 @@ genphrase() {
   
   # Otherwise, we switch to bash.  This is the fastest way I've found to perform this
   else
-    if ! exists rand; then
-      printf '%s\n' "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
+    if ! get_command rand; then
+      printf -- '%s\n' "[ERROR] genphrase: This function requires the 'rand' external script, which was not found." \
         "You can get this script from https://github.com/rawiriblundell"
       return 1
     fi
 
     # We test for 'mapfile' which indicates bash4 or some step-in function
-    if is_command mapfile; then
+    if get_command mapfile; then
       # Create two arrays, one with all the words, and one with a bunch of random numbers
       mapfile -t dictArray < ~/.pwords.dict
       mapfile -t numArray < <(rand -M "${#dictArray[@]}" -r -N "${totalWords}")
@@ -2453,12 +2278,12 @@ genphrase() {
       {
         # We print out a random number with each word, this allows us to sort
         # all of the output, which randomises the location of any seed word
-        printf '%s\n' "${RANDOM} ${seedWord}"
+        printf -- '%s\n' "${RANDOM} ${seedWord}"
         for randInt in "${numArray[@]:loWord:phraseWords}"; do
           if (( BASH_VERSINFO >= 4 )); then
-            printf '%s\n' "${RANDOM} ${dictArray[randInt]^}"
+            printf -- '%s\n' "${RANDOM} ${dictArray[randInt]^}"
           else
-            printf '%s\n' "${RANDOM} ${dictArray[randInt]}" | capitalise
+            printf -- '%s\n' "${RANDOM} ${dictArray[randInt]}" | capitalise
           fi
         done
       # Pass the grouped output for some cleanup
@@ -2475,7 +2300,7 @@ genphrase() {
 # Figure out the correct TERM value
 # Function to test indicated terminfo entries
 termtest() {
-  if is_command infocmp; then
+  if get_command infocmp; then
     infocmp "${1}" &>/dev/null
     return "$?"
   else
@@ -2502,7 +2327,7 @@ fi
 # If not, we set up ~/.terminfo appropriately (usually Solaris)
 if [[ "${TERM}" = "xterm-256color" ]]; then
   if ! termtest xterm-256color; then
-    if is_command tic; then
+    if get_command tic; then
       mkdir -p "${HOME}"/.terminfo
       print-xterm-256color > "${HOME}"/.terminfo/xterm-256color
       TERMINFO="${HOME}"/.terminfo
@@ -2510,7 +2335,7 @@ if [[ "${TERM}" = "xterm-256color" ]]; then
       tic "${HOME}"/.terminfo/xterm-256color 2>/dev/null
       TERM=xterm-256color
     else
-      printf '%s\n' "'tic' is required to setup xterm-256color but was not found" \
+      printf -- '%s\n' "'tic' is required to setup xterm-256color but was not found" \
         "Usually this can be found in the 'ncurses' package"
       # Set a dummy TERM to invoke the next block
       TERM=pants
@@ -2557,13 +2382,13 @@ block50="\xe2\x96\x92"   # u2592\0xe2 0x96 0x92 Half shade 50%
 block25="\xe2\x96\x91"   # u2591\0xe2 0x96 0x91 Light shade 25%
 
 # Put those block characters in ascending and descending triplets
-blockAsc="$(printf '%b\n' "${block25}${block50}${block75}")"
-blockDwn="$(printf '%b\n' "${block75}${block50}${block25}")"
+blockAsc="$(printf -- '%b\n' "${block25}${block50}${block75}")"
+blockDwn="$(printf -- '%b\n' "${block75}${block50}${block25}")"
 
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
-  printf '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
-  printf '\t%s\n' "Options:" \
+  printf -- '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
+  printf -- '\t%s\n' "Options:" \
     "  -a    Automatic type selection (width based)" \
     "  -g    Enable/disable git branch in the first text block" \
     "  -h    Help, usage information" \

@@ -161,6 +161,10 @@ fi
 # shellcheck source=/dev/null
 [[ -f "${HOME}/.workrc" ]] && . "${HOME}/.workrc"
 
+# Load fzf if it's present
+# shellcheck source=/dev/null
+[[ -f "${HOME}/.fzf.bash" ]] && . "${HOME}/.fzf.bash"
+
 # If pass is present, we set our environment variables
 if get_command pass; then
   # If 'gpg2' is present, we need to set $GPG

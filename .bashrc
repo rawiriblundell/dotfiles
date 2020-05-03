@@ -1547,6 +1547,8 @@ ssh-fingerprint() {
     (-a|--append)
       shift 1
       ssh-keyscan "${keyscanargs[@]}" "${*}" > "${fingerprint}" 2> /dev/null
+      # If the fingerprint file is empty, then quietly fail
+      [[ -s "${fingerprint}" ]] || return 1
       cp "${HOME}"/.ssh/known_hosts{,."$(date +%Y%m%d)"}
       cat "${fingerprint}" ~/.ssh/known_hosts |
         sort | 
@@ -1558,6 +1560,7 @@ ssh-fingerprint() {
     ;;
     (*)
       ssh-keyscan "${keyscanargs[@]}" "${*}" > "${fingerprint}" 2> /dev/null
+      [[ -s "${fingerprint}" ]] || return 1
       ssh-keygen -l -f "${fingerprint}"
     ;;
   esac

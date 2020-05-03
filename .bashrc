@@ -1532,23 +1532,35 @@ ssh() {
 
 # Display the fingerprint for a host
 ssh-fingerprint() {
-  if [[ -z "${1}" ]]; then
-    printf -- '%s\n' "Usage: ssh-fingerprint [hostname]"
-    return 1
-  fi
-
+  local fingerprint keyscanargs
   fingerprint=$(mktemp)
+
+  trap 'rm -f "${fingerprint:?}" 2>/dev/null' RETURN
 
   # Test if the local host supports ed25519
   # Older versions of ssh don't have '-Q' so also likely won't have ed25519
   # If you wanted a more portable test: 'man ssh | grep ed25519' might be it
-  if ssh -Q key 2>/dev/null | grep -q ed25519; then
-    ssh-keyscan -t ed25519,rsa,ecdsa "${1}" > "${fingerprint}" 2> /dev/null
-  else
-    ssh-keyscan "${1}" > "${fingerprint}" 2> /dev/null
-  fi
-  ssh-keygen -l -f "${fingerprint}"
-  rm -f "${fingerprint}"
+  ssh -Q key 2>/dev/null | grep -q ed25519 && keyscanargs=( -t "ed25519,rsa,ecdsa" )
+
+  # If we have an arg "-a" or "--append", we add our findings to known_hosts
+  case "${1}" in
+    (-a|--append)
+      shift 1
+      ssh-keyscan "${keyscanargs[@]}" "${*}" > "${fingerprint}" 2> /dev/null
+      cp "${HOME}"/.ssh/known_hosts{,."$(date +%Y%m%d)"}
+      cat "${fingerprint}" ~/.ssh/known_hosts |
+        sort | 
+        uniq > "${HOME}"/.ssh/known_hosts
+    ;;
+    ('')
+      printf -- '%s\n' "Usage: ssh-fingerprint (-a|--append) [list of hostnames]"
+      return 1
+    ;;
+    (*)
+      ssh-keyscan "${keyscanargs[@]}" "${*}" > "${fingerprint}" 2> /dev/null
+      ssh-keygen -l -f "${fingerprint}"
+    ;;
+  esac
 }
 
 # Test if a string contains a substring

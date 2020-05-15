@@ -648,34 +648,55 @@ epochdays() {
 
 # Function to extract common compressed file types
 extract() {
- if [[ -z "${1}" ]]; then
-    # display usage if no parameters given
-    printf -- '%s\n' "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|exe|tar.bz2|tar.gz|tar.xz|rpm>"
- else
-    if [[ -r "${1}" ]]; then
-      case "${1}" in
-        (*.tar.bz2)   tar xvjf ./"${1}"    ;;
-        (*.tar.gz)    tar xvzf ./"${1}"    ;;
-        (*.tar.xz)    tar xvJf ./"${1}"    ;;
-        (*.lzma)      unlzma ./"${1}"      ;;
-        (*.bz2)       bunzip2 ./"${1}"     ;;
-        (*.rar)       unrar x -ad ./"${1}" ;;
-        (*.gz)        gunzip ./"${1}"      ;;
-        (*.tar)       tar xvf ./"${1}"     ;;
-        (*.tbz2)      tar xvjf ./"${1}"    ;;
-        (*.tgz)       tar xvzf ./"${1}"    ;;
-        (*.zip)       unzip ./"${1}"       ;;
-        (*.Z)         uncompress ./"${1}"  ;;
-        (*.7z)        7z x ./"${1}"        ;;
-        (*.xz)        unxz ./"${1}"        ;;
-        (*.exe)       cabextract ./"${1}"  ;;
-        (*.rpm)       rpm2cpio ./"${1}" | cpio -idmv ;;
-        (*)           echo "extract: '${1}' - unknown archive method" ;;
-      esac
-    else
-      printf -- '%s\n' "'${1}' - file not found or not readable"
+  local xcmd rc fsobj
+
+  (($#)) || return
+  rc=0
+  for fsobj; do
+    xcmd=''
+
+    if [[ ! -r ${fsobj} ]]; then
+      printf -- '%s\n' "$0: file is unreadable: '${fsobj}'" >&2
+      continue
     fi
-  fi
+
+    [[ -e ./"${fsobj#/}" ]] && fsobj="./${fsobj#/}"
+
+    case ${fsobj} in
+      (*.cbt|*.t@(gz|lz|xz|b@(2|z?(2))|a@(z|r?(.@(Z|bz?(2)|gz|lzma|xz)))))
+        xcmd=(bsdtar xvf)
+      ;;
+      (*.7z*|*.arj|*.cab|*.chm|*.deb|*.dmg|*.iso|*.lzh|*.msi|*.rpm|*.udf|*.wim|*.xar)
+        xcmd=(7z x)
+      ;;
+      (*.ace|*.cba)         xcmd=(unace x) ;;
+      (*.cbr|*.rar)         xcmd=(unrar x) ;;
+      (*.cbz|*.epub|*.zip)  xcmd=(unzip) ;;
+      (*.cpio) cpio -id < "${fsobj}"; rc=$(( rc + "${?}" )); continue ;;
+      (*.cso)
+        ciso 0 "${fsobj}" "${fsobj}".iso; extract "${fsobj}".iso
+        rm -rf "${fsobj:?}"; rc=$(( rc + "${?}" ))
+        continue
+      ;;
+      (*.arc)   xcmd=(arc e);;
+      (*.bz2)   xcmd=(bunzip2);;
+      (*.exe)   xcmd=(cabextract);;
+      (*.gz)    xcmd=(gunzip);;
+      (*.lzma)  xcmd=(unlzma);;
+      (*.xz)    xcmd=(unxz);;
+      (*.Z|*.z) xcmd=(uncompress);;
+      (*.zpaq)  xcmd=(zpaq x);;
+      (*)
+        printf -- '%s\n' "$0: unrecognized file extension: '${fsobj}'" >&2
+        continue
+      ;;
+    esac
+
+    command "${xcmd[@]}" "${fsobj}"
+    rc=$(( rc + "${?}" ))
+  done
+  (( rc > 0 )) && return "${rc}"
+  return 0
 }
 
 # Go to the top of our git tree

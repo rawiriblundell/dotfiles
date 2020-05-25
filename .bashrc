@@ -50,7 +50,8 @@ set_env_path() {
     /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
     /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games \
     /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
-    "${HOME}"/.cargo /Library/TeX/texbin "${HOME}"/.fzf/bin
+    "${HOME}"/.cargo /Library/TeX/texbin "${HOME}"/.fzf/bin \
+    /usr/local/opt/fzf/bin
   )
  
   # If Android Home exists, add more dirs
@@ -153,6 +154,8 @@ dotfiles=(
   "${HOME}/.workrc"
   "${HOME}/.fzf/shell/completion.bash"
   "${HOME}/.fzf/shell/key-bindings.bash"
+  /usr/local/opt/fzf/shell/completion.bash
+  /usr/local/opt/fzf/shell/key-bindings.bash
 )
 
 # Work through our list of dotfiles, if a match is found, load it

@@ -1952,7 +1952,7 @@ yaml2json() {
 # Named for this synonym trace: history -> past -> yore.
 # 'past' kept triggering 'paste' in muscle memory :)
 yore() {
-  history | grep "${1:?No search term provided}"
+  history | grep -- "${*:?No search term provided}"
 }
 
 ################################################################################

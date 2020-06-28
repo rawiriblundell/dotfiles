@@ -280,11 +280,6 @@ if [[ "$(uname)" = "SunOS" ]]; then
   }
   
 elif [[ "$(uname)" = "Linux" ]]; then
-  # Enable wide diff, handy for side-by-side i.e. diff -y or sdiff
-  # Linux only, as -W/-w options aren't available in non-GNU
-  alias diff='diff -W $(( $(tput cols) - 2 ))'
-  alias sdiff='sdiff -w $(( $(tput cols) - 2 ))'
- 
   # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
   tty --quiet && stty erase '^?'
   
@@ -302,6 +297,12 @@ fi
 # See: https://github.com/wickett/curl-trace
 if [[ -f ~/.curl-format ]] && get_command curl; then
   alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
+fi
+
+# Test if our version of 'diff' supports the '-W' argument.  If so, we
+# enable wide diff, which is handy for side-by-side i.e. diff -y or sdiff
+if diff -W 100 <(echo a) <(echo a) >/dev/null 2>&1; then
+  alias diff='diff -W $(( "${COLUMNS:-$(tput cols)}" - 2 ))'
 fi
 
 # Again, cater for Solaris.  First test for GNU:
@@ -328,6 +329,13 @@ fi
 # When EDITOR == vim ; alias vi to vim
 [[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
 get_command vim && alias vi='vim'
+
+# It's increasingly rare to find a version of 'sdiff' that doesn't have '-w'
+# So we simply test for 'sdiff's existence and setup the alias if found
+# As with 'diff' this sets the available width
+if get_command sdiff; then
+  alias sdiff='sdiff -w $(( "${COLUMNS:-$(tput cols)}" - 2 ))'
+fi
 
 # It looks like blindly asserting the following upsets certain 
 # Solaris versions of *grep.  So we throw in an extra check

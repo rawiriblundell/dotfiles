@@ -213,6 +213,12 @@ stty ixoff -ixon
 # See: https://lists.gnu.org/archive/html/bug-bash/2019-02/msg00057.html
 set enable-bracketed-paste On
 
+# Make Tab cycle between possible completions
+# Cycle forward: Tab
+# Cycle backward: Shift-Tab
+bind TAB:menu-complete
+bind '"\e[Z": menu-complete-backward'
+
 ################################################################################
 # Programmable Completion (Tab Completion)
 

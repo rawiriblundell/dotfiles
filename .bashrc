@@ -1873,6 +1873,7 @@ up() {
     (1)         cd .. || return ;;
     (*)         cd "$(eval "printf -- '../'%.0s {1..$1}")" || return ;;
   esac
+  pwd
 }
 
 # This is based on one of the best urandom+bash random integer scripts IMHO

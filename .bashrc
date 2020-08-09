@@ -614,7 +614,7 @@ dec_to_char() {
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {
   tput setaf 1
-  printf -- '%s\n' "$@" >&2
+  printf -- '%s\n' "${*}" >&2
   tput sgr0
   return 1
 }

@@ -1565,7 +1565,7 @@ ssh() {
           continue
         fi
         local_sum=$(cksum ~/"${dotfile}" | awk '{print $1}')
-        remote_sum=$(command ssh -q "${remote_host}" cksum "${dotfile}" | awk '{print $1}')
+        remote_sum=$(command ssh -q "${remote_host}" cksum "${dotfile}" 2>/dev/null | awk '{print $1}')
         if [[ "${local_sum}" = "${remote_sum}" ]]; then
           printf -- '%s\n' "${remote_host}:~/${dotfile} matches the local version"
         else

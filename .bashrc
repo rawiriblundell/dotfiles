@@ -1995,7 +1995,7 @@ yore() {
 # https:#raw.githubusercontent.com/lpar/kpwgen/master/kpwgen.go
 # http://shorl.com/koremutake.php
 genpasswd() {
-  LC_CTYPE=C
+  export LC_CTYPE=C
   # localise variables for safety
   local OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper \
     pwdSpecial pwdSpecialChars pwdSyllables n t u v tmpArray

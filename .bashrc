@@ -1553,14 +1553,19 @@ ssh() {
       return 0
     ;;
     (dotfiles)
-      (( "${2}" )) || return 1
+      remote_host="${2:?Remote Host not defined}"
       for dotfile in .bashrc .exrc .inputrc .pwords.dict .vimrc; do
+        if ! [[ -r "${dotfile}" ]]; then
+          printf -- '%s\n' "Local copy of ${dotfile} missing" >&2
+          continue
+        fi
         local_sum=$(cksum ~/"${dotfile}" | awk '{print $1}')
-        remote_sum=$(command ssh -q "${2}" cksum "${dotfile}" | awk '{print $1}')
+        remote_sum=$(command ssh -q "${remote_host}" cksum "${dotfile}" | awk '{print $1}')
         if [[ "${local_sum}" = "${remote_sum}" ]]; then
-          printf -- '%s\n' "${dotfile} on ${2} matches the local version"
+          printf -- '%s\n' "${remote_host}:~/${dotfile} matches the local version"
         else
-          scp ~/"${dotfile}" "${2}:" || return 1
+          printf -- '%s\n' "${remote_host}:~/${dotfile} appears outdated, updating..."
+          scp ~/"${dotfile}" "${remote_host}:" || return 1
         fi
       done
     ;;

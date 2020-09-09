@@ -1552,6 +1552,18 @@ ssh() {
         "raw: Runs ssh in its default, noisy state"
       return 0
     ;;
+    (dotfiles)
+      (( "${2}" )) || return 1
+      for dotfile in .bashrc .exrc .inputrc .pwords.dict .vimrc; do
+        local_sum=$(cksum ~/"${dotfile}" | awk '{print $1}')
+        remote_sum=$(command ssh -q "${2}" cksum "${dotfile}" | awk '{print $1}')
+        if [[ "${local_sum}" = "${remote_sum}" ]]; then
+          printf -- '%s\n' "${dotfile} on ${2} matches the local version"
+        else
+          scp ~/"${dotfile}" "${2}:" || return 1
+        fi
+      done
+    ;;
     (nokeys)
       command ssh \
         -o PubkeyAuthentication=no \

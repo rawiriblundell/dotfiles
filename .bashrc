@@ -1545,10 +1545,11 @@ fi
 # and automatically adds them to ~/.ssh/known_hosts
 ssh() {
   case "${1}" in
-    (-h)
+    (-h|--help)
       command ssh -h 2>&1 | grep -v "^unknown"
       printf -- '%s\n' "Overlay options:"
-      printf -- '\t   %s\n' "nokeys: Forces password based authentication" \
+      printf -- '\t   %s\n' "dotfiles: syncs dotfiles to a remote host" \
+        "nokeys: Forces password based authentication" \
         "raw: Runs ssh in its default, noisy state"
       return 0
     ;;

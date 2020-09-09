@@ -1554,6 +1554,10 @@ ssh() {
       return 0
     ;;
     (dotfiles)
+      # Inspired by
+      # https://github.com/cdown/sshrc/blob/master/sshrc
+      # https://github.com/fsquillace/kyrat
+      # https://github.com/BarbUk/dotfiles/blob/master/bin/ssh_connect
       remote_host="${2:?Remote Host not defined}"
       for dotfile in .bashrc .exrc .inputrc .pwords.dict .vimrc; do
         if ! [[ -r "${dotfile}" ]]; then

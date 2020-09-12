@@ -1560,7 +1560,7 @@ ssh() {
       # https://github.com/BarbUk/dotfiles/blob/master/bin/ssh_connect
       remote_host="${2:?Remote Host not defined}"
       for dotfile in .bashrc .exrc .inputrc .pwords.dict .vimrc; do
-        if ! [[ -r "${dotfile}" ]]; then
+        if ! [[ -r ~/"${dotfile}" ]]; then
           printf -- '%s\n' "Local copy of ${dotfile} missing" >&2
           continue
         fi

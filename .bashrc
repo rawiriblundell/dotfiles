@@ -1085,6 +1085,23 @@ quickserve() {
   )
 }
 
+# GUI-paginated man pages
+# Inspired by the discussion here https://news.ycombinator.com/item?id=25304257
+pman() {
+  local mantext
+  case "$(uname -s)" in
+    (Darwin) man -t "${@}" | open -f -a Preview ;;
+    (Linux)
+      mantext=$(mktemp)
+      man -t "${@}" | ps2pdf - > "${mantext}"
+      (
+        evince "${mantext}"
+        rm -f "${mantext}" 2>/dev/null
+      )
+    ;;
+  esac
+}
+
 # This function prints the terminfo details for 'xterm-256color'
 # This is for importing this into systems that don't have this
 print-xterm-256color() {

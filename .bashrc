@@ -481,7 +481,7 @@ cd() {
     if is_gitdir; then
       GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
     else
-      GIT_BRANCH="NON-GIT"
+      GIT_BRANCH="NOT-GIT"
     fi
     export GIT_BRANCH
   fi

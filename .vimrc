@@ -10,10 +10,15 @@ set expandtab
 set shiftwidth=2
 set softtabstop=2
 
-try
-        colorscheme desert
-catch
-endtry
+if has('termguicolors') && has('mac')
+    set termguicolors
+endif
+
+" list desirable colorschemes in reverse order of preference
+silent! colorscheme desert
+silent! colorscheme torte
+silent! colorscheme pablo
+silent! colorscheme industry
 
 " Set encoding and default file format
 set encoding=utf8

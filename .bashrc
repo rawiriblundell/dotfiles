@@ -274,24 +274,32 @@ complete -d cd
 
 ################################################################################
 # OS specific tweaks
+# TO-DO: export as an environment var like OSSTR to minimise calls to uname
 
-if [[ "$(uname)" = "SunOS" ]]; then
-  # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
-  vi() {
-    local origWidth
-    origWidth="${COLUMNS:-$(tput cols)}"
-    (( origWidth > 160 )) && stty columns 160
-    command vi "$*"
-    stty columns "${origWidth}"
-  }
-  
-elif [[ "$(uname)" = "Linux" ]]; then
-  # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
-  tty --quiet && stty erase '^?'
+case "$(uname)" in
+  (SunOS)
+    # Function to essentially sort out "Terminal Too Wide" issue in vi on Solaris
+    vi() {
+      local origWidth
+      origWidth="${COLUMNS:-$(tput cols)}"
+      (( origWidth > 160 )) && stty columns 160
+      command vi "$*"
+      stty columns "${origWidth}"
+    }
+  ;;
+  (Linux)
+    # Correct backspace behaviour for some troublesome Linux servers that don't abide by .inputrc
+    tty --quiet && stty erase '^?'
+  ;;
+  (Darwin)
+    # OSX's 'locate' is garbage and updated weekly, 'mdfind' is updated near real-time
+    alias locate='mdfind'
+  ;;
+esac
   
 # I haven't used HP-UX in a while, but just to be sure
 # we fix the backspace quirk for xterm
-elif [[ "$(uname -s)" = "HP-UX" ]] && [[ "${TERM}" = "xterm" ]]; then
+if [[ "$(uname -s)" = "HP-UX" ]] && [[ "${TERM}" = "xterm" ]]; then
   stty intr ^c
   stty erase ^?
 fi

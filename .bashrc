@@ -1691,8 +1691,8 @@ sum() {
       ;;
       (*) sum=$(( sum + param )) ;;
     esac
-    printf -- '%d\n' "${sum}"
   done
+  printf -- '%d\n' "${sum}"
 }
 
 # Provide a very simple 'tac' step-in function

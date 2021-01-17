@@ -1664,6 +1664,37 @@ string-contains() {
   esac
 }
 
+# Add any number of integers together
+# There is a historical 'sum' program, it has long been superseded by now
+sum() {
+  local param sum
+  case "${1}" in
+    (-h|--help|--usage)
+      {
+        printf -- '%s\n' "Usage: integer_sum x y [..z], or pipeline | integer_sum"
+        printf -- '\t%s\n' \
+          "sum a sequence of integers, input by either positional parameters or STDIN"
+      } >&2
+      return 0
+    ;;
+  esac
+  if [ ! -t 0 ]; then
+    while read -r; do
+      set -- "${@}" "${REPLY}"
+    done < "${1:-/dev/stdin}"
+  fi
+  for param in "${@}"; do
+    case "${param}" in
+      (*[!0-9]*)
+        printf -- '%s\n' "${param} is not an integer" >&2
+        return 1
+      ;;
+      (*) sum=$(( sum + param )) ;;
+    esac
+    printf -- '%d\n' "${sum}"
+  done
+}
+
 # Provide a very simple 'tac' step-in function
 if ! get_command tac; then
   tac() {

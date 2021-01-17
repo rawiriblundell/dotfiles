@@ -802,12 +802,16 @@ is_gitdir() {
 }
 
 # Test if a given value is an integer
+# '[ $1 -eq $1 ]' or 'test $1 eq $1' aren't portable options
+# They're mostly portable, but in ksh they work with floats.
+# This is an integer test, not a numerical equivalence test...
+# Fun alternative:
+# [ "$(printf -- '%d' "${1:?}" 2>/dev/null)" -eq "${1}" ] 2>/dev/null
 is_integer() {
-  if test "${1}" -eq "${1}" 2>/dev/null; then
-    return 0
-  else
-    return 1
-  fi
+  case "${1:?No integer supplied}" in
+    (*[!0-9]*) return 1;;
+    (*)        return 0 ;;
+  esac
 }
 
 # Test if a given value is a global var, local var (default) or array

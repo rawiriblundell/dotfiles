@@ -1639,11 +1639,11 @@ ssh-fingerprint() {
       # If the fingerprint file is empty, then quietly fail
       [[ -s "${fingerprint}" ]] || return 1
       cp "${HOME}"/.ssh/known_hosts{,."$(date +%Y%m%d)"}
-      cat "${fingerprint}" ~/.ssh/known_hosts |
+      cat "${fingerprint}" ~/.ssh/known_hosts."$(date +%Y%m%d)" |
         sort | 
         uniq > "${HOME}"/.ssh/known_hosts
     ;;
-    ('')
+    (''|-h|--help)
       printf -- '%s\n' "Usage: ssh-fingerprint (-a|--append) [list of hostnames]"
       return 1
     ;;

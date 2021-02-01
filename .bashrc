@@ -500,7 +500,20 @@ center() {
   local width
   width="${COLUMNS:-$(tput cols)}"
   while IFS= read -r; do
-    (( ${#REPLY} >= width )) && printf -- '%s\n' "${REPLY}" && continue
+    # If, by luck, REPLY is the same as width, then just dump it
+    (( ${#REPLY} == width )) && printf -- '%s\n' "${REPLY}" && continue
+
+    # Handle lines of any length longer than width
+    # this ensures that wrapped overflow is centered
+    if (( ${#REPLY} > width )); then
+      while read -r subreply; do
+        (( ${#subreply} == width )) && printf -- '%s\n' "${subreply}" && continue
+        printf -- '%*s\n' $(( (${#subreply} + width) / 2 )) "${subreply}"
+      done < <(fold -w "${width}" <<< "${REPLY}")
+      continue
+    fi
+
+    # Otherwise, print centered
     printf -- '%*s\n' $(( (${#REPLY} + width) / 2 )) "${REPLY}"
   done < "${1:-/dev/stdin}"
   [[ -n "${REPLY}" ]] && printf -- '%s\n' "${REPLY}"

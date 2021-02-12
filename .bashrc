@@ -68,7 +68,7 @@ set_env_path() {
   # i.e. OSX, because path_helper can be slow...
   while read -r; do
     pathArray+=( "${REPLY}" )
-  done < <(cat "$(find "${HOME}"/.pathrc /etc/paths /etc/paths.d -type f 2>/dev/null)" 2>/dev/null)
+  done < <(find "${HOME}/.pathrc" /etc/paths /etc/paths.d -type f -exec cat {} \; 2>/dev/null)
 
   # Iterate through the array and build the newPath variable using found paths
   newPath=

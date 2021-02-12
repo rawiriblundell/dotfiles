@@ -32,11 +32,12 @@ set_env_path() {
   
   # If we have any args, feed them into ~/.pathrc
   if (( "${#}" > 0 )); then
+    touch "${HOME}/.pathrc"
     # shellcheck disable=SC2048
     for path in ${*}; do
       if [[ -d "${path}" ]]; then
-        if ! grep -q "${path}" "${HOME}"/.pathrc; then
-          printf -- '%s\n' "${path}" >> "${HOME}"/.pathrc
+        if ! grep -q "${path}" "${HOME}/.pathrc"; then
+          printf -- '%s\n' "${path}" >> "${HOME}/.pathrc"
         fi
       fi
     done

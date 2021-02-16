@@ -486,13 +486,12 @@ fi
 # Wrap 'cd' to automatically update GIT_BRANCH when necessary
 cd() {
   command cd "${@}" || return 1
-  if [[ "${PS1_GIT_MODE}" = True ]]; then
-    if is_gitdir; then
-      GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
-    else
-      GIT_BRANCH="NOT-GIT"
-    fi
+  if is_gitdir; then
+    PS1_GIT_MODE=True
+    GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
     export GIT_BRANCH
+  else
+    PS1_GIT_MODE=False
   fi
 }
 

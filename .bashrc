@@ -2007,6 +2007,8 @@ weather() {
   curlArgs="-H \"Accept-Language: ${LANG%_*}\" --compressed -m 10"
   case "${1}" in
     (-h|--help) request="wttr.in/:help" ;;
+    (-m|--moon)   request="wttr.in/moon" ;;
+    (-g|--graphs) shift 1; request="v2.wttr.in/${*:-Wellington}" ;;
     (*)         request="wttr.in/${*:-Wellington}" ;;
   esac
 

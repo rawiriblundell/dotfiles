@@ -2058,7 +2058,27 @@ yaml2json() {
 # Named for this synonym trace: history -> past -> yore.
 # 'past' kept triggering 'paste' in muscle memory :)
 yore() {
-  history | grep -- "${*:?No search term provided}"
+  local param search_pattern filter_pattern
+  case "${*}" in
+    (*-f*|*--filter*)
+      # Cater for 'yore --filter [filter pattern] [search pattern]'
+      # and 'yore [search pattern] --filter [filter pattern]'
+      case "${1}" in
+        (*-f*|*--filter*) search_pattern="${@:$#}" ;;
+        (*)               search_pattern="${1}" ;;
+      esac
+      for param in "${@}"; do
+        shift 1
+        [[ "${param}" = "-f" ]] && continue
+        [[ "${param}" = "--filter" ]] && continue
+        [[ "${param}" = "${search_pattern}" ]] && continue
+        filter_pattern="${param}"
+      done
+      history | grep -E -- "${search_pattern}" | grep -Ev -- "${filter_pattern}"
+    ;;
+    ('') printf -- '%s\n' "Usage: yore [pattern] [-f|--filter pattern]" >&2 ;;
+    (*)  history | grep -E -- "${*}" ;;
+  esac
 }
 
 ################################################################################

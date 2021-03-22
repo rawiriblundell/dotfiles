@@ -2060,21 +2060,23 @@ yaml2json() {
 yore() {
   local param search_pattern filter_pattern
   case "${*}" in
-    (*-f*|*--filter*)
-      # Cater for 'yore --filter [filter pattern] [search pattern]'
-      # and 'yore [search pattern] --filter [filter pattern]'
+    (*-v*|*--invert-match*|*--not*)
+      # Cater for 'yore --not [filter pattern] [search pattern]'
+      # and 'yore [search pattern] --not [filter pattern]'
       case "${1}" in
-        (*-f*|*--filter*) search_pattern="${@:$#}" ;;
-        (*)               search_pattern="${1}" ;;
+        (*-v*|*--invert-match*|*--not*) search_pattern="${*:$#}" ;;
+        (*)                             search_pattern="${1}" ;;
       esac
       for param in "${@}"; do
         shift 1
-        [[ "${param}" = "-f" ]] && continue
-        [[ "${param}" = "--filter" ]] && continue
         [[ "${param}" = "${search_pattern}" ]] && continue
-        filter_pattern="${param}"
+        case "${param}" in
+          (-v|--invert-match|--not) continue ;;
+          (*)                       filter_pattern="${param}" ;;
+        esac
       done
-      history | grep -E -- "${search_pattern}" | grep -Ev -- "${filter_pattern}"
+      # Filter first so that any grep colour settings work for the search
+      history | grep -Ev -- "${filter_pattern}" | grep -E -- "${search_pattern}" 
     ;;
     ('') printf -- '%s\n' "Usage: yore [pattern] [-f|--filter pattern]" >&2 ;;
     (*)  history | grep -E -- "${*}" ;;

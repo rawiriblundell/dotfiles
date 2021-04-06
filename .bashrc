@@ -657,6 +657,51 @@ dec_to_char() {
   printf "\\$(printf -- '%03o' "${int}")"
 }
 
+delete-branch() {
+  local unwanted_branches current_branch mode
+  current_branch="$(git symbolic-ref -q HEAD)"
+  current_branch="${current_branch##refs/heads/}"
+  current_branch="${current_branch:-HEAD}"
+
+  case "${1}" in
+    (--local)  shift 1; mode=local ;;
+    (--remote) shift 1; mode=remote ;;
+    (--both)   shift 1; mode=both ;;
+    (*)        mode=local ;;
+  esac
+
+  case "${1}"  in
+    ('')
+      unwanted_branches=$(
+        git branch |
+          grep --invert-match '^\*' |
+          cut -c 3- |
+          fzf --multi --preview="git log {}"
+      )
+    ;;
+    (*)  unwanted_branches="${*}" ;;
+  esac
+
+  case "${mode}" in
+    (local)
+      for branch in ${unwanted_branches}; do
+        git branch --delete --force "${branch}"
+      done
+    ;;
+    (remote)
+      for branch in ${unwanted_branches}; do
+        git push origin --delete "${branch}"
+      done
+    ;;
+    (both)
+      for branch in ${unwanted_branches}; do
+        git branch --delete --force "${branch}"
+        git push origin --delete "${branch}"
+      done
+    ;;
+  esac
+}
+
 # Optional error handling function
 # See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
 die() {

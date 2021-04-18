@@ -54,7 +54,7 @@ bashrc_update() {
 # A function to update the PATH variable
 # shellcheck disable=SC2120
 set_env_path() {
-  local path dir newPath
+  local path dir new_path
   
   # If we have any args, feed them into ~/.pathrc
   if (( "${#}" > 0 )); then
@@ -96,18 +96,18 @@ set_env_path() {
     pathArray+=( "${REPLY}" )
   done < <(find "${HOME}/.pathrc" /etc/paths /etc/paths.d -type f -exec cat {} \; 2>/dev/null)
 
-  # Iterate through the array and build the newPath variable using found paths
-  newPath=
+  # Iterate through the array and build the new_path variable using found paths
+  new_path=
   for dir in "${pathArray[@]}"; do
-    # If it's already in newPath, skip on to the next dir
-    case "${newPath}" in 
+    # If it's already in new_path, skip on to the next dir
+    case "${new_path}" in 
       (*:${dir}:*|*:${dir}$) continue ;; 
     esac
-    [[ -d "${dir}" ]] && newPath="${newPath}:${dir}"
+    [[ -d "${dir}" ]] && new_path="${new_path}:${dir}"
   done
 
-  # Now assign our freshly built newPath variable, removing any leading colon
-  PATH="${newPath#:}"
+  # Now assign our freshly built new_path variable, removing any leading colon
+  PATH="${new_path#:}"
 
   # Finally, export the PATH
   export PATH
@@ -228,6 +228,9 @@ HISTIGNORE='ls:bg:fg:history*:yore*:redo*:exit'
 # For setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 HISTSIZE=5000
 HISTFILESIZE=5000
+
+# Define a number of cd's to keep track of
+CDHISTSIZE=30
 
 # If we're disconnected, capture whatever is in history
 trap 'history -a' SIGHUP
@@ -429,6 +432,17 @@ export LESS_TERMCAP_so LESS_TERMCAP_ue LESS_TERMCAP_us
 ################################################################################
 # Functions
 
+# A helper for git information in 'setprompt()' and others
+_set_git_branch_var() {
+  if is_gitdir; then
+    PS1_GIT_MODE=True
+    GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+    export GIT_BRANCH
+  else
+    PS1_GIT_MODE=False
+  fi
+}
+
 # Because you never know what crazy systems are out there
 get_command apropos || apropos() { man -k "$*"; }
 
@@ -485,7 +499,7 @@ capitalise() {
   # Otherwise, if a parameter exists, then capitalise all given elements
   # Processing follows the same path as before.
   elif [[ -n "$*" ]]; then
-    for inString in "$@"; do
+    for inString in "${@}"; do
       capitalise-string "${inString}"
     done | paste -sd ' ' -
   fi
@@ -509,16 +523,68 @@ else
   }
 fi
 
+# A function that helps to manage the CDHIST array
+_cdhist() {
+  local CDHISTSIZE_CUR
+  CDHISTSIZE_CUR="${#CDHIST[@]}"
+  case "${1}" in
+    (list)
+      local i j
+      i="${#CDHIST[@]}"
+      j="0"
+      until (( i == 0 )); do
+        printf -- '%s\n' "-${i} ${CDHIST[j]}"
+        (( --i )); (( ++j ))
+      done
+    ;;
+    (append)
+      local element
+      # Ensure that we're working with a directory
+      [[ -d "${2}" ]] || return 1
+      # Ensure that we're not adding a duplicate entry
+      # This array should be small enough to loop over without any impact
+      for element in "${CDHIST[@]}"; do
+        [[ "${element}" = "${2}" ]] && return 0
+      done
+      # Ensure that we remain within CDHISTSIZE by rotating out older elements
+      if (( CDHISTSIZE_CUR >= "${CDHISTSIZE:-30}" )); then
+        CDHIST=( "${CDHIST[@]:1}" )
+      fi
+      # Add the newest element
+      CDHIST+=( "${2}" )
+    ;;
+    (select)
+      local cdhist_target offset
+      offset="${2}"
+      cdhist_target="$(( CDHISTSIZE_CUR + offset ))"
+      printf -- '%s\n' "${CDHIST[cdhist_target]}"
+    ;;
+  esac
+}
+
 # Wrap 'cd' to automatically update GIT_BRANCH when necessary
+# -- or -l : list the contents of the CDHIST stack
+# up [n]   : go 'up' n directories e.g. 'cd ../../../' = 'cd up 3'
+# -[n]     : go to the nth element of the CDHIST stack
 cd() {
-  command cd "${@}" || return 1
-  if is_gitdir; then
-    PS1_GIT_MODE=True
-    GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
-    export GIT_BRANCH
-  else
-    PS1_GIT_MODE=False
-  fi
+  case "${1}" in
+    (-)       command cd - && return 0 ;;
+    (--|-l)   _cdhist list && return 0 ;;
+    (-[0-9]*) command cd "$(_cdhist select "${1}")" ;;
+    (up)
+      shift 1
+      case "${1}" in
+        (*[!0-9]*) return 1 ;;
+        ("")       command cd || return 1 ;;
+        (1)        command cd .. || return 1 ;;
+        (*)        command cd "$(eval "printf -- '../'%.0s {1..$1}")" || return 1 ;;
+      esac
+    ;;
+    (*)       command cd "${@}" || return 1 ;;
+  esac
+  pwd
+  _set_git_branch_var
+  _cdhist append "${PWD}"
 }
 
 # Print the given text in the center of the screen.
@@ -601,17 +667,6 @@ fi
 
 # Indent code by four spaces, useful for posting in markdown
 codecat() { indent 4 "${1}"; }
-
-# A shell conversion of
-# https://gist.github.com/caseydunham/508e2994e1195e4cb8e4
-convert_ldaptime_to_unixepoch() {
-  local ldap_offset ldap_timestamp
-  ldap_timestamp="${1:?No ldap timestamp supplied}"
-  ldap_timestamp=$(( ldap_timestamp / 10000000 ))
-  # Calculated as '( (1970-1601) * 365 -3 + ((1970-1601)/4) ) * 86400'
-  ldap_offset=11644473600
-  printf -- '%s\n' "$(( ldap_timestamp - ldap_offset ))"
-}
 
 # Provide a function to compress common compressed Filetypes
 compress() {
@@ -713,7 +768,7 @@ die() {
 
 # Basic step-in function for dos2unix
 # This simply removes dos line endings using 'sed'
-if ! command -v dos2unix &>/dev/null; then
+if ! get_command dos2unix; then
   dos2unix() {
     if [[ "${1:0:1}" = '-' ]]; then
       printf -- '%s\n' "This is a simple step-in function, '${1}' isn't supported"
@@ -845,16 +900,6 @@ godmode() {
   else
     sudo "$@"
   fi
-}
-
-# Sort history by most used commands, can optionally print n lines (e.g. histrank [n])
-histrank() { 
-  HISTTIMEFORMAT="%y/%m/%d %T " history \
-    | awk '{out=$4; for(i=5;i<=NF;i++){out=out" "$i}; print out}' \
-    | sort \
-    | uniq -c \
-    | sort -nk1 \
-    | tail -n "${1:-$(tput lines)}"
 }
 
 # Write a horizontal line of characters
@@ -1749,7 +1794,7 @@ sum() {
   case "${1}" in
     (-h|--help|--usage)
       {
-        printf -- '%s\n' "Usage: integer_sum x y [..z], or pipeline | integer_sum"
+        printf -- '%s\n' "Usage: sum x y [..z], or pipeline | sum"
         printf -- '\t%s\n' \
           "sum a sequence of integers, input by either positional parameters or STDIN"
       } >&2
@@ -1785,26 +1830,6 @@ if ! get_command tac; then
     fi
   }
 fi
-
-# Throttle stdout
-throttle() {
-  # Check that stdin isn't empty
-  if [[ -t 0 ]]; then
-    printf -- '%s\n' "Usage:  pipe | to | throttle [n]" ""
-    printf -- '\t%s\n'  "Increment line by line through the output of other commands" "" \
-      "Delay between each increment can be defined.  Default is 1 second."
-    return 0
-  fi
-
-  # Default the sleep time to 1 second
-  sleepTime="${1:-1}"
-
-  # Now we output line by line with a sleep in the middle
-  while read -r; do
-    printf -- '%s\n' "${REPLY}"
-    sleep "${sleepTime}" 2>/dev/null || sleep 1
-  done
-}
 
 # Check if 'timeout' is available, if not, enable a stop-gap function
 if ! get_command timeout; then
@@ -2025,45 +2050,6 @@ trim() {
   fi
 }
 
-# Provide 'up', so instead of e.g. 'cd ../../../' you simply type 'up 3'
-up() {
-  case "${1}" in
-    (*[!0-9]*)  : ;;
-    ("")        cd || return ;;
-    (1)         cd .. || return ;;
-    (*)         cd "$(eval "printf -- '../'%.0s {1..$1}")" || return ;;
-  esac
-  pwd
-}
-
-# This is based on one of the best urandom+bash random integer scripts IMHO
-# FYI: randInt is significantly faster
-# https://unix.stackexchange.com/a/413890
-urandInt() {
-  local intCount rangeMin rangeMax range bytes t maxvalue mult hexrandom
-  intCount="${1:-1}"
-  rangeMin="${2:-1}"
-  rangeMax="${3:-32767}"
-  range=$(( rangeMax - rangeMin + 1 ))
-
-  bytes=0
-  t="${range}"
-  while (( t > 0 )); do
-    (( t=t>>8, bytes++ ))
-  done
-
-  maxvalue=$((1<<(bytes*8)))
-  mult=$((maxvalue/range - 1))
-
-  while (( i++ < intCount )); do
-    while :; do
-      hexrandom=$(dd if=/dev/urandom bs=1 count=${bytes} 2>/dev/null | xxd -p)
-      (( 16#$hexrandom < range * mult )) && break
-    done
-    printf -- '%u\n' "$(( (16#$hexrandom%range) + rangeMin ))"
-  done
-}
-
 # Get local weather and present it nicely
 weather() {
   # We require 'curl' so check for it
@@ -2094,16 +2080,29 @@ weather() {
 # Function to display a list of users and their memory and cpu usage
 # Non-portable swap: for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r
 what() {
-  # Start processing $1.  I initially tried coding this with getopts but it blew up
-  if [[ "${1}" = "-c" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k7 -rn
-  elif [[ "${1}" = "-m" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | sort -k4 -rn
-  elif [[ -z "${1}" ]]; then
-    ps -eo pcpu,vsz,user | tail -n +2 | awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
-  else
-    printf -- '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
-  fi
+  case "${1}" in
+    (-h|--help)
+      printf -- '%s\n' "what - list all users and their memory/cpu usage (think 'who' and 'what')" \
+        "Usage: what [-c (sort by cpu usage) -m (sort by memory usage)]"
+    ;;
+    (-c)
+      ps -eo pcpu,vsz,user | 
+        tail -n +2 | 
+        awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | 
+        sort -k7 -rn
+    ;;
+    (-m)
+      ps -eo pcpu,vsz,user | 
+        tail -n +2 | 
+        awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }' | 
+        sort -k4 -rn
+    ;;
+    ('')
+      ps -eo pcpu,vsz,user |
+        tail -n +2 | 
+        awk '{ cpu[$3]+=$1; vsz[$3]+=$2 } END { for (user in cpu) printf("%-10s - Memory: %10.1f KiB, CPU: %4.1f%\n", user, vsz[user]/1024, cpu[user]); }'
+    ;;
+  esac
 }
 
 # Function to get the owner of a file

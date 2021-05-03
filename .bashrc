@@ -571,6 +571,16 @@ cd() {
     (-)       command cd - && return 0 ;;
     (--|-l)   _cdhist list && return 0 ;;
     (-[0-9]*) command cd "$(_cdhist select "${1}")" ;;
+    (-f|--fzf|select)
+      if ! command -v fzf >/dev/null 2>&1; then
+        printf -- '%s\n' "'fzf' is required, but was not found in PATH" >&2
+        return 1
+      fi
+      cdhist_result=$(printf -- '%s\n' "${CDHIST[@]}" | fzf -e --height 40% --border)
+      if [[ -n "${cdhist_result}" ]]; then
+        command cd "${cdhist_result}"
+      fi
+    ;;
     (up)
       shift 1
       case "${1}" in

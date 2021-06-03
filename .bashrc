@@ -370,9 +370,18 @@ else
   alias ll='ls -alF'        # list long
 fi
 
-# When EDITOR == vim ; alias vi to vim
-[[ "${EDITOR##*/}" = "vim" ]] && alias vi='vim'
-get_command vim && alias vi='vim'
+# Straighten out $EDITOR and alias 'vi' by order of preference: 
+# nvim -> vim -> vi
+if get_command nvim; then
+  EDITOR="$(get_command nvim)"
+  alis vi='nvim'
+elif get_command vim; then
+  EDITOR="$(get_command vim)"
+  alis vi='vim'
+else
+  EDITOR="$(get_command vi)"
+fi
+export EDITOR
 
 # It's increasingly rare to find a version of 'sdiff' that doesn't have '-w'
 # So we simply test for 'sdiff's existence and setup the alias if found

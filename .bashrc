@@ -374,10 +374,10 @@ fi
 # nvim -> vim -> vi
 if get_command nvim; then
   EDITOR="$(get_command nvim)"
-  alis vi='nvim'
+  alias vi='nvim'
 elif get_command vim; then
   EDITOR="$(get_command vim)"
-  alis vi='vim'
+  alias vi='vim'
 else
   EDITOR="$(get_command vi)"
 fi

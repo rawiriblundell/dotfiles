@@ -1158,42 +1158,54 @@ old() { cp --reflink=auto "${1}"{,.old} 2>/dev/null || cp "${1}"{,.old}; }
 # A function to print a specific line from a file
 # TO-DO: Update it to handle globs e.g. 'printline 4 *'
 printline() {
-  # If $1 is empty, print a usage message
-  if [[ -z "${1}" ]]; then
-    printf -- '%s\n' "Usage:  printline n [file]" ""
-    printf -- '\t%s\n' "Print the Nth line of FILE." "" \
-      "With no FILE or when FILE is -, read standard input instead."
-    return 0
+  # Fail early: We require sed
+  if ! command -v sed >/dev/null 2>&1; then
+    printf -- '%s\n' "[ERROR] printline: This function depends on 'sed' which was not found." >&2
+    return 1
   fi
 
-  # Check that $1 is a number, if it isn't print an error message
+  # If $1 is empty, print a usage message
+  # Otherwise, check that $1 is a number, if it isn't print an error message
   # If it is, blindly convert it to base10 to remove any leading zeroes
-  case $1 in
-    (''|*[!0-9]*) printf -- '%s\n' "[ERROR] printline: '${1}' does not appear to be a number." "" \
-                    "Run 'printline' with no arguments for usage.";
-                  return 1 ;;
-    (*)           local lineNo="$((10#$1))" ;;
+  case "${1}" in
+    (''|-h|--help|--usage|help|usage)
+      printf -- '%s\n' "Usage:  printline n [file]" ""
+      printf -- '\t%s\n' "Print the Nth line of FILE." "" \
+        "With no FILE or when FILE is -, read standard input instead."
+      return 0
+    ;;
+    (*[!0-9]*)
+      printf -- '%s\n' "[ERROR] printline: '${1}' does not appear to be a number." "" \
+        "Run 'printline' with no arguments for usage." >&2
+      return 1
+    ;;
+    (*) local lineNo="$((10#${1})){p;q;}" ;;
   esac
 
-  # Next, if $2 is set, check that we can actually read it
+  # Next, we handle $2.  First, we check if it's a number, indicating a line range
+  if (( "${2}" )) 2>/dev/null; then
+    # Stack the numbers in lowest,highest order
+    if (( "${2}" > "${1}" )); then
+      lineNo="${1},$((10#${2}))p;$((10#${2}+1))q;"
+    else
+      lineNo="$((10#${2})),${1}p;$((${1}+1))q;"
+    fi
+    shift 1
+  fi
+
+  # Otherwise, we check if it's a readable file
   if [[ -n "${2}" ]]; then
     if [[ ! -r "${2}" ]]; then
       printf -- '%s\n' "[ERROR] printline: '$2' does not appear to exist or I can't read it." "" \
-        "Run 'printline' with no arguments for usage."
+        "Run 'printline' with no arguments for usage." >&2
       return 1
     else
       local file="${2}"
     fi
   fi
 
-  # Finally after all that testing is done, we throw in a cursory test for 'sed'
-  if get_command sed; then
-    sed -ne "${lineNo}{p;q;}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
-  # Otherwise we print a message that 'sed' isn't available
-  else
-    printf -- '%s\n' "[ERROR] printline: This function depends on 'sed' which was not found."
-    return 1
-  fi
+  # Finally after all that testing and setup is done
+  sed -ne "${lineNo}" -e "\$s/.*/[ERROR] printline: End of stream reached./" -e '$ w /dev/stderr' "${file:-/dev/stdin}"
 }
 
 # Start an HTTP server, optionally specifying the port and directory

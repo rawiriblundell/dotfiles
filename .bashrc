@@ -332,7 +332,12 @@ case "$(uname)" in
     alias locate='mdfind'
     # If we have GNU coreutils via brew, we should have the man pages too
     if [[ -d "/usr/local/opt/coreutils/libexec/gnuman" ]]; then
-      MANPATH="/usr/local/opt/coreutils/libexec/gnuman:${MANPATH}"
+      case "${MANPATH}" in 
+        (/usr/local/opt/coreutils/libexec/gnuman:*) : ;;
+        (*)
+          MANPATH="/usr/local/opt/coreutils/libexec/gnuman:${MANPATH:-/usr/share/man}"
+        ;;
+      esac
     fi
   ;;
 esac

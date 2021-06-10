@@ -118,40 +118,43 @@ set_env_path() {
 # shellcheck disable=SC2119
 set_env_path
 
-# A portable alternative to exists/get_command/which/type
-pathfind() {
-  OLDIFS="${IFS}"
-  IFS=:
-  for prog in ${PATH}; do
-    if [[ -x "${prog}/$*" ]]; then
-      printf -- '%s\n' "${prog}/$*"
-      IFS="${OLDIFS}"
+# Functionalise 'command -v' to allow 'if get_command [command]' idiom
+get_command() {
+  local errcount cmd
+  case "${1}" in
+    (-v|--verbose)
+      shift 1
+      errcount=0
+      for cmd in "${@}"; do
+        command -v "${cmd}" || 
+          { printf -- '%s\n' "${cmd} not found"; (( errcount++ )); }
+      done
+      (( errcount == 0 )) && return 0
+    ;;
+    ('')
+      printf -- '%s\n' "get_command [-v|--verbose] list of commands" \
+        "get_command will emit return code 1 if any listed command is not found" >&2
       return 0
-    fi
-  done
-  IFS="${OLDIFS}"
+    (*)
+      errcount=0
+      for cmd in "${@}"; do
+        command -v "${1}" >/dev/null 2>&1 || (( errcount++ ))
+      done
+      (( errcount == 0 )) && return 0
+  esac
+  # If we get to this point, we've failed
   return 1
 }
-
-# Functionalise 'command -v' to allow 'if get_command [command]' idiom
-get_command() { command -v "${1}" &>/dev/null; }
 alias exists='get_command'
 alias is_command='get_command'
 
-# Check if /usr/bin/sudo and /bin/bash exist
-# If not, try to find them and suggest a symlink
-if [[ ! -f /usr/bin/sudo ]]; then
-  if pathfind sudo &>/dev/null; then
-    printf -- '%s\n' "/usr/bin/sudo not found.  Please run 'sudo ln -s $(pathfind sudo) /usr/bin/sudo'"
-  else
-    printf -- '%s\n' "/usr/bin/sudo not found, and I couldn't find 'sudo' in '$PATH'"
-  fi
-fi
+# Check if /bin/bash exists, if not suggest a symlink
+# This is the correct solution to the "/usr/bin/env bash" debate IMHO
 if [[ ! -f /bin/bash ]]; then
-  if pathfind bash &>/dev/null; then
-    printf -- '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(pathfind bash) /bin/bash'"
+  if get_command bash; then
+    printf -- '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(get_command -v bash | head -n 1) /bin/bash'" >&2
   else
-    printf -- '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '$PATH'"
+    printf -- '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '${PATH}'" >&2
   fi
 fi
 

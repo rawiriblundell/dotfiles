@@ -571,6 +571,19 @@ _cdhist() {
   esac
 }
 
+# If CDHIST is empty, try to pre-load it from bash_history
+_cdhist_skel() {
+  awk '/^cd \//{ if (!a[$0]++) print;}' "${HOME}/.bash_history" | 
+    cut -d ' ' -f2- | 
+    tail -n "${CDHISTSIZE:-30}"
+}
+
+if (( "${#CDHIST[@]}" == 0 )); then
+  while read -r; do
+    _cdhist append "${REPLY}"
+  done < <(_cdhist_skel)
+fi
+
 # Wrap 'cd' to automatically update GIT_BRANCH when necessary
 # -- or -l : list the contents of the CDHIST stack
 # up [n]   : go 'up' n directories e.g. 'cd ../../../' = 'cd up 3'

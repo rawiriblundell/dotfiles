@@ -69,14 +69,15 @@ set_env_path() {
     done
   fi
 
-  # Open an array of potential PATH members, including Solaris bin/sbin paths
+  # Open an array of potential PATH members
+  # This allows us to bias bindirs for a better experience on Solaris and MacOS
   pathArray=(
-    /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/kerberos/bin \
-    /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin /usr/local/bin \
-    /usr/local/sbin /usr/local/opt/texinfo/bin /usr/local/opt/libxml2/bin \
-    /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin /opt/sfw/sbin \
-    /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games /usr/local/games \
-    /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
+    /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/local/opt/coreutils/libexec/gnubin \
+    /usr/kerberos/bin /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin \
+    /usr/local/bin /usr/local/sbin /usr/local/opt/texinfo/bin \
+    /usr/local/opt/libxml2/bin /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin \
+    /opt/sfw/sbin /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games \
+    /usr/local/games /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
     "${HOME}"/.cargo /Library/TeX/texbin "${HOME}"/.fzf/bin \
     /usr/local/opt/fzf/bin
   )
@@ -324,6 +325,10 @@ case "$(uname)" in
   (Darwin)
     # OSX's 'locate' is garbage and updated weekly, 'mdfind' is updated near real-time
     alias locate='mdfind'
+    # If we have GNU coreutils via brew, we should have the man pages too
+    if [[ -d "/usr/local/opt/coreutils/libexec/gnuman" ]]; then
+      MANPATH="/usr/local/opt/coreutils/libexec/gnuman:${MANPATH}"
+    fi
   ;;
 esac
   

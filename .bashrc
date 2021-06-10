@@ -73,7 +73,7 @@ set_env_path() {
   # This allows us to bias bindirs for a better experience on Solaris and MacOS
   pathArray=(
     /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/local/opt/coreutils/libexec/gnubin \
-    /usr/local/opt/gnu-sed/libexec/gnubin \
+    /usr/local/opt/gnu-sed/libexec/gnubin /usr/local/opt/grep/libexec/gnubin \
     /usr/kerberos/bin /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin \
     /usr/local/bin /usr/local/sbin /usr/local/opt/texinfo/bin \
     /usr/local/opt/libxml2/bin /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin \

@@ -135,12 +135,14 @@ get_command() {
       printf -- '%s\n' "get_command [-v|--verbose] list of commands" \
         "get_command will emit return code 1 if any listed command is not found" >&2
       return 0
+    ;;
     (*)
       errcount=0
       for cmd in "${@}"; do
         command -v "${1}" >/dev/null 2>&1 || (( errcount++ ))
       done
       (( errcount == 0 )) && return 0
+    ;;
   esac
   # If we get to this point, we've failed
   return 1

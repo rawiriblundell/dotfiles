@@ -214,6 +214,17 @@ if get_command pass; then
   export GPG GPG_OPTS GPG_TTY
 fi
 
+# If an ssh private key is found, spin up an agent and load the key(s)
+if file "${HOME}/.ssh/"* | grep "private key" >/dev/null 2>&1; then
+  printf -- '\n======> %s\n\n' "Private ssh keys found, setting up ssh-agent..."
+  if [[ ! -S "${HOME}/.ssh/"ssh_auth_sock ]]; then
+    eval $(ssh-agent -s)
+    ln -sf "${SSH_AUTH_SOCK}" "${HOME}/.ssh/"ssh_auth_sock
+  fi
+  export SSH_AUTH_SOCK="${HOME}/.ssh/"ssh_auth_sock
+  ssh-add -l > /dev/null || ssh-add
+fi
+
 ################################################################################
 # Setup our desired shell options
 shopt -s checkwinsize cdspell extglob histappend
@@ -493,7 +504,7 @@ capitalise() {
     printf -- '\t%s\n' "Capitalises the first character of STRING and/or its elements."
     return 0
   # Disallow both piping in strings and declaring strings
-  elif [[ ! -t 0 ]] && [[ ! -z "${1}" ]]; then
+  elif [[ ! -t 0 ]] && [[ -n "${1}" ]]; then
     printf -- '%s\n' "[ERROR] capitalise: Please select either piping in or declaring a string to capitalise, not both."
     return 1
   fi

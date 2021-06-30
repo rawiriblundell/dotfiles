@@ -400,13 +400,13 @@ fi
 # Straighten out $EDITOR and alias 'vi' by order of preference: 
 # nvim -> vim -> vi
 if get_command nvim; then
-  EDITOR="$(get_command nvim)"
+  EDITOR="$(get_command -v nvim)"
   alias vi='nvim'
 elif get_command vim; then
-  EDITOR="$(get_command vim)"
+  EDITOR="$(get_command -v vim)"
   alias vi='vim'
 else
-  EDITOR="$(get_command vi)"
+  EDITOR="$(get_command -v vi)"
 fi
 export EDITOR
 

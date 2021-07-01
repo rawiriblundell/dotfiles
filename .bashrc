@@ -2199,28 +2199,32 @@ yaml2json() {
 # Named for this synonym trace: history -> past -> yore.
 # 'past' kept triggering 'paste' in muscle memory :)
 yore() {
-  local param search_pattern filter_pattern
-  case "${*}" in
-    (*-v*|*--invert-match*|*--not*)
-      # Cater for 'yore --not [filter pattern] [search pattern]'
-      # and 'yore [search pattern] --not [filter pattern]'
-      case "${1}" in
-        (*-v*|*--invert-match*|*--not*) search_pattern="${*:$#}" ;;
-        (*)                             search_pattern="${1}" ;;
-      esac
-      for param in "${@}"; do
-        shift 1
-        [[ "${param}" = "${search_pattern}" ]] && continue
+  case "${#}" in
+    (0)
+      printf -- '%s\n' "Usage: yore [pattern] [-v|--invert-match|--not pattern]" >&2
+    ;;
+    (1)
+      history | grep -E -- "${*}"
+    ;;
+    (*)
+      local params index param filter_index filter_pattern search_pattern
+      params=( "${@}" )
+      index=0
+      for param in "${params[@]}"; do
         case "${param}" in
-          (-v|--invert-match|--not) continue ;;
-          (*)                       filter_pattern="${param}" ;;
+          (-v|--invert-match|--not)
+            filter_index=$(( index + 1 ))
+            filter_pattern="${params[$filter_index]}"
+            unset "params[$index]" "params[$filter_index]"
+          ;;
+          (*) (( ++index )) ;;
         esac
       done
+
+      search_pattern="${params[*]}"
       # Filter first so that any grep colour settings work for the search
       history | grep -Ev -- "${filter_pattern}" | grep -E -- "${search_pattern}" 
     ;;
-    ('') printf -- '%s\n' "Usage: yore [pattern] [-f|--filter pattern]" >&2 ;;
-    (*)  history | grep -E -- "${*}" ;;
   esac
 }
 

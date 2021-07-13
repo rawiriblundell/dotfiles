@@ -218,7 +218,7 @@ fi
 if file "${HOME}/.ssh/"* | grep "private key" >/dev/null 2>&1; then
   if [[ ! -S "${HOME}/.ssh/"ssh_auth_sock ]]; then
     printf -- '\n======> %s\n\n' "Private ssh keys found, setting up ssh-agent..."
-    eval $(ssh-agent -s)
+    eval "$(ssh-agent -s)"
     ln -sf "${SSH_AUTH_SOCK}" "${HOME}/.ssh/"ssh_auth_sock
   fi
   export SSH_AUTH_SOCK="${HOME}/.ssh/"ssh_auth_sock
@@ -623,7 +623,7 @@ cd() {
   case "${1}" in
     (-)       command cd - && return 0 ;;
     (--|-l)   _cdhist list && return 0 ;;
-    (-[0-9]*) command cd "$(_cdhist select "${1}")" ;;
+    (-[0-9]*) command cd "$(_cdhist select "${1}")" || return 1 ;;
     (-f|--fzf|select)
       if ! command -v fzf >/dev/null 2>&1; then
         printf -- '%s\n' "'fzf' is required, but was not found in PATH" >&2
@@ -631,7 +631,7 @@ cd() {
       fi
       cdhist_result=$(printf -- '%s\n' "${CDHIST[@]}" | fzf -e --height 40% --border)
       if [[ -n "${cdhist_result}" ]]; then
-        command cd "${cdhist_result}"
+        command cd "${cdhist_result}" || return 1
       fi
     ;;
     (up)

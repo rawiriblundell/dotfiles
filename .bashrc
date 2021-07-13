@@ -600,6 +600,7 @@ _cdhist() {
 
 # If CDHIST is empty, try to pre-load it from bash_history
 _cdhist_skel() {
+  [[ -r "${HOME}/.bash_history" ]] || return 1
   awk '/^cd \//{ if (!a[$0]++) print;}' "${HOME}/.bash_history" | 
     cut -d ' ' -f2- | 
     tail -n "${CDHISTSIZE:-30}"
@@ -607,7 +608,10 @@ _cdhist_skel() {
 
 if (( "${#CDHIST[@]}" == 0 )); then
   while read -r; do
-    _cdhist append "${REPLY}"
+    case "${REPLY}" in
+      ('') : ;;
+      (*)  _cdhist append "${REPLY}" ;;
+    esac
   done < <(_cdhist_skel)
 fi
 

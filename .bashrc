@@ -948,6 +948,16 @@ get_certexpiry() {
 # See e.g. https://stackoverflow.com/q/6245570
 if get_command git; then
   git() {
+    # If the args contain any mention of a master branch, we check for the newer 
+    # 'main' nomenclature.  We take no other position than to suggest the correct command.
+    if [[ "${*}" =~ 'master' ]]; then
+      if command git branch 2>/dev/null | grep -qw "main"; then
+        printf -- '%s\n' "This repo uses 'main' rather than 'master'." \
+          "Try: 'git ${*/master/main}'" \
+          "To override this warning, try: 'command git ${*}'" >&2
+        return 1
+      fi
+    fi
     command git "${@}"
     GIT_BRANCH="$(command git branch 2>/dev/null| sed -n '/\* /s///p')"
     export GIT_BRANCH

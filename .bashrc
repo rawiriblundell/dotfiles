@@ -645,7 +645,7 @@ cd() {
     ;;
     (*)       command cd "${@}" || return 1 ;;
   esac
-  pwd
+  printf -- '%s\n' "${PWD:-$(pwd)}" >&2
   _set_git_branch_var
   _cdhist append "${PWD}"
 }

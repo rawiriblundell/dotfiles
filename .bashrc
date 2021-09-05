@@ -620,6 +620,7 @@ fi
 # up [n]   : go 'up' n directories e.g. 'cd ../../../' = 'cd up 3'
 # -[n]     : go to the nth element of the CDHIST stack
 cd() {
+  local arg cdhist_result
   case "${1}" in
     (-)       command cd - && return 0 ;;
     (--|-l)   _cdhist list && return 0 ;;
@@ -643,7 +644,22 @@ cd() {
         (*)        command cd "$(eval "printf -- '../'%.0s {1..$1}")" || return 1 ;;
       esac
     ;;
-    (*)       command cd "${@}" || return 1 ;;
+    (-L|-P)
+      arg="${1}"
+      shift 1
+      if (( "${#}" == 2 )); then
+        command cd "${arg}" "${PWD/$1/$2}" || return 1
+      else
+        command cd "${arg}" "${@}" || return 1
+      fi
+    ;;
+    (*)
+      if (( "${#}" == 2 )); then
+        command cd "${PWD/$1/$2}" || return 1
+      else
+        command cd "${@}" || return 1
+      fi
+    ;;
   esac
   printf -- '%s\n' "${PWD:-$(pwd)}" >&2
   _set_git_branch_var

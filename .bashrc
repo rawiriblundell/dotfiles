@@ -2736,6 +2736,33 @@ block25="\xe2\x96\x91"   # u2591\0xe2 0x96 0x91 Light shade 25%
 blockAsc="$(printf -- '%b\n' "${block25}${block50}${block75}")"
 blockDwn="$(printf -- '%b\n' "${block75}${block50}${block25}")"
 
+# Source: https://gist.github.com/hypergig/ea6a60469ab4075b2310b56fa27bae55
+# Define an array of color numbers for the colors that are hardest to see on
+# either a black or white terminal background
+BLOCKED_COLORS=(0 1 7 9 11 {15..18} {154..161} {190..197} {226..235} {250..255})
+
+# Define another array that is an inversion of the above
+mapfile -t ALLOWED_COLORS < <(printf -- '%d\n' {0..255} "${BLOCKED_COLORS[@]}" | sort -n | uniq -u)
+
+hrps1(){
+  local color width
+  # Figure out the width of the terminal window
+  width="$(( "${COLUMNS:-$(tput cols)}" - 6 ))"
+  # Define our initial color code
+  color=$(( RANDOM % 255 ))
+  # Ensure that our color code is an allowed one.  If not, regenerate until it is.
+  until printf -- '%d\n' "${ALLOWED_COLORS[@]}" | grep -xq "${color}"; do
+    color=$(( RANDOM % 255 ))
+  done
+  tput setaf "${color}"               # Set our color
+  printf -- '%s' "${blockAsc}"        # Print the ascending block sequence
+  for (( i=1; i<=width; ++i )); do    # Fill the gap with hard blocks
+    printf -- '%b' "${block100}"
+  done
+  printf -- '%s\n' "${blockDwn}"      # Print our descending block sequence
+  tput sgr0                           # Unset our color
+}
+
 setprompt-help() {
   printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
   printf -- '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""

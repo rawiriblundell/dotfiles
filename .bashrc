@@ -771,9 +771,12 @@ csvwrap() {
 # Function to convert a decimal to an ascii character
 # See: https://www.ascii-code.com/
 dec_to_char() {
-  local int="${1:?No integer supplied}"
+  local int
+  int="${1:?No integer supplied}"
   # Ensure that we have an integer
-  test "${int}" -eq "${int}" || return 1
+  case "${int}" in
+    (*[!0-9]*) return 1 ;;
+  esac
   
   # Ensure int is within the range 32-126
   # If it's less than 32, add 32 to bring it up into range
@@ -834,15 +837,6 @@ delete-branch() {
       done
     ;;
   esac
-}
-
-# Optional error handling function
-# See: https://www.reddit.com/r/bash/comments/5kfbi7/best_practices_error_handling/
-die() {
-  tput setaf 1
-  printf -- '%s\n' "${*}" >&2
-  tput sgr0
-  return 1
 }
 
 # Basic step-in function for dos2unix
@@ -1459,6 +1453,14 @@ redo() {
   case "${1}" in
     ('')
       fc -s
+    ;;
+    (-h|--help)
+      printf -- '%s\n' \
+        "'redo' the last command, optionally with search and replace" \
+        "Usage:" \
+        "redo <-- Invokes the last command" \
+        "redo foo bar <-- last command, replaces first instance of 'foo' with 'bar'" \
+        "redo -g foo bar <-- last command, replaces all instances of 'foo' with 'bar'"
     ;;
     (-g|--global)
       shift 1
@@ -2744,16 +2746,25 @@ BLOCKED_COLORS=(0 1 7 9 11 {15..18} {154..161} {190..197} {226..235} {250..255})
 # Define another array that is an inversion of the above
 mapfile -t ALLOWED_COLORS < <(printf -- '%d\n' {0..255} "${BLOCKED_COLORS[@]}" | sort -n | uniq -u)
 
-hrps1(){
-  local color width
-  # Figure out the width of the terminal window
-  width="$(( "${COLUMNS:-$(tput cols)}" - 6 ))"
+# A function to generate a random color code using the above arrays
+_select_random_color() {
+  local color
   # Define our initial color code
   color=$(( RANDOM % 255 ))
   # Ensure that our color code is an allowed one.  If not, regenerate until it is.
   until printf -- '%d\n' "${ALLOWED_COLORS[@]}" | grep -xq "${color}"; do
     color=$(( RANDOM % 255 ))
   done
+  # Emit our selected color number
+  printf -- '%d\n' "${color}"
+}
+
+hrps1(){
+  local color width
+  # Figure out the width of the terminal window
+  width="$(( "${COLUMNS:-$(tput cols)}" - 6 ))"
+  # Define our initial color code
+  color="$(_select_random_color)"
   tput setaf "${color}"               # Set our color
   printf -- '%s' "${blockAsc}"        # Print the ascending block sequence
   for (( i=1; i<=width; ++i )); do    # Fill the gap with hard blocks
@@ -2844,7 +2855,7 @@ setprompt() {
     (w|W|white|White)       ps1Pri="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
     (rand)
-      ps1Pri="\[$(tput setaf $((RANDOM%255)))\]"
+      ps1Pri="\[$(tput setaf "$(_select_random_color)")\]"
     ;;
     (safe)
       ps1Pri="${ps1Wte}"
@@ -2871,7 +2882,7 @@ setprompt() {
     (w|W|white|White)       ps1Sec="${ps1Wte}";;
     (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
     (rand)
-      ps1Sec="\[$(tput setaf $((RANDOM%255)))\]"
+      ps1Sec="\[$(tput setaf "$(_select_random_color)")\]"
     ;;
     (*[0-9]*)
       if (( "${2//[^0-9]/}" > 255 )); then

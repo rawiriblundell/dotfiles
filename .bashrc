@@ -128,7 +128,7 @@ get_command() {
       errcount=0
       for cmd in "${@}"; do
         command -v "${cmd}" || 
-          { printf -- '%s\n' "${cmd} not found"; (( errcount++ )); }
+          { printf -- '%s\n' "${cmd} not found" >&2; (( ++errcount )); }
       done
       (( errcount == 0 )) && return 0
     ;;
@@ -140,7 +140,7 @@ get_command() {
     (*)
       errcount=0
       for cmd in "${@}"; do
-        command -v "${1}" >/dev/null 2>&1 || (( errcount++ ))
+        command -v "${1}" >/dev/null 2>&1 || (( ++errcount ))
       done
       (( errcount == 0 )) && return 0
     ;;

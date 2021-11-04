@@ -1906,15 +1906,17 @@ sum() {
   esac
   if [ ! -t 0 ]; then
     while read -r; do
-      set -- "${@}" "${REPLY}"
+      case "${REPLY}" in
+        (*[!0-9]*) : ;;
+        (*) sum=$(( sum + param )) ;;
+      esac
     done < "${1:-/dev/stdin}"
+    printf -- '%d\n' "${sum}"
+    return 0
   fi
   for param in "${@}"; do
     case "${param}" in
-      (*[!0-9]*)
-        printf -- '%s\n' "${param} is not an integer" >&2
-        return 1
-      ;;
+      (*[!0-9]*) : ;;
       (*) sum=$(( sum + param )) ;;
     esac
   done

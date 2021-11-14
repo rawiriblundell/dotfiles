@@ -320,6 +320,36 @@ fi
 # Fix 'cd' tab completion
 complete -d cd
 
+# Emulate the Alt-h helper from the fish shell
+# Example: cat [alt-h] -> man cat
+alt_h() {
+  local _alth_first_word _alth_lookup_cmd
+  export ALTH_SC="$(tput sc)"
+
+  _alth_first_word=${READLINE_LINE%% *}
+  if (( READLINE_POINT > ${#_alth_first_word} )); then
+    # grab the string up to the cursor. e.g. "df {} | less" where {} is the cursor looks up df.
+    _alth_lookup_cmd=${READLINE_LINE::$READLINE_POINT}
+    # remove previous commands from the left
+    _alth_lookup_cmd=${_alth_lookup_cmd##*[;|&]}
+    # remove leading space if it exists (only a single one though)
+    _alth_lookup_cmd=${_alth_lookup_cmd# }
+    #remove arguments to the current command from the right
+    _alth_lookup_cmd=${_alth_lookup_cmd%% *}
+  else
+    # if the cursor is at the beginning of the line, look up the first word
+    _alth_lookup_cmd=$_alth_first_word 
+  fi
+
+  if get_command tldr; then
+    tldr "${_alth_lookup_cmd}"
+  else
+    man "${_alth_lookup_cmd}"
+  fi
+}
+
+bind -x '"\eh":alt_h'
+
 ################################################################################
 # OS specific tweaks
 # TO-DO: export as an environment var like OSSTR to minimise calls to uname

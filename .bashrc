@@ -163,16 +163,12 @@ fi
 
 # If EUID isn't set, then set it
 # Note that 'id -u' is now mostly portable here due to the alignment of xpg4 above
-if [[ -z "${EUID}" ]]; then
-  EUID=$(id -u)
-  readonly EUID; export EUID
-fi
+: "${EUID:-$(id -u)}"
+readonly EUID; export EUID
 
 # If HOSTNAME isn't set, then set it
-if [[ -z "${HOSTNAME}" ]]; then
-  HOSTNAME=$(hostname)
-  readonly HOSTNAME; export HOSTNAME
-fi
+: "${HOSTNAME:-$(hostname)}"
+readonly HOSTNAME; export HOSTNAME
 
 # If HOME isn't set, then set it
 if [[ -z "${HOME}" ]]; then

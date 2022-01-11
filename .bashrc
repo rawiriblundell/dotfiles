@@ -471,7 +471,7 @@ export GREP_COLORS LS_COLORS LSCOLORS
 
 # Check for dircolors and if found, process .dircolors
 # This sets up colours for 'ls' via LS_COLORS
-if [[ -z "${LS_COLORS}" ]] && pathfind dircolors &>/dev/null; then
+if [[ -z "${LS_COLORS}" ]] && get_command dircolors; then
   if [[ -r ~/.dircolors ]]; then
     eval "$(dircolors -b ~/.dircolors)"
   elif [[ -r /etc/DIR_COLORS ]] ; then

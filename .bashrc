@@ -496,13 +496,18 @@ export LESS_TERMCAP_so LESS_TERMCAP_ue LESS_TERMCAP_us
 
 # A helper for git information in 'setprompt()' and others
 _set_git_branch_var() {
-  if is_gitdir; then
-    PS1_GIT_MODE=True
-    GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
-    export GIT_BRANCH
-  else
-    PS1_GIT_MODE=False
+  PS1_GIT_MODE=True
+  is_gitdir || { PS1_GIT_MODE=False; return; }
+
+  GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+  # Sometimes you're in a git dir but 'git branch' returns nothing
+  # In this rare instance, we pluck the info from 'git status'
+  if (( "${#GIT_BRANCH}" == 0 )); then
+    GIT_BRANCH="$(git status 2>&1 | awk '/On branch/{print $3}')"
   fi
+  #Finally, we failover to UNKNOWN
+  GIT_BRANCH="${GIT_BRANCH:-UNKNOWN}"
+  export GIT_BRANCH
 }
 
 # Because you never know what crazy systems are out there

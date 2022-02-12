@@ -441,6 +441,8 @@ export EDITOR
 # As with 'diff' this sets the available width
 if get_command sdiff; then
   alias sdiff='sdiff -w $(( "${COLUMNS:-$(tput cols)}" - 2 ))'
+else
+  alias sdiff='diff -y -w $(( "${COLUMNS:-$(tput cols)}" - 2 ))'
 fi
 
 # It looks like blindly asserting the following upsets certain 

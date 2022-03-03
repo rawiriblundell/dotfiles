@@ -2265,6 +2265,7 @@ yaml2json() {
 # Functionalise history | grep
 # Named for this synonym trace: history -> past -> yore.
 # 'past' kept triggering 'paste' in muscle memory :)
+# TODO: Add '-u|--uniq' output
 yore() {
   case "${#}" in
     (0)

@@ -160,6 +160,9 @@ endif
 
 "====[ Make trailing whitespace, and non-breaking spaces visible ]======
 
+    highlight ExtraWhitespace ctermbg=red guibg=red
+    match ExtraWhitespace /\s\+$/
+
     exec "set listchars=tab:>-,trail:.,nbsp:~"
 "    disable by default.  Entering :set list and :set list& can turn this on or off
 "    uncomment the below line to enable by default

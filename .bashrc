@@ -79,7 +79,7 @@ set_env_path() {
     /usr/local/opt/libxml2/bin /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin \
     /opt/sfw/sbin /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games \
     /usr/local/games /snap/bin "${HOME}"/bin "${HOME}"/go/bin /usr/local/go/bin \
-    "${HOME}"/.cargo /Library/TeX/texbin "${HOME}"/.fzf/bin \
+    "${HOME}"/.cargo "${HOME}"/.cargo/bin /Library/TeX/texbin "${HOME}"/.fzf/bin \
     /usr/local/opt/fzf/bin
   )
  

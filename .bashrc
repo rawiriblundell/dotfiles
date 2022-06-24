@@ -515,6 +515,28 @@ _set_git_branch_var() {
 # Because you never know what crazy systems are out there
 get_command apropos || apropos() { man -k "$*"; }
 
+# Smoosh the gap between 'aws-cli' and 'aws-vault'
+if command -v aws >/dev/null 2>&1; then
+  aws() {
+    case "${1}" in
+      (vault)
+        if command -v aws-vault; then
+          shift 1
+          command aws-vault "${@}"
+        else
+          printf -- '%s\n' "aws-vault not found in PATH" >&2
+          return 1
+        fi
+      ;;
+      (*) command aws "${@}" ;;
+    esac
+  }
+  AWS_DEFAULT_OUTPUT=json
+  AWS_DEFAULT_REGION=ap-southeast-2
+  AWS_VAULT_BACKEND="${AWS_VAULT_BACKEND:-file}"
+  export AWS_DEFAULT_OUTPUT AWS_DEFAULT_REGION AWS_VAULT_BACKEND
+fi
+
 # Convert comma separated list to long format e.g. id user | tr "," "\n"
 # See also n2c() and n2s() for the opposite behaviour
 c2n() {

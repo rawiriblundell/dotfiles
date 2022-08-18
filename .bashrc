@@ -214,7 +214,7 @@ fi
 
 # If an ssh private key is found, spin up an agent and load the key(s)
 if file "${HOME}/.ssh/"* | grep "private key" >/dev/null 2>&1; then
-  if [[ ! -S "${HOME}/.ssh/"ssh_auth_sock ]]; then
+  if [[ ! -S "${HOME}/.ssh/"ssh_auth_sock ]] || ! pgrep ssh-agent >/dev/null 2>&1; then
     printf -- '\n======> %s\n\n' "Private ssh keys found, setting up ssh-agent..."
     eval "$(ssh-agent -s)"
     ln -sf "${SSH_AUTH_SOCK}" "${HOME}/.ssh/"ssh_auth_sock

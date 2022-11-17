@@ -1377,7 +1377,7 @@ quickserve() {
 pman() {
   local mantext
   case "$(uname -s)" in
-    (Darwin) man -t "${@}" | open -f -a Preview ;;
+    (Darwin) man -t "${@}" | ps2pdf - - | open -g -f -a Preview ;;
     (Linux)
       mantext=$(mktemp)
       man -t "${@}" | ps2pdf - > "${mantext}"

@@ -1034,12 +1034,13 @@ fi
 # Small function to try and ensure setprompt etc behaves when escalating to root
 # I don't want to override the default behaviour of 'sudo', hence the name
 godmode() {
-  if [[ -z "${1}" ]]; then
-    # Testing for 'sudo -E' is hackish, let's just use this
-    sudo bash --rcfile "${HOME}"/.bashrc
-  else
-    sudo "$@"
-  fi
+  case "${1}" in
+    ('')
+      # Testing for 'sudo -E' is hackish, let's just use this
+      sudo bash --rcfile "${HOME}"/.bashrc
+    ;;
+    (*) sudo "$@" ;;
+  esac
 }
 
 # Write a horizontal line of characters

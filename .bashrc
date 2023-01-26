@@ -148,18 +148,6 @@ get_command() {
   # If we get to this point, we've failed
   return 1
 }
-alias exists='get_command'
-alias is_command='get_command'
-
-# Check if /bin/bash exists, if not suggest a symlink
-# This is the correct solution to the "/usr/bin/env bash" debate IMHO
-if [[ ! -f /bin/bash ]]; then
-  if get_command bash; then
-    printf -- '%s\n' "/bin/bash not found.  Please run 'sudo ln -s $(get_command -v bash | head -n 1) /bin/bash'" >&2
-  else
-    printf -- '%s\n' "/bin/bash not found, and I couldn't find 'bash' in '${PATH}'" >&2
-  fi
-fi
 
 # If EUID isn't set, then set it
 # Note that 'id -u' is now mostly portable here due to the alignment of xpg4 above
@@ -391,12 +379,6 @@ fi
 
 ################################################################################
 # Aliases
-
-# If .curl-format exists, AND 'curl' is available, enable curl-trace alias
-# See: https://github.com/wickett/curl-trace
-if [[ -f ~/.curl-format ]] && get_command curl; then
-  alias curl-trace='curl -w "@/${HOME}/.curl-format" -o /dev/null -s'
-fi
 
 # Test if our version of 'diff' supports the '-W' argument.  If so, we
 # enable wide diff, which is handy for side-by-side i.e. diff -y or sdiff
@@ -912,34 +894,6 @@ if ! get_command dos2unix; then
   }
 fi
 
-################################################################################
-# NOTE: This function is a work in progress
-# TO-DO: Factor in leaps
-################################################################################
-# Calculate how many seconds since epoch
-# Portable version based on http://www.etalabs.net/sh_tricks.html
-# We strip leading 0's in order to prevent unwanted octal math
-# This seems terse, but the vars are the same as their 'date' formats
-epoch() {
-  local y j h m s yo
-
-# POSIX portable way to assign all our vars
-IFS=: read -r y j h m s <<-EOF
-$(date -u +%Y:%j:%H:%M:%S)
-EOF
-
-  # yo = year offset
-  yo=$(( y - 1600 ))
-  y=$(( (yo * 365 + yo / 4 - yo / 100 + yo / 400 + $(( 10#$j )) - 135140) * 86400 ))
-
-  printf -- '%s\n' "$(( y + ($(( 10#$h )) * 3600) + ($(( 10#$m )) * 60) + $(( 10#$s )) ))"
-}
-
-# Calculate how many days since epoch
-epochdays() {
-  printf -- '%s\n' "$(( $(epoch) / 86400 ))"
-}
-
 # Function to extract common compressed file types
 extract() {
   local xcmd rc fsobj
@@ -993,21 +947,35 @@ extract() {
   return 0
 }
 
+# Get a number of random integers using $RANDOM with debiased modulo
+get-get-randint() {
+  local nCount nMin nMax nMod randThres i xInt
+  nCount="${1:-1}"
+  nMin="${2:-1}"
+  nMax="${3:-32767}"
+  nMod=$(( nMax - nMin + 1 ))
+  if (( nMod == 0 )); then return 3; fi
+  # De-bias the modulo as best as possible
+  randThres=$(( -(32768 - nMod) % nMod ))
+  if (( randThres < 0 )); then
+    (( randThres = randThres * -1 ))
+  fi
+  i=0
+  while (( i < nCount )); do
+    xInt="${RANDOM}"
+    if (( xInt > ${randThres:-0} )); then
+      printf -- '%d\n' "$(( xInt % nMod + nMin ))"
+      (( i++ ))
+    fi
+  done
+}
+
 # Go to the top of our git tree
 gcd() {
   case "$(git rev-parse --show-toplevel 2>&1)" in
     (fatal*) return 1 ;;
     (*)      cd "$(git rev-parse --show-toplevel)/${1}" || return 1 ;;
   esac
-}
-
-# Try to emit a certificate expiry date from openssl
-get_certexpiry() {
-  local host="${1}"
-  local hostport="${2:-443}"
-  echo | openssl s_client -showcerts -host "${host}" -port "${hostport}" 2>&1 \
-    | openssl x509 -inform pem -noout -enddate \
-    | cut -d "=" -f 2
 }
 
 # Let 'git' take the perf hit of setting GIT_BRANCH rather than PROMPT_COMMAND
@@ -1103,158 +1071,6 @@ is_set() {
     ;;
   esac
 }
-
-# A function to log messages to the system log
-# http://hacking.elboulangero.com/2015/12/06/bash-logging.html may be useful
-logmsg() {
-  local optFlags logIdent printFmt stdOutArg OPTIND
-  unset optFlags logIdent printFmt stdOutArg OPTIND
-  while getopts ":t:s" optFlags; do
-    case "${optFlags}" in
-      (s)   stdOutArg='-s' ;;
-      (t)   logIdent="-t ${OPTARG}" ;;
-      (\?|:|*)  
-        printf -- '%s\n' "Usage: logmsg [-s(tdout) -t tag] message" >&2
-        return 1
-      ;;
-    esac
-  done
-  shift "$(( OPTIND - 1 ))"
-  case "${logIdent}" in
-    ('')  printFmt="$(date '+%b %d %T') ${HOSTNAME%%.*}:" ;;
-    (*)   printFmt="$(date '+%b %d %T') ${HOSTNAME%%.*} ${logIdent/-t /}:" ;;
-  esac
-  if command -v systemd-cat >/dev/null 2>&1; then
-    [[ "${stdOutArg}" = "-s" ]] && printf -- '%s\n' "${printFmt} ${*}"
-    case "${logIdent}" in
-      ('') systemd-cat <<< "${*}" ;;
-      (*)  systemd-cat "${logIdent}" <<< "${*}" ;;
-    esac
-  elif command -v logger >/dev/null 2>&1; then
-    [[ "${stdOutArg}" = "-s" ]] && printf -- '%s\n' "${printFmt} ${*}"
-    logger "${logIdent}" "${*}"
-  else
-    [[ -w /var/log/messages ]] && logFile=/var/log/messages
-    [[ -z "${logFile}" && -w /var/log/syslog ]] && logFile=/var/log/syslog
-    [[ -z "${logFile}" ]] && logFile=/var/log/logmsg
-    if [[ "${stdOutArg}" = "-s" ]]; then
-      printf -- '%s\n' "${printFmt} ${*}" | tee -a "${logFile}" 2>&1
-    else
-      printf -- '%s\n' "${printFmt} ${*}" >> "${logFile}" 2>&1
-    fi
-  fi
-}
-
-################################################################################
-# NOTE: This function is a work in progress
-################################################################################
-# If 'mapfile' is not available, offer it as a step-in function
-# Written as an attempt at http://wiki.bash-hackers.org/commands/builtin/mapfile?s[]=mapfile#to_do
-#   "Create an implementation as a shell function that's portable between Ksh, Zsh, and Bash 
-#    (and possibly other bourne-like shells with array support)."
-
-# Potentially useful resources: 
-# http://cfajohnson.com/shell/arrays/
-# https://stackoverflow.com/a/32931403
-
-# Known issue: No traps!  This means IFS might be left altered if 
-# the function is cancelled or fails in some way
-
-if ! get_command mapfile; then
-  # This is simply the appropriate section of 'help mapfile', edited, as a function:
-  mapfilehelp() {
-    # Hey, this exercise is for an array-capable shell, so let's use an array for this!
-    # This gets around the mess of heredocs and tabbed indentation
-
-    # shellcheck disable=SC2054,SC2102
-    local mapfileHelpArray=(
-    "mapfile [-n count] [-s count] [-t] [-u fd] [array]"
-    "readarray [-n count] [-s count] [-t] [-u fd] [array]"
-    ""
-    "      Read  lines  from the standard input into the indexed array variable ARRAY, or"
-    "      from file descriptor FD if the -u option is supplied.  The variable MAPFILE"
-    "      is the default ARRAY."
-    ""
-    "      Options:"
-    "        -n     Copy at most count lines.  If count is 0, all lines are copied."
-    "        -s     Discard the first count lines read."
-    "        -t     Nothing.  This option is here only for drop-in compatibility"
-    "               'mapfile' behaviour without '-t' cannot be replicated, '-t' is almost"
-    "               always used, so we provide this dummy option for convenience"
-    "        -u     Read lines from file descriptor FD instead of the standard input."
-    ""
-    "      If not supplied with an explicit origin, mapfile will clear array before assigning to it."
-    ""
-    "      mapfile returns successfully unless an invalid option or option argument is supplied," 
-    "      ARRAY is invalid or unassignable, or if ARRAY is not an indexed array."
-    )
-    printf -- '%s\n' "${mapfileHelpArray[@]}"
-  }
-
-  mapfile() {
-    local elementCount elementDiscard fileDescr IFS
-    unset MAPFILE
-    # Handle our various options
-    while getopts ":hn:s:tu:" flags; do
-      case "${flags}" in
-        (h) mapfile-help; return 0;;
-        (n) elementCount="${OPTARG}";;
-        (s) elementDiscard="${OPTARG}";;
-        (t) :;; #Only here for compatibility
-        (u) fileDescr="${OPTARG}";;
-        (*) mapfile-help; return 1;;
-      esac
-    done
-    shift "$(( OPTIND - 1 ))"
-
-    IFS=$'\n'     # Temporarily set IFS to newlines
-    set -f        # Turn off globbing
-    set +H        # Prevent parsing of '!' via history substitution
-
-    # If a linecount is set, we build the array element by element
-    if [[ -n "${elementCount}" ]] && (( elementCount > 0 )); then
-      # First, if we're discarding elements:
-      for ((i=0;i<elementDiscard;i++)); do
-        read -r
-        echo "${REPLY}" >/dev/null 2>&1
-      done
-      # Next, read the input stream into MAPFILE
-      i=0
-      eof=
-      while (( i < elementCount )) && [[ -z "${eof}" ]]; do
-        read -r || eof=true
-        MAPFILE+=( "${REPLY}" )
-        (( i++ ))
-      done
-    # Otherwise we just read the whole lot in
-    else
-      while IFS= read -r; do
-        MAPFILE+=( "${REPLY}" )
-      done
-      [[ "${REPLY}" ]] && MAPFILE+=( "${REPLY}" )
-
-      # If elementDiscard is declared, then we can quickly reindex like so:
-      if [[ -n "${elementDiscard}" ]]; then
-        MAPFILE=( "${MAPFILE[@]:$elementDiscard}" )
-      fi
-    fi <&"${fileDescr:-0}"
-
-    # Finally, rename the array if required
-    # I would love to know a better way to handle this
-    if [[ -n "${1}" ]]; then
-      # shellcheck disable=SC2034
-      for element in "${MAPFILE[@]}"; do
-        eval "$1+=( \"\${element}\" )"
-      done
-    fi
-
-    # Set f and H back to normal
-    set +f
-    set -H
-  }
-  # And finally alias 'readarray'
-  alias readarray='mapfile'
-fi
 
 # Function to list the members of a group.  
 # Replicates the absolute basic functionality of a real 'members' command
@@ -1388,64 +1204,6 @@ pman() {
   esac
 }
 
-# This function prints the terminfo details for 'xterm-256color'
-# This is for importing this into systems that don't have this
-print-xterm-256color() {
-cat <<'NEWTERM'
-xterm-256color|xterm with 256 colors,
-        am, bce, ccc, km, mc5i, mir, msgr, npc, xenl,
-        colors#256, cols#80, it#8, lines#24, pairs#32767,
-        acsc=``aaffggiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
-        bel=^G, blink=\E[5m, bold=\E[1m, cbt=\E[Z, civis=\E[?25l,
-        clear=\E[H\E[2J, cnorm=\E[?12l\E[?25h, cr=^M,
-        csr=\E[%i%p1%d;%p2%dr, cub=\E[%p1%dD, cub1=^H,
-        cud=\E[%p1%dB, cud1=^J, cuf=\E[%p1%dC, cuf1=\E[C,
-        cup=\E[%i%p1%d;%p2%dH, cuu=\E[%p1%dA, cuu1=\E[A,
-        cvvis=\E[?12;25h, dch=\E[%p1%dP, dch1=\E[P, dl=\E[%p1%dM,
-        dl1=\E[M, ech=\E[%p1%dX, ed=\E[J, el=\E[K, el1=\E[1K,
-        flash=\E[?5h$<100/>\E[?5l, home=\E[H, hpa=\E[%i%p1%dG,
-        ht=^I, hts=\EH, ich=\E[%p1%d@, il=\E[%p1%dL, il1=\E[L,
-        ind=^J, indn=\E[%p1%dS,
-        initc=\E]4;%p1%d;rgb\:%p2%{255}%*%{1000}%/%2.2X/%p3%{255}%*%{1000}%/%2.2X/%p4%{255}%*%{1000}%/%2.2X\E\\,
-        invis=\E[8m, is2=\E[!p\E[?3;4l\E[4l\E>, kDC=\E[3;2~,
-        kEND=\E[1;2F, kHOM=\E[1;2H, kIC=\E[2;2~, kLFT=\E[1;2D,
-        kNXT=\E[6;2~, kPRV=\E[5;2~, kRIT=\E[1;2C, kb2=\EOE,
-        kbs=\177, kcbt=\E[Z, kcub1=\EOD, kcud1=\EOB, kcuf1=\EOC,
-        kcuu1=\EOA, kdch1=\E[3~, kend=\EOF, kent=\EOM, kf1=\EOP,
-        kf10=\E[21~, kf11=\E[23~, kf12=\E[24~, kf13=\E[1;2P,
-        kf14=\E[1;2Q, kf15=\E[1;2R, kf16=\E[1;2S, kf17=\E[15;2~,
-        kf18=\E[17;2~, kf19=\E[18;2~, kf2=\EOQ, kf20=\E[19;2~,
-        kf21=\E[20;2~, kf22=\E[21;2~, kf23=\E[23;2~,
-        kf24=\E[24;2~, kf25=\E[1;5P, kf26=\E[1;5Q, kf27=\E[1;5R,
-        kf28=\E[1;5S, kf29=\E[15;5~, kf3=\EOR, kf30=\E[17;5~,
-        kf31=\E[18;5~, kf32=\E[19;5~, kf33=\E[20;5~,
-        kf34=\E[21;5~, kf35=\E[23;5~, kf36=\E[24;5~,
-        kf37=\E[1;6P, kf38=\E[1;6Q, kf39=\E[1;6R, kf4=\EOS,
-        kf40=\E[1;6S, kf41=\E[15;6~, kf42=\E[17;6~,
-        kf43=\E[18;6~, kf44=\E[19;6~, kf45=\E[20;6~,
-        kf46=\E[21;6~, kf47=\E[23;6~, kf48=\E[24;6~,
-        kf49=\E[1;3P, kf5=\E[15~, kf50=\E[1;3Q, kf51=\E[1;3R,
-        kf52=\E[1;3S, kf53=\E[15;3~, kf54=\E[17;3~,
-        kf55=\E[18;3~, kf56=\E[19;3~, kf57=\E[20;3~,
-        kf58=\E[21;3~, kf59=\E[23;3~, kf6=\E[17~, kf60=\E[24;3~,
-        kf61=\E[1;4P, kf62=\E[1;4Q, kf63=\E[1;4R, kf7=\E[18~,
-        kf8=\E[19~, kf9=\E[20~, khome=\EOH, kich1=\E[2~,
-        kind=\E[1;2B, kmous=\E[M, knp=\E[6~, kpp=\E[5~,
-        kri=\E[1;2A, mc0=\E[i, mc4=\E[4i, mc5=\E[5i, meml=\El,
-        memu=\Em, op=\E[39;49m, rc=\E8, rev=\E[7m, ri=\EM,
-        rin=\E[%p1%dT, rmacs=\E(B, rmam=\E[?7l, rmcup=\E[?1049l,
-        rmir=\E[4l, rmkx=\E[?1l\E>, rmm=\E[?1034l, rmso=\E[27m,
-        rmul=\E[24m, rs1=\Ec, rs2=\E[!p\E[?3;4l\E[4l\E>, sc=\E7,
-        setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
-        setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
-        sgr=%?%p9%t\E(0%e\E(B%;\E[0%?%p6%t;1%;%?%p2%t;4%;%?%p1%p3%|%t;7%;%?%p4%t;5%;%?%p7%t;8%;m,
-        sgr0=\E(B\E[m, smacs=\E(0, smam=\E[?7h, smcup=\E[?1049h,
-        smir=\E[4h, smkx=\E[?1h\E=, smm=\E[?1034h, smso=\E[7m,
-        smul=\E[4m, tbc=\E[3g, u6=\E[%i%d;%dR, u7=\E[6n,
-        u8=\E[?1;2c, u9=\E[c, vpa=\E[%i%p1%dd,
-NEWTERM
-}
-
 # A small function to test connectivity to a remote host's port.
 # Usage: probe-port [remote host] [port (default: 22)] [tcp/udp (default: tcp)]
 probe-port() {
@@ -1465,29 +1223,6 @@ probe-ssh() {
 psgrep() {
   [[ "${1:?Usage: psgrep [search term]}" ]]
   ps auxf | awk -v proc="[${1:0:1}]${1:1}" '$0 ~ proc {print $2}'
-}
-
-# Get a number of random integers using $RANDOM with debiased modulo
-randInt() {
-  local nCount nMin nMax nMod randThres i xInt
-  nCount="${1:-1}"
-  nMin="${2:-1}"
-  nMax="${3:-32767}"
-  nMod=$(( nMax - nMin + 1 ))
-  if (( nMod == 0 )); then return 3; fi
-  # De-bias the modulo as best as possible
-  randThres=$(( -(32768 - nMod) % nMod ))
-  if (( randThres < 0 )); then
-    (( randThres = randThres * -1 ))
-  fi
-  i=0
-  while (( i < nCount )); do
-    xInt="${RANDOM}"
-    if (( xInt > ${randThres:-0} )); then
-      printf -- '%d\n' "$(( xInt % nMod + nMin ))"
-      (( i++ ))
-    fi
-  done
 }
 
 # 'redo' the last command, optionally with search and replace
@@ -1532,45 +1267,6 @@ redo() {
     ;;
   esac
 }
-
-# Check if 'rev' is available, if not, enable a stop-gap function
-if ! get_command rev; then
-  rev() {
-    # Check that stdin or $1 isn't empty
-    if [[ -t 0 ]] && [[ -z "${1}" ]]; then
-      printf -- '%s\n' "Usage:  rev string|file" ""
-      printf -- '\t%s\n'  "Reverse the order of characters in STRING or FILE." "" \
-        "With no STRING or FILE, read standard input instead." "" \
-        "Note: This is a bash function to provide the basic functionality of the command 'rev'"
-      return 0
-    # Disallow both piping in strings and declaring strings
-    elif [[ ! -t 0 ]] && [[ -n "${1}" ]]; then
-      printf -- '%s\n' "[ERROR] rev: Please select either piping in or declaring a string to reverse, not both."
-      return 1
-    fi
-
-    # If parameter is a file, or stdin in used, action that first
-    if [[ -f "${1}" ]]||[[ ! -t 0 ]]; then
-      while read -r; do
-        len=${#REPLY}
-        rev=
-        for((i=len-1;i>=0;i--)); do
-          rev="$rev${REPLY:$i:1}"
-        done
-        printf -- '%s\n' "${rev}"
-      done < "${1:-/dev/stdin}"
-    # Else, if parameter exists, action that
-    elif [[ -n "$*" ]]; then
-      Line=$*
-      rev=
-      len=${#Line}
-      for((i=len-1;i>=0;i--)); do 
-        rev="$rev${Line:$i:1}"
-      done
-      printf -- '%s\n' "${rev}"
-    fi
-  }
-fi
 
 # A function to repeat an action any number of times
 repeat() {
@@ -1621,57 +1317,6 @@ round() {
   printf "%.${2:-0}f" "${1:?No float given}"
 }
 
-# Escape special characters in a string, named for a similar function in R
-sanitize() { printf -- '%q\n' "${1}"; }
-alias sanitise='sanitize'
-
-# Check if 'seq' is available, if not, provide a basic replacement function
-if ! get_command seq; then
-  seq() {
-    local first
-    # If no parameters are given, print out usage
-    if [[ -z "$*" ]]; then
-      printf -- '%s\n' "Usage:"
-      printf -- '\t%s\n'  "seq LAST" \
-        "seq FIRST LAST" \
-        "seq FIRST INCR LAST" \
-        "Note: this is a step-in function, no args are supported."
-      return 0
-    fi
-    
-    # If only one number is given, we assume 1..n
-    if [[ -z "${2}" ]]; then
-      eval "printf -- '%d\\n' {1..$1}"
-    # Otherwise, we act accordingly depending on how many parameters we get
-    # This runs with a default increment of 1/-1 for two parameters
-    elif [[ -z "${3}" ]]; then
-      eval "printf -- '%d\\n' {$1..$2}"
-    # and with three parameters we use the second as our increment
-    elif [[ -n "${3}" ]]; then
-      # First we test if the bash version is 4, if so, use native increment
-      if (( BASH_VERSINFO >= 4 )); then
-        eval "printf -- '%d\\n' {$1..$3..$2}"
-      # Otherwise, use the manual approach
-      else
-        first="${1}"
-        # Simply iterate through in ascending order
-        if (( first < $3 )); then
-          while (( first <= $3 )); do
-            printf -- '%d\n' "${first}"
-            first=$(( first + $2 ))
-          done
-        # or... undocumented feature: descending order!
-        elif (( first > $3 )); then
-          while (( first >= $3 )); do
-            printf -- '%d\n' "${first}"
-            first=$(( first - $2 ))
-          done
-        fi
-      fi
-    fi
-  }
-fi
-
 # Standardise the terminal window title header
 # reference: http://www.faqs.org/docs/Linux-mini/Xterm-Title.html#s3
 settitle() {
@@ -1688,168 +1333,6 @@ settitle() {
     ;;
   esac
 }
-
-# shift_array <arr_name> [<n>]
-# From https://www.reddit.com/r/bash/comments/aj0xm0/quicktip_shifting_arrays/
-shift_array() {
-  # Create nameref to real array
-  local -n arr="$1"
-  local n="${2:-1}"
-  arr=("${arr[@]:${n}}")
-}
-
-################################################################################
-# NOTE: This function is a work in progress
-################################################################################
-# Check if 'shuf' is available, if not, provide basic shuffle functionality
-# Check commit history for a range of alternative methods - ruby, perl, python etc
-# Requires: randInt function
-if ! get_command shuf; then
-  shuf() {
-    local OPTIND inputRange inputStrings nMin nMax nCount shufArray shufRepeat
-
-    # First test that $RANDOM is available
-    if (( ${RANDOM}${RANDOM} == ${RANDOM}${RANDOM} )); then
-      printf -- '%s\n' "shuf: RANDOM global variable required but doesn't appear to be available"
-      return 1
-    fi
-
-    while getopts ":e:i:hn:rv:" optFlags; do
-      case "${optFlags}" in
-        (e) inputStrings=true
-            shufArray=( "${OPTARG}" )
-            until [[ $(eval "echo \${$OPTIND:0:1}") = "-" ]] || [[ -z $(eval "echo \${$OPTIND}") ]]; do
-              # shellcheck disable=SC2207
-              shufArray+=($(eval "echo \${$OPTIND}"))
-              OPTIND=$((OPTIND + 1))
-            done;;
-        (h)  printf -- '%s\n' "" "shuf - generate random permutations" \
-                "" "Options:" \
-                "  -e, echo.                Treat each ARG as an input line" \
-                "  -h, help.                Print a summary of the options" \
-                "  -i, input-range LO-HI.   Treat each number LO through HI as an input line" \
-                "  -n, count.               Output at most n lines" \
-                "  -o, output FILE          This option is unsupported in this version, use '> FILE'" \
-                "  -r, repeat               Output lines can be repeated" \
-                "  -v, version.             Print the version information" ""
-              return 0;;
-        (i) inputRange=true
-            nMin="${OPTARG%-*}"
-            nMax="${OPTARG##*-}"
-            ;;
-        (n) nCount="${OPTARG}";;
-        (r) shufRepeat=true;;
-        (v)  printf -- '%s\n' "shuf.  This is a bashrc function knockoff that steps in if the real 'shuf' is not found."
-             return 0;;
-        (\?)  printf -- '%s\n' "shuf: invalid option -- '-$OPTARG'." \
-                "Try -h for usage or -v for version info." >&2
-              returnt 1;;
-        (:)  printf -- '%s\n' "shuf: option '-$OPTARG' requires an argument, e.g. '-$OPTARG 5'." >&2
-             return 1;;
-      esac
-    done
-    shift "$(( OPTIND - 1 ))"
-
-    # Handle -e and -i options.  They shouldn't be together because we can't
-    # understand their love.  -e is handled later on in the script
-    if [[ "${inputRange}" = "true" ]] && [[ "${inputStrings}" == "true" ]]; then
-      printf -- '%s\n' "shuf: cannot combine -e and -i options" >&2
-      return 1
-    fi
-
-    # Default the reservoir size
-    # This number was unscientifically chosen using "feels right" technology
-    reservoirSize=4096
-
-    # If we're dealing with a file, feed that into file descriptor 6
-    if [[ -r "${1}" ]]; then
-      # Size it up first and adjust nCount if necessary
-      if [[ -n "${nCount}" ]] && (( $(wc -l < "${1}") < nCount )); then
-        nCount=$(wc -l < "${1}")
-      fi
-      exec 6< "${1}"
-    # Cater for the -i option
-    elif [[ "${inputRange}" = "true" ]]; then
-      # If an input range is provided and repeats are ok, then simply call randInt:
-      if [[ "${shufRepeat}" = "true" ]] && (( nMax <= 32767 )); then
-        randInt "${nCount:-$nMax}" "${nMin}" "${nMax}"
-        return "$?"
-      # Otherwise, print a complete range to fd6 for later processing
-      else
-        exec 6< <(eval "printf -- '%d\\n' {$nMin..$nMax}")
-      fi
-    # If we're dealing with -e, we already have shufArray
-    elif [[ "${inputStrings}" = "true" ]]; then
-      # First, adjust nCount as appropriate
-      if [[ -z "${nCount}" ]] || (( nCount > "${#shufArray[@]}" )); then
-        nCount="${#shufArray[@]}"
-      fi
-      # If repeats are ok, just get it over and done with
-      if [[ "${shufRepeat}" = "true" ]] && (( nCount <= 32767 )); then
-        for i in $(randInt "${nCount}" 1 "${#shufArray[@]}"); do
-          (( i-- ))
-          printf -- '%s\n' "${shufArray[i]}"
-        done
-        return "$?"
-      # Otherwise, dump shufArray into fd6
-      else
-        exec 6< <(printf -- '%s\n' "${shufArray[@]}")
-      fi
-    # If none of the above things are in use, then we assume stdin
-    else
-      exec 6<&0
-    fi
-
-    # If we reach this point, then we need to setup our output filtering
-    # We use this over a conventional loop, because loops are very slow
-    # So, if nCount is defined, we pipe all output to 'head -n'
-    # Otherwise, we simply stream via `cat` as an overglorified no-op
-    if [[ -n "${nCount}" ]]; then
-      headOut() { head -n "${nCount}"; }
-    else
-      headOut() { cat -; }
-    fi
-
-    # Start capturing everything for headOut()
-    {
-      # Turn off globbing for safety
-      set -f
-      
-      # Suck up as much input as required or possible into the reservoir
-      mapfile -u 6 -n "${nCount:-$reservoirSize}" -t shufArray
-
-      # If there's more input, we start selecting random points in
-      # the reservoir to evict and replace with incoming data
-      i="${#shufArray[@]}"
-      while IFS=$'\n' read -r -u 6; do
-        n=$(randInt 1 1 "$i")
-        (( n-- ))
-        if (( n < ${#shufArray[@]} )); then
-          printf -- '%s\n' "${shufArray[n]}"
-          shufArray[n]="${REPLY}"
-        else
-          printf -- '%s\n' "${REPLY}"
-        fi
-        (( i++ ))
-      done
-
-      # At this point we very likely have something left in the reservoir
-      # so we shuffle it out.  This is effectively Satollo's algorithm
-      while (( ${#shufArray[@]} > 0 )); do
-        n=$(randInt 1 1 "${#shufArray[@]}")
-        (( n-- ))
-        if (( n < ${#shufArray[@]} )) && [[ -n "${shufArray[n]}" ]]; then
-          printf -- '%s\n' "${shufArray[n]}"
-          unset -- 'shufArray[n]'
-          # shellcheck disable=SC2206
-          shufArray=( "${shufArray[@]}" )
-        fi
-      done
-      set +f
-    } | headOut
-    exec 0<&6 6<&-
-  }
-fi
 
 # Silence ssh motd's etc using "-q"
 # Adding "-o StrictHostKeyChecking=no" prevents key prompts
@@ -1934,15 +1417,6 @@ ssh-fingerprint() {
       [[ -s "${fingerprint}" ]] || return 1
       ssh-keygen -l -f "${fingerprint}"
     ;;
-  esac
-}
-
-# Test if a string contains a substring
-# Example: string-contains needle haystack
-string-contains() { 
-  case "${2?No string given}" in 
-    (*${1?No substring given}*)  return 0 ;; 
-    (*)                          return 1 ;; 
   esac
 }
 
@@ -2122,42 +1596,6 @@ toupper() {
     fi < "${1:-/dev/stdin}"
   fi
 }
-
-# Detect if our version of 'tput' is so old that it uses termcap syntax
-# If this is the case, overlay it so that newer terminfo style syntax works
-# This is a subset of a fuller gist
-# https://gist.github.com/rawiriblundell/83ed9408a7e3032c780ed56b7c9026f2
-# For performance we only implement if 'tput ce' (a harmless test) works
-if tput ce 2>/dev/null; then
-  tput() {
-    ctput-null() { command tput "${@}" 2>/dev/null; }
-    ctput() { command tput "${@}"; }
-    case "${1}" in
-      (bold)          ctput-null bold  || ctput md;;
-      (civis)         ctput-null civis || ctput vi;;
-      (cnorm)         ctput-null cnorm || ctput ve;;
-      (cols)          ctput-null cols  || ctput co;;
-      (dim)           ctput-null dim   || ctput mh;;
-      (lines)         ctput-null lines || ctput li;;
-      (setaf)
-        case $(uname) in
-          (FreeBSD)   ctput AF "${2}";;
-          (OpenBSD)   ctput AF "${2}" 0 0;;
-          (*)         ctput setaf "${2}";;
-        esac
-      ;;
-      (setab)
-        case $(uname) in
-          (FreeBSD)   ctput AB "${2}";;
-          (OpenBSD)   ctput AB "${2}" 0 0;;
-          (*)         ctput setab "${2}";;
-        esac
-      ;;
-      (sgr0)          ctput-null sgr0  || ctput me;;
-      (*)             ctput "${@}";;
-    esac
-  }
-fi
 
 # Simple alternative for 'tree'
 if ! get_command tree; then
@@ -2402,26 +1840,26 @@ genpasswd() {
   if [[ "${pwdKoremutake}" = "true" ]]; then
     for (( i=0; i<pwdNum; i++ )); do
       n=0
-      for int in $(randInt "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
+      for int in $(get-randint "${pwdChars:-7}" 1 $(( ${#pwdSyllables[@]} - 1 )) ); do
         tmpArray[n]=$(printf -- '%s\n' "${pwdSyllables[int]}")
         (( n++ ))
       done
-      read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
+      read -r t u v < <(get-randint 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
         tmpArray[t]=$(capitalise "${tmpArray[t]}")
       fi
       if [[ "${pwdDigit}" = "true" ]]; then
         while (( u == t )); do
-          u="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+          u="$(get-randint 1 0 $(( ${#tmpArray[@]} - 1 )) )"
         done
-        tmpArray[u]="$(randInt 1 0 9)"
+        tmpArray[u]="$(get-randint 1 0 9)"
       fi
       if [[ "${pwdSpecial}" = "true" ]]; then
         while (( v == t )); do
-          v="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+          v="$(get-randint 1 0 $(( ${#tmpArray[@]} - 1 )) )"
         done
-        randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) )
+        randSpecial=$(get-randint 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) )
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
       printf -- '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
@@ -2433,7 +1871,7 @@ genpasswd() {
         tmpArray[n]="${REPLY}"
         (( n++ ))
       done < <(tr -dc "${pwdSet}" < /dev/urandom | tr -d ' ' | fold -w 1 | head -n "${pwdChars}")
-      read -r t u v < <(randInt 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
+      read -r t u v < <(get-randint 3 0 $(( ${#tmpArray[@]} - 1 )) | paste -s -)
       #pwdLower is effectively guaranteed, so we skip it and focus on the others
       if [[ "${pwdUpper}" = "true" ]]; then
         if ! printf -- '%s\n' "tmpArray[@]}" | grep "[A-Z]" >/dev/null 2>&1; then
@@ -2442,19 +1880,19 @@ genpasswd() {
       fi
       if [[ "${pwdDigit}" = "true" ]]; then
         while (( u == t )); do
-          u="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+          u="$(get-randint 1 0 $(( ${#tmpArray[@]} - 1 )) )"
         done
         if ! printf -- '%s\n' "tmpArray[@]}" | grep "[0-9]" >/dev/null 2>&1; then
-          tmpArray[u]="$(randInt 1 0 9)"
+          tmpArray[u]="$(get-randint 1 0 9)"
         fi
       fi
       # Because special characters aren't sucked up from /dev/urandom,
       # we have no reason to test for them, just swap one in
       if [[ "${pwdSpecial}" = "true" ]]; then
         while (( v == t )); do
-          v="$(randInt 1 0 $(( ${#tmpArray[@]} - 1 )) )"
+          v="$(get-randint 1 0 $(( ${#tmpArray[@]} - 1 )) )"
         done
-        randSpecial=$(randInt 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) ) 
+        randSpecial=$(get-randint 1 0 $(( ${#pwdSpecialChars[@]} - 1 )) ) 
         tmpArray[v]="${pwdSpecialChars[randSpecial]}"
       fi
       printf -- '%s\n' "${tmpArray[@]}" | paste -sd '\0' -
@@ -2691,11 +2129,11 @@ genphrase() {
         # We print out a random number with each word, this allows us to sort
         # all of the output, which randomises the location of any seed word
         printf -- '%s\n' "${RANDOM} ${seedWord}"
-        for randInt in "${numArray[@]:loWord:phraseWords}"; do
+        for get-randint in "${numArray[@]:loWord:phraseWords}"; do
           if (( BASH_VERSINFO >= 4 )); then
-            printf -- '%s\n' "${RANDOM} ${dictArray[randInt]^}"
+            printf -- '%s\n' "${RANDOM} ${dictArray[get-randint]^}"
           else
-            printf -- '%s\n' "${RANDOM} ${dictArray[randInt]}" | capitalise
+            printf -- '%s\n' "${RANDOM} ${dictArray[get-randint]}" | capitalise
           fi
         done
       # Pass the grouped output for some cleanup
@@ -2708,65 +2146,6 @@ genphrase() {
   fi
 }
 
-################################################################################
-# Figure out the correct TERM value
-# Function to test indicated terminfo entries
-termtest() {
-  if get_command infocmp; then
-    infocmp "${1}" &>/dev/null
-    return "$?"
-  else
-    oldTerm="${TERM}"
-    TERM="${1}"
-    tput colors &>/dev/null
-    rc="$?"
-    TERM="${oldTerm}"
-    return "${rc}"
-  fi
-}
-
-# Firstly, we assume a PuTTY connection identified as 'putty-256color'
-if [[ "${TERM}" = "putty-256color" ]]; then
-  # We check whether an appropriate terminfo entry exists
-  # If not, failover to 'xterm-256color'
-  termtest putty-256color || TERM=xterm-256color
-# If we're not using 'putty-256color', then we want 'xterm-256color'
-else
-  TERM=xterm-256color
-fi
-
-# Next, we test for a 'xterm-256color' terminfo entry
-# If not, we set up ~/.terminfo appropriately (usually Solaris)
-if [[ "${TERM}" = "xterm-256color" ]]; then
-  if ! termtest xterm-256color; then
-    if get_command tic; then
-      mkdir -p "${HOME}"/.terminfo
-      print-xterm-256color > "${HOME}"/.terminfo/xterm-256color
-      TERMINFO="${HOME}"/.terminfo
-      export TERMINFO
-      tic "${HOME}"/.terminfo/xterm-256color 2>/dev/null
-      TERM=xterm-256color
-    else
-      printf -- '%s\n' "'tic' is required to setup xterm-256color but was not found" \
-        "Usually this can be found in the 'ncurses' package"
-      # Set a dummy TERM to invoke the next block
-      TERM=pants
-    fi
-  fi
-fi
-
-# Finally, if we get to this point, we take what we can get
-if ! string-contains 256color "${TERM}"; then
-  for termType in xterm-color xtermc dtterm sun-color xterm; do
-    if termtest "${termType}"; then
-      TERM="${termType}"
-      break
-    fi
-  done
-fi
-
-# Finally, lock in the TERM setting
-export TERM
 ################################################################################
 # Standardise the Command Prompt
 # NOTE for customisation: Any non-printing escape characters must be enclosed, 

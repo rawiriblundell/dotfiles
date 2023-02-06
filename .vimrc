@@ -4,12 +4,14 @@
 " http://amix.dk/vim/vimrc.html
 " https://github.com/thoughtstream/Damian-Conway-s-Vim-Setup
 
+"====[ Setup tab stops ]====================
 syntax on
 set autoindent
 set expandtab
 set shiftwidth=2
 set softtabstop=2
 
+"====[ Deal with syntax colorisation ]====================
 if has('termguicolors') && has('mac')
     set termguicolors
 endif
@@ -20,27 +22,28 @@ silent! colorscheme torte
 silent! colorscheme pablo
 silent! colorscheme industry
 
-" Set encoding and default file format
+"====[ Set encoding and default file format ]====================
 set encoding=utf8
 set ffs=unix,dos,mac
 
+"====[ Set encoding and default file format ]====================
 " Always show the status line
 set laststatus=2
 
-" Format the status line
+"====[ Format the status line ]====================
 set statusline=\ %{HasPaste()}%F%m%r%h\ %w\ \ CWD:\ %r%{getcwd()}%h\ \ \ Line:\ %l
 
-" Display a warning if the file format isn't Unix
+"====[ Display a warning if the file format isn't Unix ]====================
 set statusline+=%#warningmsg#
 set statusline+=%{&ff!='unix'?'['.&ff.']':''}
 set statusline+=%*
-"
-" " Display a warning if file encoding isn't UTf-8
+
+"====[ Display a warning if file encoding isn't UTf-8 ]====================
 set statusline+=%#warningmsg#
 set statusline+=%{(&fenc!='utf-8'&&&fenc!='')?'['.&fenc.']':''}
 set statusline+=%*
-"
-" " Add syntastic warnings to the status line
+
+"====[ Add syntastic warnings to the status line ]====================
 " set statusline+=%#warningmsg#
 " set statusline+=%{SyntasticStatuslineFlag()}
 " set statusline+=%*
@@ -82,7 +85,6 @@ function! HasPaste()
 endfunction
 
 "====[ Make the 81st column stand out ]====================
-
 " We need to add a check to ensure the version of vim is higher than 7.1
 " as matchadd isn't available in earlier versions
 if version >= 701
@@ -92,7 +94,6 @@ if version >= 701
 endif
 
 "====[ Highlight matches when jumping to next ]============
-
     " This rewires n and N to do the highlighing...
     nnoremap <silent> n   n:call HLNext(0.4)<cr>
     nnoremap <silent> N   N:call HLNext(0.4)<cr>
@@ -159,9 +160,12 @@ endif
     endfunction
 
 "====[ Make trailing whitespace, and non-breaking spaces visible ]======
-
     highlight ExtraWhitespace ctermbg=red guibg=red
     match ExtraWhitespace /\s\+$/
+
+"====[ Make hard tabs visible ]======
+    highlight Tabs ctermbg=darkblue guibg=darkblue
+    call matchadd("Tabs",'\t')
 
     exec "set listchars=tab:>-,trail:.,nbsp:~"
 "    disable by default.  Entering :set list and :set list& can turn this on or off
@@ -169,7 +173,6 @@ endif
 "    set list
 
 "====[ Always turn on syntax highlighting for diffs ]=========================
-
     " EITHER select by the file-suffix directly...
     augroup PatchDiffHighlight
         autocmd!
@@ -183,7 +186,7 @@ endif
         autocmd FileType  diff   syntax enable
     augroup END
 
-"====[ Open any file with a pre-existing swapfile in readonly mode "]=========
+"====[ Open any file with a pre-existing swapfile in readonly mode ]=========
 
     augroup NoSimultaneousEdits
         autocmd!
@@ -194,10 +197,11 @@ endif
         autocmd SwapExists * sleep 2
     augroup END
 
-" Return to last edit position when opening files (You want this!)
+"====[ Return to last edit position when opening files (You want this!) ]======
 autocmd BufReadPost *
       \ if line("'\"") > 0 && line("'\"") <= line("$") |
       \   exe "normal! g`\"" |
       \ endif
-" Remember info about open buffers on close
+
+"====[ Remember info about open buffers on close ]======
 set viminfo^=%

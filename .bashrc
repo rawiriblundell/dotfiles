@@ -700,7 +700,9 @@ cd() {
       fi
     ;;
   esac
-  printf -- '%s\n' "${PWD:-$(pwd)}" >&2
+  # If CDPATH is set, we usually get PWD,
+  # so to deduplicate we check that CDPATH is 0-length
+  (( ${#CDPATH} == 0 )) && printf -- '%s\n' "${PWD:-$(pwd)}" >&2
   _set_git_branch_var
   _cdhist append "${PWD}"
 }

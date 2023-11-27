@@ -72,14 +72,14 @@ set_env_path() {
   # Open an array of potential PATH members
   # This allows us to bias bindirs for a better experience on Solaris and MacOS
   pathArray=(
-    /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/local/opt/coreutils/libexec/gnubin \
-    /usr/local/opt/gnu-sed/libexec/gnubin /usr/local/opt/grep/libexec/gnubin \
-    /usr/kerberos/bin /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin \
-    /usr/local/bin /usr/local/sbin /usr/local/opt/texinfo/bin \
-    /usr/local/opt/libxml2/bin /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin \
-    /opt/sfw/sbin /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games \
-    /usr/local/games /snap/bin "${HOME}/bin" "${HOME}/go/bin" /usr/local/go/bin \
-    "${HOME}/.cargo" "${HOME}/.cargo/bin" /Library/TeX/texbin "${HOME}/.fzf/bin" \
+    /usr/gnu/bin /usr/xpg6/bin /usr/xpg4/bin /usr/local/opt/coreutils/libexec/gnubin
+    /usr/local/opt/gnu-sed/libexec/gnubin /usr/local/opt/grep/libexec/gnubin
+    /usr/kerberos/bin /usr/kerberos/sbin /bin /sbin /usr/bin /usr/sbin
+    /usr/local/bin /usr/local/sbin /usr/local/opt/texinfo/bin
+    /usr/local/opt/libxml2/bin /usr/X11/bin /opt/csw/bin /opt/csw/sbin /opt/sfw/bin
+    /opt/sfw/sbin /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games
+    /usr/local/games /snap/bin "${HOME}/bin" "${HOME}/go/bin" /usr/local/go/bin
+    "${HOME}/.cargo" "${HOME}/.cargo/bin" /Library/TeX/texbin "${HOME}/.fzf/bin"
     /usr/local/opt/fzf/bin "${HOME}/.bash-my-aws/bin"
   )
  
@@ -127,8 +127,10 @@ get_command() {
       shift 1
       errcount=0
       for cmd in "${@}"; do
-        command -v "${cmd}" || 
-          { printf -- '%s\n' "${cmd} not found" >&2; (( ++errcount )); }
+        command -v "${cmd}" || {
+          printf -- '%s\n' "${cmd} not found" >&2
+          (( ++errcount ))
+        }
       done
       (( errcount == 0 )) && return 0
     ;;
@@ -950,7 +952,7 @@ extract() {
 }
 
 # Get a number of random integers using $RANDOM with debiased modulo
-get-get-randint() {
+get-randint() {
   local nCount nMin nMax nMod randThres i xInt
   nCount="${1:-1}"
   nMin="${2:-1}"
@@ -1272,17 +1274,20 @@ redo() {
 
 # A function to repeat an action any number of times
 repeat() {
-  # check that $1 is a digit, if not error out, if so, set the repeatNum variable
-  case "${1}" in
-    (*[!0-9]*|'') printf -- '%s\n' "[ERROR]: '${1}' is not a number.  Usage: 'repeat n command'"; return 1;;
-    (*)           local repeatNum=$1;;
-  esac
+  local repeat_count
+  repeat_count="${1}"
+  # check that $1 is a digit, if not error out
+  is_integer "${repeat_count}" || {
+    printf -- '%s\n' "[ERROR]: '${1}' is not a number.  Usage: 'repeat n command'" >&2
+    return 1
+  }
+
   # shift so that the rest of the line is the command to execute
-  shift
+  shift 1
 
   # Run the command in a while loop repeatNum times
-  for (( i=0; i<repeatNum; i++ )); do
-    "$@"
+  for (( i=0; i<repeat_count; i++ )); do
+    "${@}"
   done
 }
 
@@ -1424,6 +1429,7 @@ ssh-fingerprint() {
 
 # Add any number of integers together
 # There is a historical 'sum' program, it has long been superseded by now
+# by cksum, md5sum, sha256sum, digest and many similar others
 sum() {
   local param sum
   case "${1}" in
@@ -2048,18 +2054,6 @@ genphrase() {
 # All sorts of line wrapping weirdness and prompt overwrites will then occur.  
 # This is why all the escape codes have '\]' enclosing them.  Don't mess with that.
 
-# First, we map some basic colours:
-ps1Blk="\[$(tput setaf 0)\]"                    # Black - \[\e[0;30m\]
-ps1Red="\[$(tput bold)\]\[$(tput setaf 9)\]"    # Bold Red - \[\e[1;31m\]
-ps1Grn="\[$(tput setaf 10)\]"                   # Normal Green - \[\e[0;32m\]
-ps1Ylw="\[$(tput bold)\]\[$(tput setaf 11)\]"   # Bold Yellow - \[\e[1;33m\]
-ps1Blu="\[$(tput setaf 32)\]"                   # Blue - \[\e[38;5;32m\]
-ps1Mag="\[$(tput bold)\]\[$(tput setaf 13)\]"   # Bold Magenta - \[\e[1;35m\]
-ps1Cyn="\[$(tput bold)\]\[$(tput setaf 14)\]"   # Bold Cyan - \[\e[1;36m\]
-ps1Wte="\[$(tput bold)\]\[$(tput setaf 15)\]"   # Bold White - \[\e[1;37m\]
-ps1Ora="\[$(tput setaf 208)\]"                  # Orange - \[\e[38;5;208m\]
-ps1Rst="\[$(tput sgr0)\]"                       # Reset text - \[\e[0m\]
-
 # Map out some block characters
 # shellcheck disable=SC2034
 block100="\xe2\x96\x88"  # u2588\0xe2 0x96 0x88 Solid Block 100%
@@ -2108,34 +2102,31 @@ hrps1(){
 }
 
 setprompt-help() {
-  printf -- '%s\n' "setprompt - configure state and colourisation of the bash prompt" ""
-  printf -- '\t%s\n' "Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]" ""
-  printf -- '\t%s\n' "Options:" \
-    "  -a    Automatic type selection (width based)" \
-    "  -g    Enable/disable git branch in the first text block" \
-    "  -h    Help, usage information" \
-    "  -f    Full prompt" \
-    "  -m    Minimal prompt" \
-    "  -r    Restore prompt colours to defaults" \
-    "  -s    Simplified prompt" \
-    "  rand  Select a random colour.  Can be used for 1st and 2nd colours" \
-    "        e.g. 'setprompt rand rand'" \
-    "  safe  Sets 1st and 2nd colours to white.  In case of weird behaviour" \
-    "" \
-    "The first and second parameters will accept human readable colour codes." \
-    "These are represented in short and full format e.g." \
-    "For 'blue', you can enter 'bl', 'Bl', 'blue' or 'Blue'." \
-    "This applies for:" \
-    "Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange." \
-    "ANSI Numerical codes (0-255) can also be supplied" \
-    "e.g. 'setprompt 143 76'." \
-    "" \
-    "256 colours is assumed.  If you find issues, run 'setprompt safe'." \
-    "" \
-    "'setprompt -a' enables auto width-based prompt mode selection." \
-    "If less than 60 columns is detected, the prompt is set to minimal mode." \
-    "If less than 80 columns is detected, the prompt is set to simple mode." \
-    "When the columns exceed 80, the prompt is set to the full mode."
+cat << EOF
+setprompt - configure state and colourisation of the bash prompt
+
+    Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]
+
+    Options:
+      -g    Enable/disable git branch in the first text block
+      -h    Help, usage information
+      -r    Restore prompt colours to defaults
+      rand  Select a random colour.  Can be used for 1st and 2nd colours
+            e.g. 'setprompt rand rand'
+      safe  Sets 1st and 2nd colours to white.  In case of weird behaviour
+      unset Sets the prompt simply to '$ '
+
+    The first and second parameters will accept human readable colour codes.
+    These are represented in short and full format e.g.
+    For 'blue', you can enter 'bl', 'Bl', 'blue' or 'Blue'."
+    This applies for:
+    Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange.
+    ANSI Numerical codes (0-255) can also be supplied"
+    e.g. 'setprompt 143 76
+
+    A terminal supporting 256 colours is assumed.
+    If you find issues, run 'setprompt safe' or 'setprompt unset'.
+EOF
   return 0
 }
 
@@ -2144,16 +2135,19 @@ setprompt-help() {
 [[ -f "${HOME}/.setpromptrc" ]] && . "${HOME}/.setpromptrc"
 
 setprompt() {
+  # Setup sane defaults for the following variables
+  : "${PS1_BG_COLOR:=32}" # Blue
+  : "${PS1_FG_COLOR:=15}" # White
+  : "${PS1_CHAR:=$}"
+
   # Let's setup some default primary and secondary colours for root/sudo
   if (( EUID == 0 )); then
-    ps1Pri="${ps1Red}"
-    ps1Sec="${ps1Red}"
-    ps1Block="${blockAsc}"
-    ps1Char='#'
+    PS1_BG_COLOR="1"  # Red
+    PS1_FG_COLOR="15" # White
+    PS1_CHAR='#'
   fi
 
   case "${1}" in
-    (-a|--auto)             export PS1_MODE=Auto;;
     (-g|--git)
       case "${PS1_GIT_MODE}" in
         (True)  PS1_GIT_MODE=False ;;
@@ -2162,131 +2156,117 @@ setprompt() {
       esac
       export PS1_GIT_MODE
     ;;
-    (-h|--help)             setprompt-help; return 0;;
-    (-f|--full)             export PS1_MODE=Full;;
-    (-m|--mini)             export PS1_MODE=Minimal;;
-    (-r|--reset)
+    (-h|help|usage)             setprompt-help; return 0 ;;
+    (-r|reset)
+      unset PS1_BG_COLOR PS1_FG_COLOR
+      #TODO: Validate that this dotfile isn't full of random garbage
       if [[ -r "${HOME}/.setpromptrc" ]]; then
-        unset ps1Pri ps1Sec
         # shellcheck source=/dev/null
         . "${HOME}/.setpromptrc"
-        [[ -z "${ps1Pri}" ]] && ps1Pri="${ps1Red}"
-        [[ -z "${ps1Sec}" ]] && ps1Sec="${ps1Grn}"
-      else
-        ps1Pri="${ps1Red}"
-        ps1Sec="${ps1Grn}"
       fi
+      : "${PS1_BG_COLOR:=32}" # Blue
+      : "${PS1_FG_COLOR:=15}" # White
     ;;
-    (-s|--simple)           export PS1_MODE=Simple;;
-    (b|B|black|Black)       ps1Pri="${ps1Blk}";;
-    (r|R|red|Red)           ps1Pri="${ps1Red}";;
-    (g|G|green|Green)       ps1Pri="${ps1Grn}";;
-    (y|Y|yellow|Yellow)     ps1Pri="${ps1Ylw}";;
-    (bl|Bl|blue|Blue)       ps1Pri="${ps1Blu}";;
-    (m|M|magenta|Magenta)   ps1Pri="${ps1Mag}";;
-    (c|C|cyan|Cyan)         ps1Pri="${ps1Cyn}";;
-    (w|W|white|White)       ps1Pri="${ps1Wte}";;
-    (o|O|orange|Orange)     ps1Pri="${ps1Ora}";;
+    (b|B|black|Black)       PS1_BG_COLOR="0" ;;
+    (r|R|red|Red)           PS1_BG_COLOR="1" ;;
+    (g|G|green|Green)       PS1_BG_COLOR="2" ;;
+    (y|Y|yellow|Yellow)     PS1_BG_COLOR="3" ;;
+    (bl|Bl|blue|Blue)       PS1_BG_COLOR="32" ;;
+    (m|M|magenta|Magenta)   PS1_BG_COLOR="164" ;;
+    (c|C|cyan|Cyan)         PS1_BG_COLOR="50" ;;
+    (w|W|white|White)       PS1_BG_COLOR="15" ;;
+    (o|O|orange|Orange)     PS1_BG_COLOR="208" ;;
     (rand)
-      ps1Pri="\[$(tput setaf "$(_select_random_color)")\]"
+      PS1_BG_COLOR="$(_select_random_color)"
     ;;
     (safe)
-      ps1Pri="${ps1Wte}"
-      ps1Sec="${ps1Wte}"      
+      PS1_BG_COLOR="15" # White
+      PS1_FG_COLOR="0"  # Black
     ;;
     (*[0-9]*)
-      if (( "${1//[^0-9]/}" > 255 )); then
-        setprompt-help; return 1
-      else
-        ps1Pri="\[\e[38;5;${1//[^0-9]/}m\]"
-      fi
+      # Strip any non-digit chars and make sure it's less than 255
+      # If not, print the help and fail out
+      (( "${1//[^0-9]/}" > 255 )) && { setprompt-help; return 1; }
+      PS1_BG_COLOR="${1//[^0-9]/}"
+    ;;
+    (unset)
+      PS1='$ '
+      export PS1
+      return 0
     ;;
     (-|_)                   : #no-op ;;
   esac
 
   case "${2}" in
-    (b|B|black|Black)       ps1Sec="${ps1Blk}";;
-    (r|R|red|Red)           ps1Sec="${ps1Red}";;
-    (g|G|green|Green)       ps1Sec="${ps1Grn}";;
-    (y|Y|yellow|Yellow)     ps1Sec="${ps1Ylw}";;
-    (bl|Bl|blue|Blue)       ps1Sec="${ps1Blu}";;
-    (m|M|magenta|Magenta)   ps1Sec="${ps1Mag}";;
-    (c|C|cyan|Cyan)         ps1Sec="${ps1Cyn}";;
-    (w|W|white|White)       ps1Sec="${ps1Wte}";;
-    (o|O|orange|Orange)     ps1Sec="${ps1Ora}";;
+    (b|B|black|Black)       PS1_FG_COLOR="0" ;;
+    (r|R|red|Red)           PS1_FG_COLOR="1" ;;
+    (g|G|green|Green)       PS1_FG_COLOR="2" ;;
+    (y|Y|yellow|Yellow)     PS1_FG_COLOR="3" ;;
+    (bl|Bl|blue|Blue)       PS1_FG_COLOR="32" ;;
+    (m|M|magenta|Magenta)   PS1_FG_COLOR="164" ;;
+    (c|C|cyan|Cyan)         PS1_FG_COLOR="50" ;;
+    (w|W|white|White)       PS1_FG_COLOR="15" ;;
+    (o|O|orange|Orange)     PS1_FG_COLOR="208" ;;
     (rand)
-      ps1Sec="\[$(tput setaf "$(_select_random_color)")\]"
+      PS1_FG_COLOR="$(_select_random_color)"
     ;;
     (*[0-9]*)
-      if (( "${2//[^0-9]/}" > 255 )); then
-        setprompt-help; return 1
-      else
-        ps1Sec="\[\e[38;5;${2//[^0-9]/}m\]"
-      fi
+      (( "${2//[^0-9]/}" > 255 )) && { setprompt-help; return 1; }
+      PS1_FG_COLOR="${2//[^0-9]/}"
     ;;
     (-|_)                   : #no-op ;;
   esac
 
-  case "${3}" in
-    (a|A|asc|Asc)           ps1Block="${blockAsc}";;
-    (d|D|dwn|Dwn)           ps1Block="${blockDwn}";;
+  #TODO: Simplify
+  #TODO: If we're on an SSH'd host, randomise the colours
+  case "${PS1_GIT_MODE}" in
+    (True)
+      if is_gitdir; then
+        if [[ -z "${GIT_BRANCH}" ]]; then
+          if is_gitdir; then
+            GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+          fi
+        fi
+        PS1_TEXT="[GIT:${GIT_BRANCH:-UNKNOWN}]"
+      else
+        PS1_TEXT="[GIT:Unrecognised]"
+      fi
+    ;;
+    (*)
+      unset PS1_TEXT
+    ;;
   esac
+  export PS1_TEXT
 
-  # Setup sane defaults for the following variables
-  export "${PS1_MODE:=Auto}"
-  : "${ps1Pri:=$ps1Red}"
-  : "${ps1Sec:=$ps1Grn}"
-  : "${ps1Block:=$blockDwn}"
-  : "${ps1Char:=$}"
-  ps1Triplet="${ps1Pri}${ps1Block}"
-  ps1Main="${ps1Sec}[\u@\h${ps1Rst} \W${ps1Sec}]${ps1Rst}${ps1Char}"
-
-  # If PS1_MODE is set to Auto, it figures out the appropriate mode to use
-  if [[ "${PS1_MODE}" = "Auto" ]]; then
-    # We store the fact that we're in auto mode
-    export PS1_AUTO=True
-    if (( "${COLUMNS:-$(tput cols)}" < 60 )); then
-      export PS1_MODE=Minimal
-    elif (( "${COLUMNS:-$(tput cols)}" > 80 )); then
-      export PS1_MODE=Full
-    else
-      export PS1_MODE=Simple
-    fi
-  else
-    export PS1_AUTO=False
+  # Typically a SHLVL of 2 and the existence of $AWS_VAULT means we're interacting with AWS
+  # If so, set the colors to black on orange.  Standard AWS colours.
+  # Also add $AWS_VAULT so that we know which AWS account we're in.
+  if (( SHLVL > 1 )) && (( "${#AWS_VAULT}" > 0 )); then
+    PS1_BG_COLOR="208" # Orange
+    PS1_FG_COLOR="0"   # Black
+    PS1_TEXT="[AWS:${AWS_VAULT}]"
+    export PS1_TEXT
   fi
 
-  # Throw it all together, based on the selected mode
-  # shellcheck disable=SC1117
-  case "${PS1_MODE}" in
-    (Minimal)
-      export PS1="${ps1Triplet}${ps1Rst}${ps1Char} "
-    ;;
-    (Simple)
-      export PS1="${ps1Triplet}${ps1Main} "
-    ;;
-    (Full)
-      if [[ "${PS1_GIT_MODE}" = "True" ]]; then
-        if is_gitdir; then
-          if [[ -z "${GIT_BRANCH}" ]]; then
-            if is_gitdir; then
-              GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
-            fi
-          fi
-          : "[${GIT_BRANCH:-UNKNOWN}]"
-        else
-          : "[NOT-GIT]"
-        fi
-      else
-        : "[\$(date +%y%m%d/%H:%M)]"
-      fi
-      PS1="${ps1Triplet}${_}${ps1Rst}${ps1Main} "
-      export PS1
-    ;;
-  esac
+  # Build our PS1 variable
+  PS1="\[\e[48;5;${PS1_BG_COLOR}m\]"
+  PS1+="\[\e[38;5;${PS1_FG_COLOR}m\]"
+  PS1+="[\$(date +%y%m%d/%H:%M)]\${PS1_TEXT}[${PWD}]"
+  # Approximate the length of the text that will appear in the coloured block
+  # This is date-format + the obvious + 5 chars of square brackets and an @ char
+  (( ${#PS1_TEXT} > 0 )) && PS1_TEXT_LEN=$(( ${#PS1_TEXT} + 2 ))
+  PS1_TEXTLEN=$(( 14 + ${PS1_TEXT_LEN:-0} + ${#PWD} + 2 ))
+  # Figure out how much padding to put in based on the terminal window
+  PS1_PADDING="$(( "${COLUMNS:-$(tput cols)}" - PS1_TEXTLEN - 3 ))"
+  PS1+=$(printf -- '%*s' "${PS1_PADDING:-10}")
+  PS1+="\[\e[0m\]"
+  PS1+="\[\e[38;5;${PS1_BG_COLOR}m\]"
+  PS1+="${blockDwn}"
+  PS1+="\[\e[0m\]"
+  PS1+="\n"
+  PS1+="${PS1_CHAR} "
 
-  # If we're in auto mode, now that PS1 is set, we need to reset PS1_MODE
-  [[ "${PS1_AUTO}" = "True" ]] && export PS1_MODE=Auto
+  export PS1
   
   # After each command, append to the history file and reread it
   # This attempts to keep history sync'd across multiple sessions

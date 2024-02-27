@@ -487,7 +487,7 @@ _set_git_branch_var() {
   PS1_GIT_MODE=True
   is_gitdir || { PS1_GIT_MODE=False; return; }
 
-  GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
+  GIT_BRANCH="$(git branch --show-current)"
   # Sometimes you're in a git dir but 'git branch' returns nothing
   # In this rare instance, we pluck the info from 'git status'
   if (( "${#GIT_BRANCH}" == 0 )); then

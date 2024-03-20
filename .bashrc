@@ -664,7 +664,7 @@ fi
 cd() {
   local arg cdhist_result
   case "${1}" in
-    (-)       command cd - && return 0 ;;
+    (-)       command cd - || return 1 ;;
     (--|-l)   _cdhist list && return 0 ;;
     (-[0-9]*) command cd "$(_cdhist select "${1}")" || return 1 ;;
     (-f|--fzf|select)

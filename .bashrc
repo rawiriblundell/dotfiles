@@ -487,6 +487,7 @@ _set_git_branch_var() {
   PS1_GIT_MODE=True
   is_gitdir || { PS1_GIT_MODE=False; return; }
 
+  #GIT_BRANCH="$(git branch 2>/dev/null| sed -n '/\* /s///p')"
   GIT_BRANCH="$(git branch --show-current)"
   # Sometimes you're in a git dir but 'git branch' returns nothing
   # In this rare instance, we pluck the info from 'git status'
@@ -2105,16 +2106,25 @@ setprompt-help() {
 cat << EOF
 setprompt - configure state and colourisation of the bash prompt
 
-    Usage: setprompt [-ahfmrs|rand|safe|[0-255]] [rand|[0-255]]
+    Usage: setprompt [-ghr|rand|safe|unset|[0-255]] [rand|[0-255]]
 
     Options:
-      -g    Enable/disable git branch in the first text block
-      -h    Help, usage information
-      -r    Restore prompt colours to defaults
-      rand  Select a random colour.  Can be used for 1st and 2nd colours
-            e.g. 'setprompt rand rand'
-      safe  Sets 1st and 2nd colours to white.  In case of weird behaviour
-      unset Sets the prompt simply to '$ '
+      -g, --git
+              Enable/disable git branch in the first text block
+      -h, help, usage 
+              Help, usage information
+      -r, reset
+              Restore prompt colours to defaults
+      rand
+              Select a random colour.  Can be used for 1st and 2nd colours
+              e.g. 'setprompt rand rand'
+              Note: This tries to be terminal safe; 
+                    it excludes unreadable colours for both white
+                    and black terminal backgrounds.
+      safe
+              Sets colours to white and black (i.e. black text on white)
+      unset
+              Sets the prompt to simply '$ '
 
     The first and second parameters will accept human readable colour codes.
     These are represented in short and full format e.g.
@@ -2123,6 +2133,7 @@ setprompt - configure state and colourisation of the bash prompt
     Black, Red, Green, Yellow, Blue, Magenta, Cyan, White and Orange.
     ANSI Numerical codes (0-255) can also be supplied"
     e.g. 'setprompt 143 76
+    Note: This is not terminal safe, you can select unreadable colours
 
     A terminal supporting 256 colours is assumed.
     If you find issues, run 'setprompt safe' or 'setprompt unset'.
@@ -2156,7 +2167,7 @@ setprompt() {
       esac
       export PS1_GIT_MODE
     ;;
-    (-h|help|usage)             setprompt-help; return 0 ;;
+    (-h|help|usage)         setprompt-help; return 0 ;;
     (-r|reset)
       unset PS1_BG_COLOR PS1_FG_COLOR
       #TODO: Validate that this dotfile isn't full of random garbage
@@ -2218,7 +2229,6 @@ setprompt() {
   esac
 
   #TODO: Simplify
-  #TODO: If we're on an SSH'd host, randomise the colours
   case "${PS1_GIT_MODE}" in
     (True)
       if is_gitdir; then
@@ -2253,12 +2263,18 @@ setprompt() {
   PS1+="\[\e[38;5;${PS1_FG_COLOR}m\]"
   PS1+="[\$(date +%y%m%d/%H:%M)]\${PS1_TEXT}[${PWD}]"
   # Approximate the length of the text that will appear in the coloured block
-  # This is date-format + the obvious + 5 chars of square brackets and an @ char
-  (( ${#PS1_TEXT} > 0 )) && PS1_TEXT_LEN=$(( ${#PS1_TEXT} + 2 ))
-  PS1_TEXTLEN=$(( 14 + ${PS1_TEXT_LEN:-0} + ${#PWD} + 2 ))
+  # If PS1_TEXT length is greater than 0, then we add:
+  # date length + PS1_TEXT length + PWD length + 4 chars for extra brackets
+  if (( ${#PS1_TEXT} > 0 )); then
+    PS1_TEXTLEN=$(( 12 + ${#PS1_TEXT} + ${#PWD} + 4 ))
+  # Otherwise, we add:
+  # date length + PWD length + 4 chars for extra brackets
+  else
+    PS1_TEXTLEN=$(( 12 + ${#PWD} + 4 ))
+  fi
   # Figure out how much padding to put in based on the terminal window
   PS1_PADDING="$(( "${COLUMNS:-$(tput cols)}" - PS1_TEXTLEN - 3 ))"
-  PS1+=$(printf -- '%*s' "${PS1_PADDING:-10}")
+  PS1+=$(printf -- '%*s' "${PS1_PADDING:-10}" "")
   PS1+="\[\e[0m\]"
   PS1+="\[\e[38;5;${PS1_BG_COLOR}m\]"
   PS1+="${blockDwn}"

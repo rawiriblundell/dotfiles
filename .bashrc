@@ -379,6 +379,18 @@ if [[ "$(uname -s)" = "HP-UX" ]] && [[ "${TERM}" = "xterm" ]]; then
   stty erase ^?
 fi
 
+# If we're using WSL2, we are likely to have vscode on our Windows host
+# Let's setup a couple of env vars and a function
+if [[ -e /mnt/c/Users ]]; then
+  WSL2_USER="$(tr -d '\r' < <(/mnt/c/Windows/System32/cmd.exe /c "echo %USERNAME%" 2>/dev/null))"
+  WSL2_LOCALAPPDATA="/mnt/c/Users/${WSL2_USER}/AppData/Local"
+  readonly WSL2_USER WSL2_LOCALAPPDATA
+  export WSL2_USER WSL2_LOCALAPPDATA
+  vscode() {
+    ${WSL2_LOCALAPPDATA}/Programs/Microsoft\ VS\ Code/Code.exe "${@}"
+  }
+fi
+
 ################################################################################
 # Aliases
 

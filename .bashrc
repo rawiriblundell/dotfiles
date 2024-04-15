@@ -1042,6 +1042,18 @@ indent() {
   sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
 }
 
+# Get IP information using ipinfo's API
+# Requires an env var: IPINFO_TOKEN, which I currently set in .workrc
+ipinfo() {
+  local target
+  (( "${#IPINFO_TOKEN}" == 0 )) && {
+    printf -- '%s\n' "IPINFO_TOKEN not found in the environment" >&2
+    return 1
+  }
+  target="${1}"
+  curl -s "https://ipinfo.io/${target}?token=${IPINFO_TOKEN}"
+}
+
 # Test if a given item is a function and emit a return code
 is_function() {
   [[ $(type -t "${1:-grobblegobble}") = function ]]

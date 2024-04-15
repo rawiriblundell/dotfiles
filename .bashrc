@@ -1045,13 +1045,33 @@ indent() {
 # Get IP information using ipinfo's API
 # Requires an env var: IPINFO_TOKEN, which I currently set in .workrc
 ipinfo() {
-  local target
+  local ipinfo_target ipinfo_mode
   (( "${#IPINFO_TOKEN}" == 0 )) && {
     printf -- '%s\n' "IPINFO_TOKEN not found in the environment" >&2
     return 1
   }
-  target="${1}"
-  curl -s "https://ipinfo.io/${target}?token=${IPINFO_TOKEN}"
+  while (( $# > 0 )); do
+    case "${1}" in
+      (-b|--brief)
+        ipinfo_mode="brief"
+        shift 1
+      ;;
+      (*)
+        ipinfo_target="${1}"
+        shift 1
+      ;;
+    esac
+  done
+
+  case "${ipinfo_mode}" in
+    (brief)
+      curl -s "https://ipinfo.io/${ipinfo_target}?token=${IPINFO_TOKEN}" |
+        jq -r '. | "\(.ip): \(.country)"'
+    ;;
+    (*)
+      curl -s "https://ipinfo.io/${ipinfo_target}?token=${IPINFO_TOKEN}"
+    ;;
+  esac 
 }
 
 # Test if a given item is a function and emit a return code

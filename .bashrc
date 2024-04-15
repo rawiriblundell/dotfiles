@@ -1045,7 +1045,7 @@ indent() {
 # Get IP information using ipinfo's API
 # Requires an env var: IPINFO_TOKEN, which I currently set in .workrc
 ipinfo() {
-  local ipinfo_target ipinfo_mode
+  local ipinfo_target ipinfo_target_country ipinfo_mode
   (( "${#IPINFO_TOKEN}" == 0 )) && {
     printf -- '%s\n' "IPINFO_TOKEN not found in the environment" >&2
     return 1
@@ -1065,8 +1065,8 @@ ipinfo() {
 
   case "${ipinfo_mode}" in
     (brief)
-      curl -s "https://ipinfo.io/${ipinfo_target}?token=${IPINFO_TOKEN}" |
-        jq -r '. | "\(.ip): \(.country)"'
+      ipinfo_target_country=$(curl -s "https://ipinfo.io/${ipinfo_target}/country?token=${IPINFO_TOKEN}")
+      printf -- '%s: %s\n' "${ipinfo_target}" "${ipinfo_target_country}"
     ;;
     (*)
       curl -s "https://ipinfo.io/${ipinfo_target}?token=${IPINFO_TOKEN}"

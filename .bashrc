@@ -213,6 +213,10 @@ if file "${HOME}/.ssh/"* | grep "private key" >/dev/null 2>&1; then
   ssh-add -l > /dev/null || ssh-add
 fi
 
+# Snapshot the login epoch time into an env var
+LOGIN_EPOCH="${EPOCHSECONDS:-$(date +%s)}"
+export LOGIN_EPOCH
+
 ################################################################################
 # Setup our desired shell options
 shopt -s checkwinsize cdspell extglob histappend

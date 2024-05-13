@@ -1426,16 +1426,17 @@ ssh() {
     ;;
     (nokeys)
       command ssh \
+        -F ~/.ssh/config \
         -o PubkeyAuthentication=no \
         -o StrictHostKeyChecking=no \
         -q \
         "${@:2}"
     ;;
     (raw)
-      command ssh "${@:2}"
+      command ssh -F ~/.ssh/config "${@:2}"
     ;;
     (*)
-      command ssh -o StrictHostKeyChecking=no -q "${@}"
+      command ssh -F ~/.ssh/config -o StrictHostKeyChecking=no -q "${@}"
     ;;
   esac
 }

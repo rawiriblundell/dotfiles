@@ -80,7 +80,7 @@ set_env_path() {
     /opt/sfw/sbin /opt/X11/bin /usr/sfw/bin /usr/sfw/sbin /usr/games
     /usr/local/games /snap/bin "${HOME}/bin" "${HOME}/go/bin" /usr/local/go/bin
     "${HOME}/.cargo" "${HOME}/.cargo/bin" /Library/TeX/texbin "${HOME}/.fzf/bin"
-    /usr/local/opt/fzf/bin "${HOME}/.bash-my-aws/bin"
+    /usr/local/opt/fzf/bin "${HOME}/.bash-my-aws/bin" /opt/mssql-tools18/bin
   )
  
   # If Android Home exists, add more dirs

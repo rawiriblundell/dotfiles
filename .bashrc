@@ -1368,9 +1368,9 @@ rolesetup() {
 }
 
 # Function for rounding floats
-# Usage: round [precision] [float]
+# Usage: round [float] [precision]
 round() {
-  printf "%.${2:-0}f" "${1:?No float given}"
+  printf "%.${2:-0}f\n" "${1:?No float given}"
 }
 
 # Standardise the terminal window title header

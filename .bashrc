@@ -799,6 +799,13 @@ elif get_command xclip; then
 elif get_command xsel ; then
   clipin() { xsel --clipboard --input; }
   clipout() { xsel --clipboard --output; }
+elif [[ -e /mnt/c/Windows/System32/clip.exe ]]; then
+  clipin() { /mnt/c/Windows/System32/clip.exe; }
+  # For WSL2, compile and put paste.exe into ~/bin
+  # https://gist.github.com/jpflouret/19da43372e643352a1bf
+  if get_command paste.exe; then
+    alias clipout='paste.exe'
+  fi
 else
   clipin() { printf -- '%s\n' "No clipboard capability found" >&2; }
   clipout() { printf -- '%s\n' "No clipboard capability found" >&2; }

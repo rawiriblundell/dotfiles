@@ -16,11 +16,16 @@ if has('termguicolors') && has('mac')
     set termguicolors
 endif
 
+set background=dark
+let g:everforest_background = 'hard'
+let g:everforest_better_performance = 1
+
 " list desirable colorschemes in reverse order of preference
 silent! colorscheme desert
 silent! colorscheme torte
 silent! colorscheme pablo
 silent! colorscheme industry
+silent! colorscheme everforest
 
 "====[ Set encoding and default file format ]====================
 set encoding=utf8

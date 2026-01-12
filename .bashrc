@@ -1693,6 +1693,7 @@ fi
 # May require further testing and development
 # shellcheck disable=SC2120
 trim() {
+  local LC_CTYPE
   LC_CTYPE=C
   local outLn=""
   # If $1 is a readable file OR if $1 is blank, we process line by line
@@ -1830,10 +1831,12 @@ yore() {
 # https:#raw.githubusercontent.com/lpar/kpwgen/master/kpwgen.go
 # http://shorl.com/koremutake.php
 genpasswd() {
-  export LC_CTYPE=C
   # localise variables for safety
-  local OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper \
+  local LC_CTYPE OPTIND pwdChars pwdDigit pwdNum pwdSet pwdKoremutake pwdUpper \
     pwdSpecial pwdSpecialChars pwdSyllables n t u v tmpArray
+
+  # I vaguely recall that this is required for portable use of 'tr'
+  LC_CTYPE=C
 
   # Default the vars
   pwdChars=10

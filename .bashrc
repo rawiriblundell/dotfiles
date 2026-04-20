@@ -1251,16 +1251,24 @@ quickserve() {
 # GUI-paginated man pages
 # Inspired by the discussion here https://news.ycombinator.com/item?id=25304257
 pman() {
-  local mantext
+  local man_target
+  command -v ps2pdf >/dev/null 2>&1 || {
+    man "${@}"
+    return "${?}"
+  }
+
+  man_target="${1:?No target manpage specified}"
+
   case "$(uname -s)" in
-    (Darwin) man -t "${@}" | ps2pdf - - | open -g -f -a Preview ;;
+    (Darwin)
+      man -t "${man_target}" | ps2pdf - - | open -g -f -a Preview
+    ;;
     (Linux)
-      mantext=$(mktemp)
-      man -t "${@}" | ps2pdf - > "${mantext}"
-      (
-        evince "${mantext}"
-        rm -f "${mantext}" 2>/dev/null
-      )
+      man -t "${man_target}" | ps2pdf - > "${man_target}.pdf"
+      xdg-open "${man_target}.pdf"
+      # We put in a brief sleep to prevent a hilarious race between xdg-open and rm
+      sleep 2
+      rm -f "${man_target}.pdf" 2>/dev/null
     ;;
   esac
 }

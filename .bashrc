@@ -813,7 +813,7 @@ else
 fi
 
 # Indent code by four spaces, useful for posting in markdown
-codecat() { indent 4 "${1}"; }
+codecat() { indent --width 4 "${1}"; }
 
 # Provide a function to compress common compressed Filetypes
 compress() {
@@ -1048,10 +1048,19 @@ hr() {
 
 # Function to indent text by n spaces (default: 2 spaces)
 indent() {
-  local identWidth
-  identWidth="${1:-2}"
-  identWidth=$(eval "printf -- '%.0s ' {1..${identWidth}}")
-  sed "s/^/${identWidth}/" "${2:-/dev/stdin}"
+    local indent_width
+    indent_width=2
+
+    case "${1}" in
+        (-w|--width)
+            indent_width="${2}"
+            shift 2
+        ;;
+    esac
+
+    while IFS= read -r line || [[ "${line}" ]]; do
+        printf '%*s%s\n' "${indent_width}" "" "${line}"
+    done < "${1:-/dev/stdin}"
 }
 
 # Get IP information using ipinfo's API

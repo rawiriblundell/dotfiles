@@ -808,7 +808,9 @@ elif [[ -e /mnt/c/Windows/System32/clip.exe ]]; then
     alias clipout='paste.exe'
   fi
 else
-  clipin() { printf -- '%s\n' "No clipboard capability found" >&2; }
+  clipin() {
+    printf -- "\033]52;c;%s\007" "$(base64 < "${1:-/dev/stdin}" | tr -d '\n')"
+  }
   clipout() { printf -- '%s\n' "No clipboard capability found" >&2; }
 fi
 

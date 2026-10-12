@@ -2225,7 +2225,7 @@ EOF
 
 setprompt() {
   # Setup sane defaults for the following variables
-  : "${PS1_BG_COLOR:=32}" # Blue
+  : "${PS1_BG_COLOR:=25}" # Blue
   : "${PS1_FG_COLOR:=15}" # White
   : "${PS1_CHAR:=$}"
 
@@ -2253,14 +2253,14 @@ setprompt() {
         # shellcheck source=/dev/null
         . "${HOME}/.setpromptrc"
       fi
-      : "${PS1_BG_COLOR:=32}" # Blue
+      : "${PS1_BG_COLOR:=25}" # Blue
       : "${PS1_FG_COLOR:=15}" # White
     ;;
     (b|B|black|Black)       PS1_BG_COLOR="0" ;;
     (r|R|red|Red)           PS1_BG_COLOR="1" ;;
     (g|G|green|Green)       PS1_BG_COLOR="2" ;;
     (y|Y|yellow|Yellow)     PS1_BG_COLOR="3" ;;
-    (bl|Bl|blue|Blue)       PS1_BG_COLOR="32" ;;
+    (bl|Bl|blue|Blue)       PS1_BG_COLOR="25" ;;
     (m|M|magenta|Magenta)   PS1_BG_COLOR="164" ;;
     (c|C|cyan|Cyan)         PS1_BG_COLOR="50" ;;
     (w|W|white|White)       PS1_BG_COLOR="15" ;;
@@ -2291,7 +2291,7 @@ setprompt() {
     (r|R|red|Red)           PS1_FG_COLOR="1" ;;
     (g|G|green|Green)       PS1_FG_COLOR="2" ;;
     (y|Y|yellow|Yellow)     PS1_FG_COLOR="3" ;;
-    (bl|Bl|blue|Blue)       PS1_FG_COLOR="32" ;;
+    (bl|Bl|blue|Blue)       PS1_FG_COLOR="25" ;;
     (m|M|magenta|Magenta)   PS1_FG_COLOR="164" ;;
     (c|C|cyan|Cyan)         PS1_FG_COLOR="50" ;;
     (w|W|white|White)       PS1_FG_COLOR="15" ;;

@@ -177,6 +177,7 @@ dotfiles=(
   "${HOME}/.fzf/shell/key-bindings.bash"
   /usr/local/opt/fzf/shell/completion.bash
   /usr/local/opt/fzf/shell/key-bindings.bash
+  /usr/share/fzf/shell/key-bindings.bash
   "${HOME}/.bash-my-aws/aliases"
   "${HOME}/.bash-my-aws/bash_completion.sh"
 )
